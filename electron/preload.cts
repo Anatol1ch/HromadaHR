@@ -1,3 +1,17 @@
-// No system operations are needed in stage 1.1, so nothing is exposed.
-// Future IPC must use contextBridge with explicit typed operations, validated
-// arguments and sender checks in Main. Never expose ipcRenderer or generic invoke.
+import { contextBridge, ipcRenderer } from 'electron'
+import { ipcChannels } from '../shared/ipc.js'
+import type { HromadaHRApi } from '../shared/ipc.js'
+
+const api: HromadaHRApi = {
+  system: {
+    getInfo: async () => {
+      try {
+        return await ipcRenderer.invoke(ipcChannels.systemGetInfo)
+      } catch {
+        return { ok: false, error: { code: 'UNAVAILABLE' } }
+      }
+    },
+  },
+}
+
+contextBridge.exposeInMainWorld('hromadaHR', api)

@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує основу версії 0.1.0 після етапів 1.1–1.3 та технічного приймання 1.4. Погоджені майбутні механізми наведено окремо в [DECISIONS.md](DECISIONS.md).
+Документ описує версію 0.1.0 після етапу 2.1 (IPC та архітектура даних). Погоджені майбутні механізми наведено окремо в [DECISIONS.md](DECISIONS.md).
 
 ## Стек та структура
 
@@ -9,7 +9,12 @@
 | Шлях | Призначення |
 | --- | --- |
 | `electron/main.ts` | Життєвий цикл, вікно, профілі, правила безпеки та завантаження renderer |
-| `electron/preload.cts` | Мінімальний preload без відкритих API |
+| `electron/preload.cts` | Обмежений contextBridge API |
+| `electron/ipc.ts` | Реєстрація IPC, перевірки відправника, аргументів і результату |
+| `shared/ipc.ts` | Allowlist каналів, типи аргументів, результатів і публічного API |
+| `src/env.d.ts` | Тип `window.hromadaHR` для renderer |
+| `vite.preload.config.ts`, `tsconfig.preload.json` | Окремі bundling і typecheck sandboxed preload |
+| `tests/ipc.test.mjs` | Цільові тести IPC-безпеки через Node test runner |
 | `src/main.tsx` | Вхід React із StrictMode та імпорт стилів |
 | `src/App.tsx` | Сім розділів, локальна навігація, головна та інформаційні стани |
 | `src/components/` | Універсальні Alert та DataState |
@@ -28,7 +33,15 @@
 
 BrowserWindow використовує `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`; стандартна web security не вимикається. Main блокує навігацію та перенаправлення через `will-navigate`/`will-redirect`, приєднання webview і створення сторонніх вікон. Запити дозволів відхиляються.
 
-Preload компілюється з `.cts` у CommonJS `dist-electron/preload.cjs` і не експортує жодних renderer API. Предметних IPC-каналів немає. Renderer не має прямого доступу до Node.js, Electron чи файлової системи. Додавання майбутніх системних операцій потребуватиме окремо погоджених обмежених методів і перевірок у Main.
+Ланцюжок виклику: React Renderer → `window.hromadaHR.system.getInfo()` → preload/contextBridge → `ipcRenderer.invoke('system:getInfo')` → Main. Це єдиний зареєстрований канал. Публічний API не містить універсального invoke/send/on, ipcRenderer, файлових операцій чи привілейованих об'єктів Electron. Renderer не має прямого доступу до Node.js, Electron чи файлової системи.
+
+`shared/ipc.ts` містить allowlist та контракти; Zod 4.6.7 використовується лише в Main. Реєстратор викликається один раз на життєвий цикл застосунку, а актуальне вікно визначається для кожного запиту. Перевіряються наявність і стан вікна/WebContents, тотожність `event.sender` його WebContents, тотожність `event.senderFrame` актуальному `mainFrame`, точний URL дозволеного dev або built документа. Самого URL недостатньо. Після цього Zod tuple відхиляє будь-які аргументи, включно з явним undefined; strict object перевіряє відповідь.
+
+Успіх має форму `{ ok: true, data: { name, version, mode } }`, помилка — `{ ok: false, error: { code } }`. Main повертає FORBIDDEN, INVALID_ARGUMENTS або INTERNAL_ERROR без тексту винятку; preload перетворює відмову транспорту на UNAVAILABLE. Невідомі канали не мають обробників і відхиляються транспортом Electron. Публічний метод завжди викликає лише свій канал без аргументів. Версія і назва походять з Electron app; режим — dev/built. Шляхи, користувацькі дані та секрети не повертаються.
+
+Місце для майбутньої перевірки доступу — в Main після перевірки відправника/аргументів і перед виконанням захищеної операції. Зараз існує лише публічна діагностика; немає сеансів, авторизації або заглушки, що автоматично дозволяє доступ. Для 2.2 можна додати окремі типізовані методи й обробники на цій межі; SQLite не реалізовано.
+
+Vite збирає `.cts` разом зі спільними константами в один CommonJS `dist-electron/preload.cjs`, залишаючи зовнішнім лише Electron. Це потрібно через [обмеження require у sandboxed preload](https://www.electronjs.org/docs/latest/tutorial/sandbox). Окремий TS-конфіг перевіряє preload без emit; NodeNext компілює Main і shared зі збереженням структури каталогів.
 
 Production CSP у `index.html` задає `default-src 'none'`, власні scripts/styles/images/fonts, `connect-src 'none'`, заборону base/form/object. Лише Vite serve-плагін дозволяє inline React refresh/styles і локальний HMR WebSocket. Це не послаблює built-CSP.
 
@@ -36,7 +49,7 @@ Production CSP у `index.html` задає `default-src 'none'`, власні scr
 
 Dev обирається лише коли застосунок не запакований і передано `--dev`; сама відсутність пакування не вмикає Vite. `pnpm dev` спочатку компілює Main/preload, далі запускає Vite та Electron через concurrently/wait-on. Адреса — `http://127.0.0.1:5176/`, `strictPort: true`. Немає логіки примусового звільнення порту. Після змін Main/preload потрібен перезапуск dev; renderer використовує HMR.
 
-`package.json.main` веде до `dist-electron/main.js`; preload лежить поряд із ним. Built завантажує `../dist/index.html` від каталогу Main через `loadFile`. Vite має `base: './'`, тому JS/CSS і зображення завантажуються з локальної збірки без Vite та інтернету. `start:built` не виконує збірку й потребує встановленого Electron.
+`package.json.main` веде до `dist-electron/electron/main.js`; preload — `dist-electron/preload.cjs`. Built завантажує `../../dist/index.html` від каталогу Main через `loadFile`. Vite має `base: './'`, тому JS/CSS і зображення завантажуються з локальної збірки без Vite та інтернету. `start:built` не виконує збірку й потребує встановленого Electron.
 
 Main обирає userData до single-instance lock:
 
@@ -50,6 +63,8 @@ Main обирає userData до single-instance lock:
 `App.tsx` використовує один `useState<SectionId>`, без React Router, глобального сховища або збереження вибраного розділу. Розділи: Головна, Огляд, Працівники, Відпустки, Стаж і ранги, Документи, Налаштування. Заголовок, breadcrumbs та активний пункт походять з одного опису розділів. Налаштування розміщено внизу sidebar.
 
 Головна містить ідентичність пілотної установи й стан розробки без KPI та кнопок удаваних операцій. Решта розділів використовує `DataState kind="planned"` з тематичним поясненням. Цей стан відрізняється від `empty`; підтримка loading/empty/search у компоненті не означає наявності запитів чи реєстрів. Alert показує локальні інформаційні повідомлення.
+
+У налаштуваннях footer через IPC показує реальну версію застосунку, стан завантаження або повідомлення про недоступність. Сім розділів та дизайн-система збережені.
 
 `src/styles.css` імпортує:
 
@@ -79,11 +94,15 @@ Main обирає userData до single-instance lock:
 | `pnpm install --frozen-lockfile` | Встановлення за lockfile та підготовка Electron; для першого встановлення потрібен інтернет |
 | `pnpm dev` | Компіляція Main/preload, Vite й Electron у dev-профілі |
 | `pnpm typecheck` | Перевірка renderer, Vite-конфігурації та Electron без emit |
+| `pnpm test` | Збірка Main/preload й дев'ять цільових тестів IPC |
+| `pnpm build:electron` | Emit Main/shared і один CommonJS preload-бандл |
 | `pnpm build` | Typecheck, emit Main/preload, production renderer і ресурси |
 | `pnpm start:built` | Відкриття вже зібраного застосунку через локальний Electron |
 
-TS-конфігурація спільно задає strict-перевірки. Renderer має DOM/react-jsx, Bundler resolution і noEmit; Vite-конфігурація — окрему node-перевірку; Electron — NodeNext і rootDir `electron`. Встановлені залежності не містять серверного runtime, SQLite або пакувальника.
+TS-конфігурація спільно задає strict-перевірки. Renderer має DOM/react-jsx, Bundler resolution і noEmit; Vite-конфігурації — окрему node-перевірку; Electron — NodeNext і rootDir `.` для Main/shared; preload — окрему Bundler-перевірку. Встановлені залежності не містять серверного runtime, SQLite або пакувальника.
+
+Тести запускають реальний скомпільований реєстратор із doubles Electron-об'єктів і реальний preload-бандл у Node VM із контрольованим transport/contextBridge. Перевіряються дозволений виклик, Zod-валідація, allowlist, сторонній sender, підфрейм, URL, закриття/заміна вікна, контрольовані помилки й точна поверхня API. Це не запуск справжнього Electron або GUI-приймання; інтеграцію contextBridge у Windows користувач перевіряє вручну.
 
 ## Ще не реалізовано
 
-SQLite, міграції, локальна авторизація, майстер першого запуску, предметні IPC, кадрові реєстри й операції, відпустки, стаж, ранги, документообіг, резервування, оновлення та інсталятор відсутні. Це межі етапу 1. Не слід трактувати каталоги профілів, навігаційні кнопки або інформаційні стани як реалізацію цих механізмів.
+SQLite, міграції, локальна авторизація, майстер першого запуску, кадрові IPC, реєстри й операції, відпустки, стаж, ранги, документообіг, резервування, оновлення та інсталятор відсутні. Це межі етапу 2.1. Не слід трактувати каталоги профілів, навігаційні кнопки або інформаційні стани як реалізацію цих механізмів.

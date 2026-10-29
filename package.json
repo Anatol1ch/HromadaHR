@@ -6,20 +6,23 @@
   "productName": "HromadaHR",
   "appId": "local.hromadahr",
   "type": "module",
-  "main": "dist-electron/main.js",
+  "main": "dist-electron/electron/main.js",
   "packageManager": "pnpm@11.25.0",
   "engines": { "node": "24.22.1" },
   "scripts": {
     "postinstall": "install-electron",
-    "dev": "tsc -p tsconfig.electron.json && concurrently --kill-others --success first --names vite,electron \"vite\" \"wait-on --timeout 30000 http-get://127.0.0.1:5176/ && electron . --dev\"",
-    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.electron.json --noEmit",
-    "build": "pnpm typecheck && tsc -p tsconfig.electron.json && vite build",
-    "start:built": "electron ."
+    "dev": "pnpm build:electron && concurrently --kill-others --success first --names vite,electron \"vite\" \"wait-on --timeout 30000 http-get://127.0.0.1:5176/ && electron . --dev\"",
+    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.preload.json",
+    "build": "pnpm typecheck && pnpm build:electron && vite build",
+    "start:built": "electron .",
+    "build:electron": "tsc -p tsconfig.electron.json && vite build --config vite.preload.config.ts",
+    "test": "pnpm build:electron && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "0.577.0",
     "react": "19.2.9",
-    "react-dom": "19.2.9"
+    "react-dom": "19.2.9",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

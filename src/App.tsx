@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
@@ -71,6 +71,24 @@ function HomePage() {
   </div>
 }
 
+function ApplicationVersion() {
+  const [version, setVersion] = useState('Завантаження версії…')
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      try {
+        const result = await window.hromadaHR.system.getInfo()
+        if (active) setVersion(result.ok ? `${result.data.name} · Версія ${result.data.version}` : 'Версія застосунку недоступна')
+      } catch {
+        if (active) setVersion('Версія застосунку недоступна')
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [])
+  return <footer className="page-footer"><p role="status">{version}</p></footer>
+}
+
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const current = sections.find(section => section.id === active)!
@@ -121,6 +139,7 @@ export default function App() {
                 description={sectionDescriptions[active]}
                 icon={<CurrentIcon size={22} aria-hidden="true" />} />
             </section>
+            {active === 'settings' && <ApplicationVersion />}
           </div>}
       </main>
     </div>

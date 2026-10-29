@@ -3,9 +3,9 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "rootDir": "electron",
+    "rootDir": ".",
     "outDir": "dist-electron",
     "types": ["node"]
   },
-  "include": ["electron/main.ts", "electron/preload.cts"]
+  "include": ["electron/**/*.ts", "shared/**/*.ts"]
 }

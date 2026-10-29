@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { registerIpcHandlers } from './ipc.js'
 
 const identity = 'HromadaHR'
 app.setName(identity)
@@ -10,6 +11,7 @@ if (process.platform === 'win32') app.setAppUserModelId('local.hromadahr')
 const isDev = !app.isPackaged && process.argv.includes('--dev')
 const directory = dirname(fileURLToPath(import.meta.url))
 const devUrl = 'http://127.0.0.1:5176/'
+const builtFile = join(directory, '../../dist/index.html')
 app.setPath('userData', join(app.getPath('appData'), isDev ? 'HromadaHR-dev' : 'HromadaHR'))
 // Select userData before the lock: development and built profiles are independent.
 const hasLock = app.requestSingleInstanceLock()
@@ -22,7 +24,7 @@ async function createWindow() {
     title: identity,
     backgroundColor: '#f5f6f8',
     webPreferences: {
-      preload: join(directory, 'preload.cjs'),
+      preload: join(directory, '../preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -39,7 +41,7 @@ async function createWindow() {
   window.on('closed', () => { mainWindow = null })
   try {
     if (isDev) await window.loadURL(devUrl)
-    else await window.loadFile(join(directory, '../dist/index.html'))
+    else await window.loadFile(builtFile)
     console.log(`[HromadaHR] ${isDev ? 'dev' : 'built'}: ${window.webContents.getURL()}`)
   } catch (error) {
     console.error('[HromadaHR] Не вдалося завантажити інтерфейс:', error)
@@ -51,6 +53,9 @@ async function createWindow() {
 if (!hasLock) {
   app.quit()
 } else {
+  registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
+    name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
+  }))
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
