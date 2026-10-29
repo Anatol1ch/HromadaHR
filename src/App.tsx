@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Activity, ArrowUpRight, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
@@ -17,6 +17,15 @@ const sections = [
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
+const sectionDescriptions: Record<Exclude<SectionId, 'home'>, string> = {
+  overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
+  employees: 'Тут буде облік працівників та їхніх особових карток. Ведення кадрових записів ще не доступне.',
+  leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
+  service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
+  documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
+  settings: 'Тут будуть налаштування установи й застосунку, зокрема назва громади та герб. Зміна параметрів ще не доступна.',
+}
+
 function NavigationItem({ section, active, onNavigate }: {
   section: Section
   active: SectionId
@@ -32,15 +41,15 @@ function NavigationItem({ section, active, onNavigate }: {
   </button>
 }
 
-function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
+function HomePage() {
   return <div className="workspace-page">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
       <div className="workspace-mark-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
       <div className="workspace-identity-copy">
         <div className="eyebrow">РОБОЧИЙ ПРОСТІР ГРОМАДИ</div>
-        <h1 id="home-title">Система кадрового обліку</h1>
+        <h1 id="home-title"><span>Вишнівська селищна</span>{' '}<span>територіальна громада</span></h1>
         <p className="workspace-system-name">HromadaHR</p>
-        <p className="subtitle">Автоматизована система кадрового обліку для органів місцевого самоврядування України.</p>
+        <p className="subtitle">Автоматизована система кадрового обліку</p>
       </div>
     </section>
     <section className="dashboard-panel" aria-labelledby="workspace-title">
@@ -49,16 +58,13 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
           <h2 id="workspace-title">Ваш робочий простір</h2>
           <p>Єдине середовище для майбутньої роботи з кадровим обліком громади.</p>
         </div>
-        <button type="button" className="primary-button" onClick={() => onNavigate('overview')}>
-          Перейти до огляду<ArrowUpRight size={19} aria-hidden="true" />
-        </button>
       </div>
       <div className="workspace-status">
         <Alert variant="info">
           <strong>Інтерфейсну оболонку створено</strong>
           <span>Доступна навігація між розділами. Їхня функціональність ще не реалізована.</span>
         </Alert>
-        <p>Оберіть розділ на бічній панелі, щоб переглянути його поточний стан.</p>
+        <p>Надалі тут можна буде вести особові картки працівників, облік відпусток, стажу, рангів і кадрових документів. Наразі розділи містять лише пояснення запланованих можливостей.</p>
       </div>
     </section>
     <footer className="page-footer"><p>HromadaHR · Автоматизована система кадрового обліку</p></footer>
@@ -105,14 +111,14 @@ export default function App() {
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
-        {active === 'home' ? <HomePage onNavigate={setActive} /> :
+        {active === 'home' ? <HomePage /> :
           <div>
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
             </div>
             <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
               <DataState kind="planned" message="Функціональність ще не реалізована"
-                description={`Розділ «${current.label}» буде доступний на наступних етапах розробки.`}
+                description={sectionDescriptions[active]}
                 icon={<CurrentIcon size={22} aria-hidden="true" />} />
             </section>
           </div>}
