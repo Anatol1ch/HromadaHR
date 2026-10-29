@@ -1,0 +1,4 @@
+# pnpm 11 requires an explicit dependency build policy for Electron.
+# This is a single-package project; there is no server workspace.
+allowBuilds:
+  electron: true
