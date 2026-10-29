@@ -1,11 +1,5 @@
-:root {
-  font-family: system-ui, sans-serif;
-  color: #202832;
-  background: #f5f6f8;
-  font-synthesis: none;
-}
-
-body { margin: 0; }
-main { max-width: 640px; margin: 15vh auto; padding: 24px; }
-h1 { margin: 0 0 16px; }
-p { line-height: 1.6; }
+/* Selected HromadaAID rules, adapted independently for HromadaHR. */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/components.css';
+@import './styles/shell.css';

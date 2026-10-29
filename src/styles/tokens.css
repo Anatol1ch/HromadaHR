@@ -1,0 +1,45 @@
+/* Values selected from HromadaAID @ 16582ce; no aid-specific tokens. */
+:root {
+  --accent-green: #286343;
+  --accent-green-soft: #e8f1eb;
+  --accent-green-strong: #1f5539;
+  --button-radius: var(--radius-control);
+  --button-focus-color: var(--border-focus);
+  --button-transition-duration: var(--motion-duration-fast);
+  --color-text: #202b3c;
+  --color-text-secondary: #647589;
+  --color-text-muted: #7d8a99;
+  --color-text-label: #52665b;
+  --color-text-hint: #78877e;
+  --color-text-error: #a7473d;
+  --surface-app: #f5f6f8;
+  --surface-card: #fff;
+  --surface-panel: #f5f8f6;
+  --border-surface: #e1e8e3;
+  --border-focus: #46835c;
+  --border-error: #c26a61;
+  --feedback-success-bg: var(--accent-green-soft);
+  --feedback-success-border: #cbdcd0;
+  --feedback-success-text: var(--accent-green-strong);
+  --feedback-error-bg: #fcf0ef;
+  --feedback-error-border: var(--border-error);
+  --feedback-error-text: var(--color-text-error);
+  --feedback-warning-bg: #fffaf4;
+  --feedback-warning-border: #ead6c3;
+  --feedback-warning-text: #705b42;
+  --feedback-info-bg: var(--surface-panel);
+  --feedback-info-border: var(--border-surface);
+  --feedback-info-text: #45584b;
+  --radius-control: 8px;
+  --radius-panel: 11px;
+  --radius-card: 12px;
+  --control-height: 44px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --motion-duration-fast: 150ms;
+}
