@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { registerIpcHandlers } from './ipc.js'
+import { Storage, storagePath } from './storage/index.js'
 
 const identity = 'HromadaHR'
 app.setName(identity)
@@ -16,6 +17,7 @@ app.setPath('userData', join(app.getPath('appData'), isDev ? 'HromadaHR-dev' : '
 // Select userData before the lock: development and built profiles are independent.
 const hasLock = app.requestSingleInstanceLock()
 let mainWindow: BrowserWindow | null = null
+const storage = new Storage()
 
 async function createWindow() {
   const window = new BrowserWindow({
@@ -55,14 +57,18 @@ if (!hasLock) {
 } else {
   registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
     name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
-  }))
+  }), () => storage.getStatus())
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.show()
     mainWindow.focus()
   })
-  void app.whenReady().then(createWindow)
+  void app.whenReady().then(() => {
+    storage.initialize(() => storagePath(process.env.LOCALAPPDATA, isDev))
+    return createWindow()
+  })
+  app.on('will-quit', () => storage.close())
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow()
   })

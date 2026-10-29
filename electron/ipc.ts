@@ -1,7 +1,7 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { ipcChannels } from '../shared/ipc.js'
-import type { IpcOperations, IpcResult, SystemInfo } from '../shared/ipc.js'
+import type { IpcOperations, IpcResult, StorageStatus, SystemInfo } from '../shared/ipc.js'
 
 const getInfoArgs = z.tuple([]) satisfies z.ZodType<IpcOperations[typeof ipcChannels.systemGetInfo]['args']>
 const systemInfo = z.strictObject({
@@ -10,13 +10,23 @@ const systemInfo = z.strictObject({
   mode: z.enum(['dev', 'built']),
 }) satisfies z.ZodType<SystemInfo>
 
+const storageStatus = z.union([
+  z.strictObject({ state: z.enum(['initializing', 'closed']) }),
+  z.strictObject({ state: z.literal('ready'), created: z.boolean(), schemaVersion: z.number().int().positive() }),
+  z.strictObject({ state: z.literal('error'), code: z.enum([
+    'CORRUPT', 'UNSUPPORTED_SCHEMA', 'FILESYSTEM', 'BUSY', 'MIGRATION_FAILED', 'INITIALIZATION_FAILED', 'BACKUP_REQUIRED',
+  ]) }),
+]) satisfies z.ZodType<StorageStatus>
+
 export function registerIpcHandlers(
   ipc: Pick<IpcMain, 'handle'>,
   getWindow: () => BrowserWindow | null,
   allowedUrl: string,
   getInfo: () => SystemInfo,
+  getStorageStatus: () => StorageStatus,
 ) {
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
+  register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
 
   // Internal registration only: channels and signatures come from the allowlist.
   // Keep security checks here when adding future explicitly allowed operations.

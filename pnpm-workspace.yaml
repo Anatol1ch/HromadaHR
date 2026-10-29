@@ -1,4 +1,6 @@
 # pnpm 11 requires an explicit dependency build policy for Electron.
 # This is a single-package project; there is no server workspace.
 allowBuilds:
+  # v13 ships Node-API prebuilds; do not invoke a local compiler on install.
+  better-sqlite3: false
   electron: true

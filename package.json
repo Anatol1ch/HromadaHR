@@ -16,15 +16,17 @@
     "build": "pnpm typecheck && pnpm build:electron && vite build",
     "start:built": "electron .",
     "build:electron": "tsc -p tsconfig.electron.json && vite build --config vite.preload.config.ts",
-    "test": "pnpm build:electron && node --test tests/*.test.mjs"
+    "test": "pnpm build:electron && node --test tests/*.test.mjs && node tests/run-electron-storage.mjs"
   },
   "dependencies": {
+    "better-sqlite3": "13.0.3",
     "lucide-react": "0.577.0",
     "react": "19.2.9",
     "react-dom": "19.2.9",
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
     "@types/react": "~19.2.0",
     "@types/react-dom": "~19.2.0",

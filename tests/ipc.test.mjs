@@ -16,7 +16,8 @@ function setup(getInfo = () => info, allowedUrl = url) {
   registerIpcHandlers({ handle: (channel, handler) => {
     assert.equal(handlers.has(channel), false)
     handlers.set(channel, handler)
-  } }, () => currentWindow, allowedUrl, () => { executions++; return getInfo() })
+  } }, () => currentWindow, allowedUrl, () => { executions++; return getInfo() },
+  () => ({ state: 'ready', created: false, schemaVersion: 1 }))
   const event = { sender: contents, senderFrame: contents.mainFrame }
   return {
     handlers, event, contents,
@@ -44,7 +45,7 @@ test('Zod rejects every unexpected argument before execution', () => {
 
 test('only allowlisted channel is registered; arbitrary channels have no handler', () => {
   const { handlers } = setup()
-  assert.deepEqual([...handlers.keys()], [ipcChannels.systemGetInfo])
+  assert.deepEqual([...handlers.keys()], [ipcChannels.systemGetInfo, ipcChannels.storageGetStatus])
   for (const channel of ['system:delete', 'employees:list', '__proto__', 'invoke']) {
     assert.equal(handlers.has(channel), false)
   }
@@ -109,16 +110,28 @@ test('built preload exposes only the typed method and invokes the real handler',
     calls.push([channel, ...args])
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
-  assert.deepEqual(Object.keys(api), ['system'])
+  assert.deepEqual(Object.keys(api), ['system', 'storage'])
   assert.deepEqual(Object.keys(api.system), ['getInfo'])
+  assert.deepEqual(Object.keys(api.storage), ['getStatus'])
   assert.deepEqual(await api.system.getInfo(), { ok: true, data: info })
   // JS callers cannot smuggle a channel/arguments through the public method.
   await api.system.getInfo('system:delete', { path: 'secret' })
   assert.deepEqual(calls, [[ipcChannels.systemGetInfo], [ipcChannels.systemGetInfo]])
+  assert.deepEqual(await api.storage.getStatus(), { ok: true, data: { state: 'ready', created: false, schemaVersion: 1 } })
   for (const key of ['invoke', 'send', 'on', 'ipcRenderer', 'require', 'fs']) assert.equal(api[key], undefined)
 })
 
 test('preload normalizes transport rejection', async () => {
   const api = preload(async () => { throw new Error('private transport details') })
   assert.equal(JSON.stringify(await api.system.getInfo()), JSON.stringify({ ok: false, error: { code: 'UNAVAILABLE' } }))
+  assert.equal(JSON.stringify(await api.storage.getStatus()), JSON.stringify({ ok: false, error: { code: 'UNAVAILABLE' } }))
+})
+
+test('storage status uses the same sender, frame and argument validation', () => {
+  const fixture = setup()
+  const call = fixture.handlers.get(ipcChannels.storageGetStatus)
+  assert.deepEqual(call(fixture.event), { ok: true, data: { state: 'ready', created: false, schemaVersion: 1 } })
+  assert.deepEqual(call(fixture.event, {}), { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+  assert.deepEqual(call({ ...fixture.event, sender: {} }), { ok: false, error: { code: 'FORBIDDEN' } })
+  assert.deepEqual(call({ ...fixture.event, senderFrame: { url } }), { ok: false, error: { code: 'FORBIDDEN' } })
 })

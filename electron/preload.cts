@@ -12,6 +12,15 @@ const api: HromadaHRApi = {
       }
     },
   },
+  storage: {
+    getStatus: async () => {
+      try {
+        return await ipcRenderer.invoke(ipcChannels.storageGetStatus)
+      } catch {
+        return { ok: false, error: { code: 'UNAVAILABLE' } }
+      }
+    },
+  },
 }
 
 contextBridge.exposeInMainWorld('hromadaHR', api)

@@ -3,6 +3,7 @@ import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, 
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
+import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
 
 const sections = [
   { id: 'home', label: 'Головна', icon: Home },
@@ -89,6 +90,39 @@ function ApplicationVersion() {
   return <footer className="page-footer"><p role="status">{version}</p></footer>
 }
 
+const storageErrors: Record<StorageErrorCode, string> = {
+  CORRUPT: 'Виявлено пошкодження локального сховища. Дані не замінено. Потрібна технічна допомога.',
+  UNSUPPORTED_SCHEMA: 'Версія або структура сховища не підтримується цим застосунком. Дані не змінено.',
+  FILESYSTEM: 'Немає доступу до локального сховища. Перевірте доступ і вільне місце на диску.',
+  BUSY: 'Локальне сховище зайняте. Закрийте інші програми, що можуть його використовувати, та перезапустіть застосунок.',
+  MIGRATION_FAILED: 'Не вдалося оновити структуру сховища. Потрібна технічна допомога.',
+  INITIALIZATION_FAILED: 'Не вдалося підготувати локальне сховище. Потрібна технічна допомога.',
+  BACKUP_REQUIRED: 'Оновлення сховища потребує захисної копії. Ця версія застосунку не виконує таке оновлення.',
+}
+
+function StorageNotice({ showReady }: { showReady: boolean }) {
+  const [status, setStatus] = useState<StorageStatus>({ state: 'initializing' })
+  useEffect(() => {
+    let active = true
+    void (async () => {
+      try {
+        const result = await window.hromadaHR.storage.getStatus()
+        if (active) setStatus(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
+      } catch {
+        if (active) setStatus({ state: 'error', code: 'INITIALIZATION_FAILED' })
+      }
+    })()
+    return () => { active = false }
+  }, [])
+  if (status.state === 'ready') return showReady ? <Alert variant="info">
+    Локальне сховище готове. Версія схеми: {status.schemaVersion}.
+  </Alert> : null
+  return <Alert variant={status.state === 'error' ? 'error' : 'info'}>
+    {status.state === 'error' ? storageErrors[status.code] :
+      status.state === 'closed' ? 'Локальне сховище закрито.' : 'Перевірка локального сховища…'}
+  </Alert>
+}
+
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const current = sections.find(section => section.id === active)!
@@ -129,6 +163,7 @@ export default function App() {
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
+        <StorageNotice showReady={active === 'settings'} />
         {active === 'home' ? <HomePage /> :
           <div>
             <div className="page-heading">
