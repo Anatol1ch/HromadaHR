@@ -1,8 +1,8 @@
-.icon-button { border: 0; background: transparent; color: #758397; position: relative; padding: 5px; display: grid; place-items: center; }
+.icon-button { border: 0; background: transparent; color: var(--color-text-secondary); position: relative; padding: 5px; display: grid; place-items: center; }
 .icon-button svg { width: 21px; height: 21px; }
-.primary-button { height: var(--control-height); background: var(--accent-green); color: var(--surface-card); border: 1px solid var(--accent-green); border-radius: var(--button-radius); padding: 0 var(--space-4); display: flex; gap: 9px; align-items: center; justify-content: center; font-size: 13px; font-weight: 650; }
+.primary-button { height: var(--control-height); background: var(--accent); color: var(--surface-card); border: 1px solid var(--accent); border-radius: var(--button-radius); padding: 0 var(--space-4); display: flex; gap: 9px; align-items: center; justify-content: center; font-size: 13px; font-weight: 650; }
 .primary-button svg { width: 19px; height: 19px; flex-shrink: 0; }
-.primary-button:hover:not([aria-disabled="true"]):not(:disabled):not([aria-busy="true"]) { background: var(--accent-green-strong); border-color: var(--accent-green-strong); }
+.primary-button:hover:not([aria-disabled="true"]):not(:disabled):not([aria-busy="true"]) { background: var(--accent-strong); border-color: var(--accent-strong); }
 .primary-button:disabled { background: #aab5bf; border-color: #aab5bf; cursor: default; }
   .ui-alert { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--space-3); margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--feedback-border); border-radius: var(--radius-control); background: var(--feedback-bg); color: var(--feedback-text); font-size: 13px; line-height: 1.5; }
   .ui-alert-success { --feedback-bg: var(--feedback-success-bg); --feedback-border: var(--feedback-success-border); --feedback-text: var(--feedback-success-text); }

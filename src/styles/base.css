@@ -29,6 +29,6 @@ button { cursor: pointer; }
 
 button:focus-visible, .skip-link:focus-visible { outline: 2px solid var(--button-focus-color); outline-offset: 3px; }
 /* Keep keyboard access to the main landmark without changing the shell. */
-.skip-link { position: fixed; top: var(--space-2); left: var(--space-2); z-index: 5; transform: translateY(-200%); padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--surface-card); color: var(--accent-green-strong); }
+.skip-link { position: fixed; top: var(--space-2); left: var(--space-2); z-index: 5; transform: translateY(-200%); padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--surface-card); color: var(--accent-strong); }
 .skip-link:focus { transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) { button { transition: none !important; } }

@@ -1,26 +1,26 @@
-/* Values selected from HromadaAID @ 16582ce; no aid-specific tokens. */
+/* HromadaHR palette; geometry inherited from HromadaAID @ 16582ce. */
 :root {
-  --accent-green: #286343;
-  --accent-green-soft: #e8f1eb;
-  --accent-green-strong: #1f5539;
+  --accent: #6F5AA5;
+  --accent-soft: #EFEAF7;
+  --accent-strong: #594681;
   --button-radius: var(--radius-control);
   --button-focus-color: var(--border-focus);
   --button-transition-duration: var(--motion-duration-fast);
-  --color-text: #202b3c;
-  --color-text-secondary: #647589;
-  --color-text-muted: #7d8a99;
-  --color-text-label: #52665b;
-  --color-text-hint: #78877e;
+  --color-text: #252738;
+  --color-text-secondary: #687084;
+  --color-text-muted: var(--color-text-secondary);
+  --color-text-label: var(--color-text-secondary);
+  --color-text-hint: var(--color-text-secondary);
   --color-text-error: #a7473d;
-  --surface-app: #f5f6f8;
-  --surface-card: #fff;
-  --surface-panel: #f5f8f6;
-  --border-surface: #e1e8e3;
-  --border-focus: #46835c;
+  --surface-app: #F7F6FA;
+  --surface-card: #FFFFFF;
+  --surface-panel: var(--accent-soft);
+  --border-surface: #E4DFEC;
+  --border-focus: var(--accent);
   --border-error: #c26a61;
-  --feedback-success-bg: var(--accent-green-soft);
+  --feedback-success-bg: #e8f1eb;
   --feedback-success-border: #cbdcd0;
-  --feedback-success-text: var(--accent-green-strong);
+  --feedback-success-text: #1f5539;
   --feedback-error-bg: #fcf0ef;
   --feedback-error-border: var(--border-error);
   --feedback-error-text: var(--color-text-error);
@@ -29,7 +29,7 @@
   --feedback-warning-text: #705b42;
   --feedback-info-bg: var(--surface-panel);
   --feedback-info-border: var(--border-surface);
-  --feedback-info-text: #45584b;
+  --feedback-info-text: var(--accent-strong);
   --radius-control: 8px;
   --radius-panel: 11px;
   --radius-card: 12px;

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Activity, ArrowUpRight, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
+import communityCoat from '../assets/community-coat.png'
 
 const sections = [
   { id: 'home', label: 'Головна', icon: Home },
@@ -34,7 +35,7 @@ function NavigationItem({ section, active, onNavigate }: {
 function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   return <div className="workspace-page">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
-      <div className="workspace-mark-area"><UsersRound size={64} strokeWidth={1.5} aria-hidden="true" /></div>
+      <div className="workspace-mark-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
       <div className="workspace-identity-copy">
         <div className="eyebrow">РОБОЧИЙ ПРОСТІР ГРОМАДИ</div>
         <h1 id="home-title">Система кадрового обліку</h1>
