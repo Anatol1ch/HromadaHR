@@ -2,8 +2,6 @@
 
 Документ описує версію 0.1.0 після етапу 2.4 (резервування та відновлення). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
 
-Етап 2.5 зупинено на перевірці безпеки: runtime залишається на рівні 2.4, вибір робочої БД/SMB/міжкомп'ютерний lock не реалізовані. Замовник підтвердив відсутність тестового SMB-стенда. [Дослідження](SHARED_STORAGE_RESEARCH.md) відокремлює фактичні локальні Win32-проби від цільової моделі, містить блокуючі питання, альтернативи й двокомп'ютерне приймання. Наявні openPaths/single-instance та WAL не можна вважати підтримкою спільного файла між ПК.
-
 ## Стек та структура
 
 Цільова платформа — Windows 10/11, локальний настільний застосунок без окремого сервера. Середовище розробки: Node.js 24.22.1, pnpm 11.25.0. Використано Electron 44.7.1, React/React DOM 19.2.9, TypeScript 5.9.3, Vite 8.3.4, @vitejs/plugin-react 6.1.2 та lucide-react 0.577.0. Фактичні версії залежностей зафіксовано в `package.json` і `pnpm-lock.yaml`.
@@ -155,7 +153,7 @@ Restore складається з окремих chooseRestore і confirmRestore
 | `pnpm install --frozen-lockfile` | Встановлення за lockfile та підготовка Electron; для першого встановлення потрібен інтернет |
 | `pnpm dev` | Компіляція Main/preload, Vite й Electron у dev-профілі |
 | `pnpm typecheck` | Перевірка renderer, Vite-конфігурації та Electron без emit |
-| `pnpm test` | Збірка Main/preload, 46 регресійних тестів + 4 локальні Win32-проби на Windows та Electron Main smoke; це не SMB-сертифікація |
+| `pnpm test` | Збірка Main/preload, 46 тестів IPC/SQLite/backup/restore та smoke online backup у реальному Electron Main |
 | `pnpm build:electron` | Emit Main/shared і один CommonJS preload-бандл |
 | `pnpm build` | Typecheck, emit Main/preload, production renderer і ресурси |
 | `pnpm start:built` | Відкриття вже зібраного застосунку через локальний Electron |
