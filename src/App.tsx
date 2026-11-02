@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
+import type { EmployeeBreadcrumb } from './components/employees/EmployeesWorkspace'
+import { useEffect, useRef, useState } from 'react'
 import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
@@ -20,9 +22,8 @@ const sections = [
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
-const sectionDescriptions: Record<Exclude<SectionId, 'home'>, string> = {
+const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
-  employees: 'Тут буде облік працівників та їхніх особових карток. Ведення кадрових записів ще не доступне.',
   leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
@@ -59,15 +60,15 @@ function HomePage() {
       <div className="workspace-primary">
         <div>
           <h2 id="workspace-title">Ваш робочий простір</h2>
-          <p>Єдине середовище для майбутньої роботи з кадровим обліком громади.</p>
+          <p>Єдине середовище для кадрового обліку громади.</p>
         </div>
       </div>
       <div className="workspace-status">
         <Alert variant="info">
-          <strong>Інтерфейсну оболонку створено</strong>
-          <span>Доступна навігація між розділами. Їхня функціональність ще не реалізована.</span>
+          <strong>Реєстр працівників доступний</strong>
+          <span>У розділі «Працівники» можна вести реєстр, створювати та редагувати особові картки.</span>
         </Alert>
-        <p>Надалі тут можна буде вести особові картки працівників, облік відпусток, стажу, рангів і кадрових документів. Наразі розділи містять лише пояснення запланованих можливостей.</p>
+        <p>Облік відпусток, стажу, рангів і кадрових документів буде додано на наступних етапах.</p>
       </div>
     </section>
     <footer className="page-footer"><p>HromadaHR · Автоматизована система кадрового обліку</p></footer>
@@ -135,6 +136,11 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [employeeBreadcrumb, setEmployeeBreadcrumb] = useState<EmployeeBreadcrumb | null>(null)
+  const navigationGuard = useRef<() => boolean>(() => true)
+  function navigate(id: SectionId) {
+    if (id !== active && navigationGuard.current()) setActive(id)
+  }
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
     let alive = true, pending = false
@@ -169,12 +175,12 @@ export default function App() {
       <div className="nav-label">РОБОЧИЙ ПРОСТІР</div>
       <nav className="nav-list" aria-label="Робочий простір">
         {sections.filter(section => section.id !== 'settings').map(section =>
-          <NavigationItem key={section.id} section={section} active={active} onNavigate={setActive} />)}
+          <NavigationItem key={section.id} section={section} active={active} onNavigate={navigate} />)}
       </nav>
       <div className="sidebar-bottom">
         <div className="nav-label">СИСТЕМА</div>
         <nav aria-label="Система">
-          <NavigationItem section={sections[6]} active={active} onNavigate={setActive} />
+          <NavigationItem section={sections[6]} active={active} onNavigate={navigate} />
         </nav>
       </div>
     </aside>
@@ -184,15 +190,18 @@ export default function App() {
           <nav className="crumb" aria-label="Навігаційні крихти">
             <ol>
               <li>{active === 'home' ? <span>Робочий простір</span> :
-                <button type="button" onClick={() => setActive('home')}>Робочий простір</button>}</li>
-              <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>
+                <button type="button" onClick={() => navigate('home')}>Робочий простір</button>}</li>
+              <li><ChevronRight size={15} aria-hidden="true" />{active === 'employees' && employeeBreadcrumb ?
+                <button type="button" onClick={employeeBreadcrumb.onBack}>Працівники</button> : <span aria-current="page">{current.label}</span>}</li>
+              {active === 'employees' && employeeBreadcrumb && <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{employeeBreadcrumb.label}</span></li>}
             </ol>
           </nav>
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice showReady={active === 'settings'} />
-        {active === 'home' ? <HomePage /> :
+        {active === 'home' ? <HomePage /> : active === 'employees' ?
+          <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> :
           <div>
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
