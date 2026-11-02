@@ -17,7 +17,14 @@ function setup(getInfo = () => info, allowedUrl = url) {
     assert.equal(handlers.has(channel), false)
     handlers.set(channel, handler)
   } }, () => currentWindow, allowedUrl, () => { executions++; return getInfo() },
-  () => ({ state: 'ready', created: false, schemaVersion: 1 }))
+  () => ({ state: 'ready', created: false, schemaVersion: 1 }), {
+    getStatus: () => ({ targets: [1, 2].map(slot => ({ slot, path: null, available: false, autoDay: null,
+      lastAttempt: null, lastSuccess: null, lastKind: null, error: null, fileName: null })),
+      busy: false, sameVolume: false, lastRestore: null }),
+    chooseFolder: async () => null, chooseRestore: async () => null,
+    saveConfig: async () => { throw new Error('Not selected') }, runManual: async () => { throw new Error('Not configured') },
+    confirmRestore: async () => { throw new Error('Not selected') },
+  })
   const event = { sender: contents, senderFrame: contents.mainFrame }
   return {
     handlers, event, contents,
@@ -45,7 +52,7 @@ test('Zod rejects every unexpected argument before execution', () => {
 
 test('only allowlisted channel is registered; arbitrary channels have no handler', () => {
   const { handlers } = setup()
-  assert.deepEqual([...handlers.keys()], [ipcChannels.systemGetInfo, ipcChannels.storageGetStatus])
+  assert.deepEqual([...handlers.keys()], Object.values(ipcChannels))
   for (const channel of ['system:delete', 'employees:list', '__proto__', 'invoke']) {
     assert.equal(handlers.has(channel), false)
   }
@@ -110,7 +117,8 @@ test('built preload exposes only the typed method and invokes the real handler',
     calls.push([channel, ...args])
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
-  assert.deepEqual(Object.keys(api), ['system', 'storage'])
+  assert.deepEqual(Object.keys(api).sort(), ['backup', 'storage', 'system'])
+  assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getStatus', 'runManual', 'saveConfig'])
   assert.deepEqual(Object.keys(api.system), ['getInfo'])
   assert.deepEqual(Object.keys(api.storage), ['getStatus'])
   assert.deepEqual(await api.system.getInfo(), { ok: true, data: info })
@@ -134,4 +142,41 @@ test('storage status uses the same sender, frame and argument validation', () =>
   assert.deepEqual(call(fixture.event, {}), { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
   assert.deepEqual(call({ ...fixture.event, sender: {} }), { ok: false, error: { code: 'FORBIDDEN' } })
   assert.deepEqual(call({ ...fixture.event, senderFrame: { url } }), { ok: false, error: { code: 'FORBIDDEN' } })
+})
+
+test('every backup operation rejects foreign sender, subframe and foreign URL before execution', async () => {
+  const fixture = setup()
+  const uuid = '11111111-1111-4111-8111-111111111111'
+  const operations = [
+    [ipcChannels.backupGetStatus, []], [ipcChannels.backupChooseFolder, [1]],
+    [ipcChannels.backupSaveConfig, [[null, null]]], [ipcChannels.backupRunManual, []],
+    [ipcChannels.backupChooseRestore, []], [ipcChannels.backupConfirmRestore, [uuid]],
+  ]
+  for (const [channel, args] of operations) {
+    const call = fixture.handlers.get(channel)
+    for (const event of [{ ...fixture.event, sender: {} }, { ...fixture.event, senderFrame: { url } },
+      { ...fixture.event, senderFrame: null }]) {
+      assert.deepEqual(await call(event, ...args), { ok: false, error: { code: 'FORBIDDEN' } }, channel)
+    }
+    fixture.contents.mainFrame.url = 'https://example.com/'
+    assert.deepEqual(await call(fixture.event, ...args), { ok: false, error: { code: 'FORBIDDEN' } }, channel)
+    fixture.contents.mainFrame.url = url
+  }
+})
+
+test('backup IPC validates tokens and operation signatures rather than accepting paths, SQL or confirmed flags', async () => {
+  const { handlers, event } = setup()
+  for (const [channel, args] of [
+    [ipcChannels.backupGetStatus, ['C:\\private']], [ipcChannels.backupChooseFolder, ['C:\\private']],
+    [ipcChannels.backupChooseFolder, [3]], [ipcChannels.backupSaveConfig, [['C:\\first', 'C:\\second']]],
+    [ipcChannels.backupSaveConfig, [[null, null], { sql: 'DELETE' }]],
+    [ipcChannels.backupRunManual, [{ path: 'C:\\private' }]],
+    [ipcChannels.backupChooseRestore, ['C:\\private.db']],
+    [ipcChannels.backupConfirmRestore, [{ confirmed: true, path: 'C:\\private.db' }]],
+    [ipcChannels.backupConfirmRestore, ['not-a-token']],
+  ]) assert.deepEqual(await handlers.get(channel)(event, ...args), { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+  for (const channel of ['fs:read', 'fs:write', 'backup:delete', 'sql:exec', 'invoke']) assert.equal(handlers.has(channel), false)
+  const api = preload(async () => { throw new Error('private details') })
+  for (const key of ['fs', 'readFile', 'writeFile', 'exec', 'invoke', 'sql', 'delete']) assert.equal(api.backup[key], undefined)
+  assert.equal((await api.backup.runManual()).error.code, 'UNAVAILABLE')
 })

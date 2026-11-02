@@ -4,6 +4,7 @@ import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
+import BackupSettings from './components/BackupSettings'
 
 const sections = [
   { id: 'home', label: 'Головна', icon: Home },
@@ -24,7 +25,7 @@ const sectionDescriptions: Record<Exclude<SectionId, 'home'>, string> = {
   leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
-  settings: 'Тут будуть налаштування установи й застосунку, зокрема назва громади та герб. Зміна параметрів ще не доступна.',
+  settings: 'Налаштування назви громади та герба буде додано пізніше.',
 }
 
 function NavigationItem({ section, active, onNavigate }: {
@@ -98,21 +99,28 @@ const storageErrors: Record<StorageErrorCode, string> = {
   MIGRATION_FAILED: 'Не вдалося оновити структуру сховища. Потрібна технічна допомога.',
   INITIALIZATION_FAILED: 'Не вдалося підготувати локальне сховище. Потрібна технічна допомога.',
   BACKUP_REQUIRED: 'Оновлення сховища потребує захисної копії. Ця версія застосунку не виконує таке оновлення.',
+  RECOVERY_REQUIRED: 'Не вдалося завершити безпечне відновлення сховища. Потрібна технічна допомога; файли збережено.',
 }
 
 function StorageNotice({ showReady }: { showReady: boolean }) {
   const [status, setStatus] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
     let active = true
-    void (async () => {
+    let pending = false
+    const refresh = async () => {
+      if (pending) return
+      pending = true
       try {
         const result = await window.hromadaHR.storage.getStatus()
         if (active) setStatus(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
       } catch {
         if (active) setStatus({ state: 'error', code: 'INITIALIZATION_FAILED' })
       }
-    })()
-    return () => { active = false }
+      finally { pending = false }
+    }
+    void refresh()
+    const timer = setInterval(() => { void refresh() }, 5000)
+    return () => { active = false; clearInterval(timer) }
   }, [])
   if (status.state === 'ready') return showReady ? <Alert variant="info">
     Локальне сховище готове. Версія схеми: {status.schemaVersion}.
@@ -169,11 +177,11 @@ export default function App() {
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
             </div>
-            <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
+            {active === 'settings' ? <BackupSettings /> : <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
               <DataState kind="planned" message="Функціональність ще не реалізована"
                 description={sectionDescriptions[active]}
                 icon={<CurrentIcon size={22} aria-hidden="true" />} />
-            </section>
+            </section>}
             {active === 'settings' && <ApplicationVersion />}
           </div>}
       </main>

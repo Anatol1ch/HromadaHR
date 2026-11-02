@@ -25,17 +25,18 @@ function temporaryTest(name, run) {
   })
 }
 
-const ordered = [...migrations,
+const ordered = [migrations[0],
   { version: 2, name: 'test_create', sql: 'CREATE TABLE test_values (id INTEGER PRIMARY KEY, value TEXT NOT NULL) STRICT' },
   { version: 3, name: 'test_insert', sql: "INSERT INTO test_values VALUES (1, 'persisted')" },
 ]
 const code = expected => error => error.code === expected && error.message === expected
 
-temporaryTest('new storage creates only the migration ledger and applies durable PRAGMAs', ({ open }) => {
+temporaryTest('new storage creates only service tables and applies durable PRAGMAs', ({ open }) => {
   const storage = open()
   assert.equal(storage.created, true)
-  assert.equal(storage.schemaVersion, 1)
-  assert.deepEqual(storage.database.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all(), [{ name: 'schema_migrations' }])
+  assert.equal(storage.schemaVersion, 2)
+  assert.deepEqual(storage.database.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all(),
+    [{ name: 'schema_migrations' }, { name: 'backup_config' }, { name: 'backup_state' }])
   for (const [pragma, value] of [['foreign_keys', 1], ['journal_mode', 'wal'], ['synchronous', 2], ['busy_timeout', 5000]]) {
     assert.equal(storage.database.pragma(pragma, { simple: true }), value)
   }
@@ -55,7 +56,7 @@ temporaryTest('reopen preserves data, unknown tables, and migration timestamps w
 })
 
 temporaryTest('migrations upgrade sequentially from a prior schema', ({ open, file }) => {
-  open(file).close()
+  open(file, [migrations[0]]).close()
   const storage = open(file, ordered)
   assert.equal(storage.schemaVersion, 3)
   assert.equal(storage.database.prepare('SELECT value FROM test_values').get().value, 'persisted')
@@ -76,10 +77,10 @@ temporaryTest('failed migration rolls back DDL, DML, ledger and user_version tog
 })
 
 temporaryTest('failed startup migration closes connection and retains the preceding committed version', ({ open, file }) => {
-  open(file).close()
-  const failed = [...migrations, { version: 2, name: 'test_fail', sql: 'CREATE TABLE test_rollback (id); INVALID SQL' }]
+  open(file, [migrations[0]]).close()
+  const failed = [migrations[0], { version: 2, name: 'test_fail', sql: 'CREATE TABLE test_rollback (id); INVALID SQL' }]
   assert.throws(() => open(file, failed), code('MIGRATION_FAILED'))
-  assert.equal(open(file).schemaVersion, 1)
+  assert.equal(open(file, [migrations[0]]).schemaVersion, 1)
 })
 
 temporaryTest('newer schema is refused without rewriting the database', ({ open, file }) => {
@@ -175,9 +176,9 @@ temporaryTest('ledger gaps, mismatched user_version and unknown migration IDs ar
 temporaryTest('critical migrations require a protective-copy implementation and cannot proceed silently', ({ open }) => {
   const storage = open()
   assert.throws(() => applyMigrations(storage.database, [...migrations, {
-    version: 2, name: 'test_critical', requiresBackup: true, sql: 'CREATE TABLE test_critical(id INTEGER)',
+    version: 3, name: 'test_critical', requiresBackup: true, sql: 'CREATE TABLE test_critical(id INTEGER)',
   }]), code('BACKUP_REQUIRED'))
-  assert.equal(storage.database.pragma('user_version', { simple: true }), 1)
+  assert.equal(storage.database.pragma('user_version', { simple: true }), 2)
   assert.equal(storage.database.prepare("SELECT name FROM sqlite_schema WHERE name='test_critical'").get(), undefined)
 })
 
@@ -201,7 +202,7 @@ temporaryTest('storage owner initializes once, reports sanitized failures and cl
   assert.deepEqual(storage.getStatus(), { state: 'initializing' })
   try {
     storage.initialize(() => file)
-    assert.deepEqual(storage.getStatus(), { state: 'ready', created: true, schemaVersion: 1 })
+    assert.deepEqual(storage.getStatus(), { state: 'ready', created: true, schemaVersion: 2 })
     storage.initialize(() => { throw new Error('must not initialize twice') })
     assert.equal(storage.getStatus().state, 'ready')
   } finally { storage.close() }

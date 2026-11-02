@@ -26,4 +26,13 @@
   .ui-data-state-compact strong { font-size: 12px; font-weight: 400; }
 .formation-spinner { animation: formation-spin 1s linear infinite; }
 @keyframes formation-spin { to { transform: rotate(360deg); } }
+.backup-panel { padding: var(--space-6); }
+.backup-panel > h2 { margin-top: 0; }
+.backup-panel p { color: var(--color-text-secondary); line-height: 1.5; }
+.backup-target { padding: var(--space-4) 0; border-bottom: 1px solid var(--border-surface); }
+.backup-target h3 { margin-top: 0; }
+.backup-path { overflow-wrap: anywhere; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-4) 0; }
+.secondary-button { min-height: var(--control-height); padding: var(--space-2) var(--space-4); border: 1px solid var(--accent); border-radius: var(--button-radius); background: var(--surface-card); color: var(--accent-strong); font: inherit; }
+.secondary-button:disabled { opacity: .55; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .formation-spinner { animation: none; } }

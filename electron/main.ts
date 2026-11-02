@@ -3,6 +3,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { registerIpcHandlers } from './ipc.js'
 import { Storage, storagePath } from './storage/index.js'
+import { BackupService } from './backup/service.js'
+import { BackupController } from './backup/controller.js'
 
 const identity = 'HromadaHR'
 app.setName(identity)
@@ -18,6 +20,8 @@ app.setPath('userData', join(app.getPath('appData'), isDev ? 'HromadaHR-dev' : '
 const hasLock = app.requestSingleInstanceLock()
 let mainWindow: BrowserWindow | null = null
 const storage = new Storage()
+const backups = new BackupService(storage)
+const backupController = new BackupController(backups, () => mainWindow)
 
 async function createWindow() {
   const window = new BrowserWindow({
@@ -33,6 +37,10 @@ async function createWindow() {
     },
   })
   mainWindow = window
+  window.webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
+    if (isMainFrame) backupController.invalidate()
+  })
+  window.webContents.on('destroyed', () => backupController.invalidate())
   window.removeMenu()
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   window.webContents.on('will-redirect', (event) => event.preventDefault())
@@ -57,18 +65,29 @@ if (!hasLock) {
 } else {
   registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
     name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
-  }), () => storage.getStatus())
+  }), () => storage.getStatus(), backupController)
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.show()
     mainWindow.focus()
   })
-  void app.whenReady().then(() => {
-    storage.initialize(() => storagePath(process.env.LOCALAPPDATA, isDev))
+  void app.whenReady().then(async () => {
+    await storage.initializeSafely(() => storagePath(process.env.LOCALAPPDATA, isDev))
+    backups.start()
     return createWindow()
   })
-  app.on('will-quit', () => storage.close())
+  let quitting = false
+  app.on('before-quit', event => {
+    if (backups.isBusy() && !quitting) {
+      event.preventDefault()
+      backups.stop()
+      const wait = setInterval(() => {
+        if (!backups.isBusy()) { clearInterval(wait); quitting = true; app.quit() }
+      }, 100)
+    }
+  })
+  app.on('will-quit', () => { backups.stop(); backupController.invalidate(); storage.close() })
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow()
   })

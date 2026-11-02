@@ -2,6 +2,8 @@ import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { ipcChannels } from '../shared/ipc.js'
 import type { IpcOperations, IpcResult, StorageStatus, SystemInfo } from '../shared/ipc.js'
+import type { BackupController } from './backup/controller.js'
+import { BackupError } from './backup/files.js'
 
 const getInfoArgs = z.tuple([]) satisfies z.ZodType<IpcOperations[typeof ipcChannels.systemGetInfo]['args']>
 const systemInfo = z.strictObject({
@@ -14,9 +16,18 @@ const storageStatus = z.union([
   z.strictObject({ state: z.enum(['initializing', 'closed']) }),
   z.strictObject({ state: z.literal('ready'), created: z.boolean(), schemaVersion: z.number().int().positive() }),
   z.strictObject({ state: z.literal('error'), code: z.enum([
-    'CORRUPT', 'UNSUPPORTED_SCHEMA', 'FILESYSTEM', 'BUSY', 'MIGRATION_FAILED', 'INITIALIZATION_FAILED', 'BACKUP_REQUIRED',
+    'CORRUPT', 'UNSUPPORTED_SCHEMA', 'FILESYSTEM', 'BUSY', 'MIGRATION_FAILED', 'INITIALIZATION_FAILED', 'BACKUP_REQUIRED', 'RECOVERY_REQUIRED',
   ]) }),
 ]) satisfies z.ZodType<StorageStatus>
+
+const backupError = z.enum(['BUSY', 'NOT_CONFIGURED', 'INVALID_FOLDERS', 'FOLDER_UNAVAILABLE', 'INVALID_SELECTION',
+  'INVALID_BACKUP', 'UNSUPPORTED_SCHEMA', 'BACKUP_FAILED', 'RESTORE_FAILED', 'RECOVERY_REQUIRED', 'CANCELLED', 'STORAGE_UNAVAILABLE'])
+const backupTarget = z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]), path: z.string().nullable(), available: z.boolean(),
+  autoDay: z.string().nullable(), lastAttempt: z.string().nullable(), lastSuccess: z.string().nullable(),
+  lastKind: z.enum(['auto', 'manual']).nullable(), error: backupError.nullable(), fileName: z.string().nullable() })
+const backupStatus = z.strictObject({ targets: z.tuple([backupTarget, backupTarget]), sameVolume: z.boolean(), busy: z.boolean(),
+  lastRestore: z.enum(['success', 'rolled-back']).nullable() })
+const token = z.string().uuid()
 
 export function registerIpcHandlers(
   ipc: Pick<IpcMain, 'handle'>,
@@ -24,9 +35,18 @@ export function registerIpcHandlers(
   allowedUrl: string,
   getInfo: () => SystemInfo,
   getStorageStatus: () => StorageStatus,
+  backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore'>,
 ) {
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
+  register(ipcChannels.backupGetStatus, z.tuple([]), backupStatus, backup.getStatus)
+  register(ipcChannels.backupChooseFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]),
+    z.strictObject({ token, path: z.string() }).nullable(), ([slot]) => backup.chooseFolder(slot))
+  register(ipcChannels.backupSaveConfig, z.tuple([z.tuple([token.nullable(), token.nullable()])]), backupStatus, ([tokens]) => backup.saveConfig(tokens))
+  register(ipcChannels.backupRunManual, z.tuple([]), backupStatus, backup.runManual)
+  register(ipcChannels.backupChooseRestore, z.tuple([]),
+    z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }).nullable(), backup.chooseRestore)
+  register(ipcChannels.backupConfirmRestore, z.tuple([token]), z.strictObject({ restored: z.boolean() }), ([value]) => backup.confirmRestore(value))
 
   // Internal registration only: channels and signatures come from the allowlist.
   // Keep security checks here when adding future explicitly allowed operations.
@@ -34,10 +54,10 @@ export function registerIpcHandlers(
     channel: Channel,
     argsSchema: z.ZodType<IpcOperations[Channel]['args']>,
     resultSchema: z.ZodType<IpcOperations[Channel]['result']>,
-    execute: (args: IpcOperations[Channel]['args']) => IpcOperations[Channel]['result'],
+    execute: (args: IpcOperations[Channel]['args']) => IpcOperations[Channel]['result'] | Promise<IpcOperations[Channel]['result']>,
   ) {
     // Register once per app lifecycle; resolve the current window for every call.
-    ipc.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]): IpcResult<IpcOperations[Channel]['result']> => {
+    ipc.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]): IpcResult<IpcOperations[Channel]['result']> | Promise<IpcResult<IpcOperations[Channel]['result']>> => {
       try {
         const window = getWindow()
         if (!window || window.isDestroyed()) return { ok: false, error: { code: 'FORBIDDEN' } }
@@ -49,13 +69,15 @@ export function registerIpcHandlers(
         }
         const parsed = argsSchema.safeParse(args)
         if (!parsed.success) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } }
-        // Public diagnostic only. Future protected handlers must check access here,
-        // after sender/argument validation and before executing any operation.
-        // No authentication or permissive authorization placeholder exists today.
-        return { ok: true, data: resultSchema.parse(execute(parsed.data)) }
-      } catch {
+        const result = execute(parsed.data)
+        // Keep synchronous diagnostics synchronous; await privileged operations
+        // before validating output and normalizing errors. No authentication.
+        if (result instanceof Promise) return result.then(data => ({ ok: true as const, data: resultSchema.parse(data) }))
+          .catch(error => ({ ok: false as const, error: { code: error instanceof BackupError ? error.code : 'INTERNAL_ERROR' as const } }))
+        return { ok: true, data: resultSchema.parse(result) }
+      } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: error instanceof BackupError ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

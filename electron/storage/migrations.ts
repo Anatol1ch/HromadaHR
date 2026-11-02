@@ -6,7 +6,7 @@ export interface Migration {
   readonly version: number
   readonly name: string
   readonly sql: string
-  // Fail closed until stage 2.4 provides verified protective copies.
+  // A verified online snapshot must complete before this migration starts.
   readonly requiresBackup?: boolean
 }
 
@@ -19,6 +19,28 @@ export const migrations: readonly Migration[] = [{
     checksum TEXT NOT NULL,
     applied_at TEXT NOT NULL
   ) STRICT`,
+}, {
+  version: 2,
+  name: 'backup_configuration',
+  sql: `CREATE TABLE backup_config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    instance_id TEXT NOT NULL,
+    folder1 TEXT,
+    folder2 TEXT
+  ) STRICT;
+  CREATE TABLE backup_state (
+    slot INTEGER PRIMARY KEY CHECK (slot IN (1, 2)),
+    auto_day TEXT,
+    last_attempt TEXT,
+    last_success TEXT,
+    last_kind TEXT CHECK (last_kind IN ('auto', 'manual')),
+    error TEXT,
+    file_name TEXT,
+    attempt_day TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    retry_after INTEGER NOT NULL DEFAULT 0
+  ) STRICT;
+  INSERT INTO backup_state(slot) VALUES (1), (2)`,
 }]
 
 function checksum(migration: Migration) {
@@ -63,21 +85,36 @@ export function applyMigrations(db: Database.Database, manifest: readonly Migrat
   let version = readSchemaVersion(db, manifest)
   for (const migration of manifest.slice(version)) {
     if (migration.requiresBackup) throw new StorageError('BACKUP_REQUIRED')
-    try {
-      db.transaction(() => {
-        // Recheck after obtaining the write lock; never run a migration twice.
-        if (readSchemaVersion(db, manifest) !== migration.version - 1) throw new StorageError('UNSUPPORTED_SCHEMA')
-        db.exec(migration.sql)
-        db.prepare('INSERT INTO schema_migrations (version, name, checksum, applied_at) VALUES (?, ?, ?, ?)')
-          .run(migration.version, migration.name, checksum(migration), new Date().toISOString())
-        db.pragma(`user_version = ${migration.version}`)
-        if ((db.pragma('foreign_key_check') as unknown[]).length) throw new StorageError('CORRUPT')
-      }).immediate()
-      version = migration.version
-    } catch (error) {
-      const code = storageErrorCode(error)
-      throw new StorageError(code === 'INITIALIZATION_FAILED' ? 'MIGRATION_FAILED' : code)
-    }
+    applyOne(db, manifest, migration)
+    version = migration.version
   }
   return version
+}
+
+export async function applyMigrationsSafely(db: Database.Database, manifest: readonly Migration[],
+  protect: (db: Database.Database, migration: Migration) => Promise<void>): Promise<number> {
+  let version = readSchemaVersion(db, manifest)
+  for (const migration of manifest.slice(version)) {
+    if (migration.requiresBackup) await protect(db, migration)
+    applyOne(db, manifest, migration)
+    version = migration.version
+  }
+  return version
+}
+
+function applyOne(db: Database.Database, manifest: readonly Migration[], migration: Migration) {
+  try {
+    db.transaction(() => {
+      // Recheck after obtaining the write lock; never run a migration twice.
+      if (readSchemaVersion(db, manifest) !== migration.version - 1) throw new StorageError('UNSUPPORTED_SCHEMA')
+      db.exec(migration.sql)
+      db.prepare('INSERT INTO schema_migrations (version, name, checksum, applied_at) VALUES (?, ?, ?, ?)')
+        .run(migration.version, migration.name, checksum(migration), new Date().toISOString())
+      db.pragma(`user_version = ${migration.version}`)
+      if ((db.pragma('foreign_key_check') as unknown[]).length) throw new StorageError('CORRUPT')
+    }).immediate()
+  } catch (error) {
+    const code = storageErrorCode(error)
+    throw new StorageError(code === 'INITIALIZATION_FAILED' ? 'MIGRATION_FAILED' : code)
+  }
 }

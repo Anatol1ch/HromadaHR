@@ -1,5 +1,6 @@
 // Runs as a real Electron Main entry, without BrowserWindow or production profiles.
 const { app } = require('electron')
+const { mkdirSync } = require('node:fs')
 const assert = require('node:assert/strict')
 const { join } = require('node:path')
 const { pathToFileURL } = require('node:url')
@@ -14,13 +15,17 @@ app.disableHardwareAcceleration()
 
 app.whenReady().then(async () => {
   const { openStorage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
+  const { snapshot } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/files.js')).href)
   assert.ok(process.versions.electron)
   const file = join(root, 'data', 'smoke.db')
   const first = openStorage(file)
   try {
-    assert.equal(first.schemaVersion, 1)
+    assert.equal(first.schemaVersion, 2)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
+    const copies = join(root, 'backups')
+    mkdirSync(copies)
+    await snapshot(first.database, copies, 'electron-smoke')
   } finally { first.close() }
   const second = openStorage(file)
   try {
