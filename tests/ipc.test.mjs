@@ -4,11 +4,16 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { registerIpcHandlers } from '../dist-electron/electron/ipc.js'
 import { ipcChannels } from '../dist-electron/shared/ipc.js'
+import { PersonnelError, PersonnelService } from '../dist-electron/electron/personnel/service.js'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { openStorageSafely } from '../dist-electron/electron/storage/index.js'
 
 const url = 'file:///app/dist/index.html'
 const info = { name: 'HromadaHR', version: '0.1.0', mode: 'built' }
 
-function setup(getInfo = () => info, allowedUrl = url) {
+function setup(getInfo = () => info, allowedUrl = url, personnel) {
   const handlers = new Map()
   const contents = { isDestroyed: () => false, mainFrame: { url: allowedUrl } }
   let currentWindow = { isDestroyed: () => false, webContents: contents }
@@ -25,7 +30,7 @@ function setup(getInfo = () => info, allowedUrl = url) {
     saveConfig: async () => { throw new Error('Not selected') }, runManual: async () => { throw new Error('Not configured') },
     confirmRestore: async () => { throw new Error('Not selected') },
     retryStorage: async () => ({ state: 'ready', created: false, schemaVersion: 1 }),
-  }, () => {})
+  }, () => {}, personnel)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   return {
     handlers, event, contents,
@@ -53,7 +58,7 @@ test('Zod rejects every unexpected argument before execution', () => {
 
 test('only allowlisted channel is registered; arbitrary channels have no handler', () => {
   const { handlers } = setup()
-  assert.deepEqual([...handlers.keys()], Object.values(ipcChannels))
+  assert.deepEqual([...handlers.keys()].sort(), Object.values(ipcChannels).sort())
   for (const channel of ['system:delete', 'employees:list', '__proto__', 'invoke']) {
     assert.equal(handlers.has(channel), false)
   }
@@ -134,7 +139,7 @@ test('built preload exposes only the typed method and invokes the real handler',
     calls.push([channel, ...args])
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
-  assert.deepEqual(Object.keys(api).sort(), ['backup', 'storage', 'system'])
+  assert.deepEqual(Object.keys(api).sort(), ['backup', 'personnel', 'storage', 'system'])
   assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getStatus', 'runManual', 'saveConfig'])
   assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'quit'])
   assert.deepEqual(Object.keys(api.storage).sort(), ['getStatus', 'retry'])
@@ -196,4 +201,89 @@ test('backup IPC validates tokens and operation signatures rather than accepting
   const api = preload(async () => { throw new Error('private details') })
   for (const key of ['fs', 'readFile', 'writeFile', 'exec', 'invoke', 'sql', 'delete']) assert.equal(api.backup[key], undefined)
   assert.equal((await api.backup.runManual()).error.code, 'UNAVAILABLE')
+})
+
+test('every personnel channel enforces sender/frame/URL and strict argument schemas', async () => {
+  let executions = 0
+  const personnel = new Proxy({}, { get: () => () => { executions++; return [] } })
+  const fixture = setup(() => info, url, personnel)
+  const id = '11111111-1111-4111-8111-111111111111'
+  const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
+    employeeType: 'official', note: null }
+  const operations = {
+    listEmployees: [], getEmployee: [id], createEmployee: [{ ...details, positionId: id, departmentId: id, category: null, startDate: '2026-01-01' }],
+    updateEmployee: [id, details], getHistory: [id], listDepartments: [],
+    createDepartment: [{ name: 'Тест' }],
+    listPositions: [], createPosition: [{ name: 'Тест' }],
+  }
+  for (const [method, args] of Object.entries(operations)) {
+    const call = fixture.handlers.get(`personnel:${method}`)
+    for (const event of [{ ...fixture.event, sender: {} }, { ...fixture.event, senderFrame: { url } },
+      { ...fixture.event, senderFrame: null }]) {
+      assert.deepEqual(await call(event, ...args), { ok: false, error: { code: 'FORBIDDEN' } }, method)
+    }
+    fixture.contents.mainFrame.url = 'https://example.com/'
+    assert.deepEqual(await call(fixture.event, ...args), { ok: false, error: { code: 'FORBIDDEN' } })
+    fixture.contents.mainFrame.url = url
+    for (const invalid of [[...args, undefined], [{ sql: 'DELETE', path: 'C:\\private' }]]) {
+      assert.deepEqual(await call(fixture.event, ...invalid), { ok: false, error: { code: 'INVALID_ARGUMENTS' } }, method)
+    }
+  }
+  assert.equal(executions, 0)
+  const create = fixture.handlers.get(ipcChannels.personnelCreateEmployee)
+  for (const change of [{ startDate: '2026-02-30' }, { firstName: ' ' }, { birthDate: '2027-01-01' }, { unexpected: true }]) {
+    assert.deepEqual(await create(fixture.event, { ...operations.createEmployee[0], ...change }),
+      { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+  }
+})
+
+test('personnel IPC validates responses and preserves controlled domain errors without leaking exceptions', async () => {
+  for (const [operation, expected] of [
+    [() => [], { ok: true, data: [] }],
+    [() => [{ id: 'bad', path: 'secret' }], { ok: false, error: { code: 'INTERNAL_ERROR' } }],
+    [() => { throw new Error('private SQL') }, { ok: false, error: { code: 'INTERNAL_ERROR' } }],
+    [() => { throw new PersonnelError('CONFLICT') }, { ok: false, error: { code: 'CONFLICT' } }],
+    [() => { throw new PersonnelError('STORAGE_UNAVAILABLE') }, { ok: false, error: { code: 'STORAGE_UNAVAILABLE' } }],
+  ]) {
+    const f = setup(() => info, url, { listEmployees: operation })
+    assert.deepEqual(await f.handlers.get(ipcChannels.personnelListEmployees)(f.event), expected)
+  }
+})
+
+test('preload personnel methods expose exactly the allowlist and fixed argument signatures', async () => {
+  const calls = []
+  const api = preload(async (channel, ...args) => { calls.push([channel, ...args]); return { ok: true, data: null } })
+  const methods = Object.values(ipcChannels).filter(c => c.startsWith('personnel:')).map(c => c.split(':')[1])
+  assert.deepEqual(Object.keys(api.personnel).sort(), methods.sort())
+  for (const method of methods) {
+    await api.personnel[method]('id', 'input', 'extra')
+    const expectedArgs = method.startsWith('list') ? [] : method.startsWith('update') ? ['id', 'input'] : ['id']
+    assert.deepEqual(calls.at(-1), [`personnel:${method}`, ...expectedArgs])
+  }
+  for (const key of ['invoke', 'sql', 'fs', 'database', 'send']) assert.equal(api.personnel[key], undefined)
+})
+
+test('built preload → IPC → personnel → isolated SQLite supports employee creation, reading and personal updates', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'hromadahr-personnel-ipc-'))
+  const connection = await openStorageSafely(join(root, 'test.db'))
+  t.after(() => { connection.close(); rmSync(root, { recursive: true, force: true }) })
+  const service = new PersonnelService({ getDatabase: () => connection.database }, () => false)
+  const f = setup(() => info, url, service)
+  const api = preload(async (channel, ...args) => f.handlers.get(channel)(f.event, ...args)).personnel
+  const department = (await api.createDepartment({ name: 'Відділ' })).data
+  const position = (await api.createPosition({ name: 'Посада' })).data
+  const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
+    employeeType: 'official', note: null }
+  const result = await api.createEmployee({ ...details, positionId: position.id, departmentId: department.id, category: null, startDate: '2026-01-01' })
+  assert.equal(result.ok, true)
+  const employee = result.data
+  assert.equal((await api.getHistory(employee.id)).data.length, 1)
+  assert.equal((await api.listEmployees()).data[0].id, employee.id)
+  assert.equal((await api.updateEmployee(employee.id, { ...details, note: 'Оновлено' })).data.note, 'Оновлено')
+  assert.equal((await api.getEmployee(employee.id)).data.currentAssignment.position.id, position.id)
+  assert.equal((await api.getEmployee(employee.id)).data.hireDate, '2026-01-01')
+  for (const method of ['deleteEmployee', 'addAssignment', 'updateAssignment', 'updatePosition', 'deletePosition', 'updateDepartment', 'deleteDepartment']) {
+    assert.equal(api[method], undefined)
+    assert.equal(f.handlers.has('personnel:' + method), false)
+  }
 })

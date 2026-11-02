@@ -1,3 +1,4 @@
+import { personnelSql } from './personnel-migration.js'
 import { createHash } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { StorageError, storageErrorCode } from './errors.js'
@@ -41,6 +42,11 @@ export const migrations: readonly Migration[] = [{
     retry_after INTEGER NOT NULL DEFAULT 0
   ) STRICT;
   INSERT INTO backup_state(slot) VALUES (1), (2)`,
+}, {
+  version: 3,
+  name: 'personnel_foundation',
+  requiresBackup: true,
+  sql: personnelSql,
 }]
 
 function checksum(migration: Migration) {

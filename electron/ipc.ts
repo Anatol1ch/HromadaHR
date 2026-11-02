@@ -1,3 +1,6 @@
+import { PersonnelError } from './personnel/service.js'
+import type { PersonnelService } from './personnel/service.js'
+import * as personnelSchemas from './personnel/schemas.js'
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { ipcChannels } from '../shared/ipc.js'
@@ -37,6 +40,7 @@ export function registerIpcHandlers(
   getStorageStatus: () => StorageStatus,
   backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
+  personnel: PersonnelService,
 ) {
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
@@ -50,6 +54,25 @@ export function registerIpcHandlers(
   register(ipcChannels.backupChooseRestore, z.tuple([]),
     z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }).nullable(), backup.chooseRestore)
   register(ipcChannels.backupConfirmRestore, z.tuple([token]), z.strictObject({ restored: z.boolean() }), ([value]) => backup.confirmRestore(value))
+
+  register(ipcChannels.personnelListEmployees, z.tuple([]), personnelSchemas.employeeCard.array(),
+    (_args) => personnel.listEmployees())
+  register(ipcChannels.personnelGetEmployee, z.tuple([personnelSchemas.id]), personnelSchemas.employeeCard,
+    ([id]) => personnel.getEmployee(id))
+  register(ipcChannels.personnelCreateEmployee, z.tuple([personnelSchemas.createEmployee]), personnelSchemas.employeeCard,
+    ([input]) => personnel.createEmployee(input))
+  register(ipcChannels.personnelUpdateEmployee, z.tuple([personnelSchemas.id, personnelSchemas.employeeDetails]), personnelSchemas.employeeCard,
+    ([id, input]) => personnel.updateEmployee(id, input))
+  register(ipcChannels.personnelGetHistory, z.tuple([personnelSchemas.id]), personnelSchemas.assignment.array(),
+    ([id]) => personnel.getHistory(id))
+  register(ipcChannels.personnelListDepartments, z.tuple([]), personnelSchemas.department.array(),
+    (_args) => personnel.listDepartments())
+  register(ipcChannels.personnelCreateDepartment, z.tuple([personnelSchemas.departmentInput]), personnelSchemas.department,
+    ([input]) => personnel.createDepartment(input))
+  register(ipcChannels.personnelListPositions, z.tuple([]), personnelSchemas.position.array(),
+    (_args) => personnel.listPositions())
+  register(ipcChannels.personnelCreatePosition, z.tuple([personnelSchemas.positionInput]), personnelSchemas.position,
+    ([input]) => personnel.createPosition(input))
 
   // Internal registration only: channels and signatures come from the allowlist.
   // Keep security checks here when adding future explicitly allowed operations.
@@ -76,11 +99,11 @@ export function registerIpcHandlers(
         // Keep synchronous diagnostics synchronous; await privileged operations
         // before validating output and normalizing errors. No authentication.
         if (result instanceof Promise) return result.then(data => ({ ok: true as const, data: resultSchema.parse(data) }))
-          .catch(error => ({ ok: false as const, error: { code: error instanceof BackupError ? error.code : 'INTERNAL_ERROR' as const } }))
+          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError) ? error.code : 'INTERNAL_ERROR' as const } }))
         return { ok: true, data: resultSchema.parse(result) }
       } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: error instanceof BackupError ? error.code : 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError) ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

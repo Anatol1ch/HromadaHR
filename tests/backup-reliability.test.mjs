@@ -174,6 +174,8 @@ fixtureTest('failure to preserve the original refuses emergency replacement with
   writeFileSync(file, 'damaged original')
   const { storage, service } = await start()
   const selected = await service.chooseRestore(async () => source)
+  // Retain the required pre-v3 snapshot within this isolated fixture.
+  fs.renameSync(join(root, 'data', 'protection'), join(root, 'data', 'migration-protection'))
   writeFileSync(join(root, 'data', 'protection'), 'unrelated object blocks protective directory')
   await assert.rejects(service.confirmRestore(selected.token, async () => true), code('RESTORE_FAILED'))
   assert.equal(readFileSync(file, 'utf8'), 'damaged original')
@@ -183,6 +185,8 @@ fixtureTest('failure to preserve the original refuses emergency replacement with
 
 fixtureTest('corrupt or incompatible source and user cancellation leave damaged originals unchanged', async ({ root, file, source, start }) => {
   const original = Buffer.from('preserve original'); writeFileSync(file, original)
+  const protection = join(root, 'data', 'protection')
+  const previousCopies = readdirSync(protection)
   const { service } = await start()
   const bad = join(root, 'bad.db'); writeFileSync(bad, 'bad source')
   await assert.rejects(service.chooseRestore(async () => bad), code('INVALID_BACKUP'))
@@ -193,7 +197,7 @@ fixtureTest('corrupt or incompatible source and user cancellation leave damaged 
   const selected = await service.chooseRestore(async () => source)
   assert.deepEqual(await service.confirmRestore(selected.token, async () => false), { restored: false })
   assert.deepEqual(readFileSync(file), original)
-  assert.equal(existsSync(join(root, 'data', 'protection')), false)
+  assert.deepEqual(readdirSync(protection), previousCopies)
 })
 
 fixtureTest('exclusive preservation refuses another process capable of modifying the damaged file', async ({ file, source, start }) => {

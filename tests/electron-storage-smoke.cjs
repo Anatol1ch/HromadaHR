@@ -14,22 +14,22 @@ app.setPath('crashDumps', join(root, 'crashes'))
 app.disableHardwareAcceleration()
 
 app.whenReady().then(async () => {
-  const { openStorage, Storage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
+  const { openStorageSafely, Storage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
   const { BackupService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/service.js')).href)
   const { snapshot } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/files.js')).href)
   assert.ok(process.versions.electron)
   const file = join(root, 'data', 'smoke.db')
-  const first = openStorage(file)
+  const first = await openStorageSafely(file)
   let source
   try {
-    assert.equal(first.schemaVersion, 2)
+    assert.equal(first.schemaVersion, 3)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
   } finally { first.close() }
-  const second = openStorage(file)
+  const second = await openStorageSafely(file)
   try {
     assert.equal(second.created, false)
     assert.equal(second.database.prepare('SELECT value FROM test_smoke').get().value, 'persisted')

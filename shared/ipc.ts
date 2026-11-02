@@ -1,6 +1,16 @@
+import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  personnelListEmployees: 'personnel:listEmployees',
+  personnelGetEmployee: 'personnel:getEmployee',
+  personnelCreateEmployee: 'personnel:createEmployee',
+  personnelUpdateEmployee: 'personnel:updateEmployee',
+  personnelGetHistory: 'personnel:getHistory',
+  personnelListDepartments: 'personnel:listDepartments',
+  personnelCreateDepartment: 'personnel:createDepartment',
+  personnelListPositions: 'personnel:listPositions',
+  personnelCreatePosition: 'personnel:createPosition',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
   storageRetry: 'storage:retry', systemQuit: 'system:quit',
   backupGetStatus: 'backup:getStatus', backupChooseFolder: 'backup:chooseFolder', backupSaveConfig: 'backup:saveConfig',
@@ -19,10 +29,19 @@ export interface SystemInfo {
   mode: 'dev' | 'built'
 }
 
-export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode
+export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.personnelListEmployees]: { args: []; result: EmployeeCard[] }
+  [ipcChannels.personnelGetEmployee]: { args: [string]; result: EmployeeCard }
+  [ipcChannels.personnelCreateEmployee]: { args: [CreateEmployee]; result: EmployeeCard }
+  [ipcChannels.personnelUpdateEmployee]: { args: [string, EmployeeDetails]; result: EmployeeCard }
+  [ipcChannels.personnelGetHistory]: { args: [string]; result: Assignment[] }
+  [ipcChannels.personnelListDepartments]: { args: []; result: Department[] }
+  [ipcChannels.personnelCreateDepartment]: { args: [Omit<Department, 'id'>]; result: Department }
+  [ipcChannels.personnelListPositions]: { args: []; result: Position[] }
+  [ipcChannels.personnelCreatePosition]: { args: [Omit<Position, 'id'>]; result: Position }
   [ipcChannels.systemGetInfo]: { args: []; result: SystemInfo }
   [ipcChannels.storageGetStatus]: { args: []; result: StorageStatus }
   [ipcChannels.storageRetry]: { args: []; result: StorageStatus }
@@ -36,6 +55,7 @@ export interface IpcOperations {
 }
 
 export interface HromadaHRApi {
+  readonly personnel: PersonnelApi
   readonly backup: BackupApi
   readonly system: {
     readonly quit: () => Promise<IpcResult<null>>

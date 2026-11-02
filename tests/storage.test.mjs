@@ -5,13 +5,16 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve, sep } from 'node:path'
 import Database from 'better-sqlite3'
 import { openStorage, Storage, storagePath } from '../dist-electron/electron/storage/index.js'
-import { applyMigrations, migrations } from '../dist-electron/electron/storage/migrations.js'
+import { applyMigrations, migrations as currentMigrations } from '../dist-electron/electron/storage/migrations.js'
+
+// Baseline v2 fixtures exercise low-level synchronous storage without bypassing critical v3.
+const migrations = currentMigrations.slice(0, 2)
 
 function temporaryTest(name, run) {
   test(name, () => {
     const root = mkdtempSync(join(tmpdir(), 'hromadahr-storage-'))
     const handles = []
-    const open = (file = join(root, 'data', 'test.db'), manifest) => {
+    const open = (file = join(root, 'data', 'test.db'), manifest = migrations) => {
       const handle = openStorage(file, manifest)
       handles.push(handle)
       return handle
@@ -185,20 +188,20 @@ temporaryTest('critical migrations require a protective-copy implementation and 
 temporaryTest('filesystem failures become explicit status and do not replace existing objects', ({ root }) => {
   const file = join(root, 'directory.db')
   mkdirSync(file)
-  const storage = new Storage()
+  const storage = new Storage(migrations)
   storage.initialize(() => file)
   assert.deepEqual(storage.getStatus(), { state: 'error', code: 'FILESYSTEM' })
   assert.equal(existsSync(file), true)
   const blocker = join(root, 'blocker')
   writeFileSync(blocker, 'preserve')
-  const inaccessible = new Storage()
+  const inaccessible = new Storage(migrations)
   inaccessible.initialize(() => join(blocker, 'test.db'))
   assert.deepEqual(inaccessible.getStatus(), { state: 'error', code: 'FILESYSTEM' })
   assert.equal(readFileSync(blocker, 'utf8'), 'preserve')
 })
 
 temporaryTest('storage owner initializes once, reports sanitized failures and closes cleanly', ({ file, root }) => {
-  const storage = new Storage()
+  const storage = new Storage(migrations)
   assert.deepEqual(storage.getStatus(), { state: 'initializing' })
   try {
     storage.initialize(() => file)
@@ -209,7 +212,7 @@ temporaryTest('storage owner initializes once, reports sanitized failures and cl
   assert.deepEqual(storage.getStatus(), { state: 'closed' })
   const broken = join(root, 'broken.db')
   writeFileSync(broken, 'broken')
-  const failed = new Storage()
+  const failed = new Storage(migrations)
   failed.initialize(() => broken)
   assert.deepEqual(failed.getStatus(), { state: 'error', code: 'CORRUPT' })
 })

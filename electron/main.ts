@@ -1,3 +1,4 @@
+import { PersonnelService } from './personnel/service.js'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -65,7 +66,7 @@ if (!hasLock) {
 } else {
   registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
     name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
-  }), () => storage.getStatus(), backupController, () => app.quit())
+  }), () => storage.getStatus(), backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()))
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
