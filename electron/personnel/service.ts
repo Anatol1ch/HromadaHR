@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
-import type { Assignment, CreateEmployee, Department, Employee, EmployeeCard, EmployeeDetails, PersonnelErrorCode, Position } from '../../shared/personnel.js'
+import type { Assignment, AssignmentInput, CreateEmployee, Department, Employee, EmployeeCard, EmployeeDetails, PersonnelErrorCode, Position } from '../../shared/personnel.js'
 import * as schemas from './schemas.js'
 
 export class PersonnelError extends Error {
@@ -12,7 +12,11 @@ const assignmentColumns = 'id, employee_id AS employeeId, position_id AS positio
 
 // Main-only. Resolve the current connection on every operation, including after restore.
 export class PersonnelService {
-  constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean) {}
+  constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean,
+    private readonly today = () => {
+      const date = new Date()
+      return [String(date.getFullYear()).padStart(4, '0'), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+    }) {}
 
   private run<T>(operation: (db: Database.Database) => T): T {
     if (this.isBusy()) throw new PersonnelError('BUSY')
@@ -79,6 +83,78 @@ export class PersonnelService {
       if (!db.prepare('SELECT id FROM employees WHERE id=?').get(id)) throw new PersonnelError('NOT_FOUND')
       return db.prepare<[string], Assignment>('SELECT ' + assignmentColumns + ' FROM employee_positions WHERE employee_id=? ORDER BY start_date').all(id)
     })())
+  }
+  private checkReferences(db: Database.Database, input: AssignmentInput) {
+    if (!db.prepare('SELECT 1 FROM departments WHERE id=?').get(input.departmentId) ||
+      !db.prepare('SELECT 1 FROM positions WHERE id=?').get(input.positionId)) throw new PersonnelError('NOT_FOUND')
+  }
+  private assignmentOwner(db: Database.Database, assignmentId: string): string {
+    const row = db.prepare<[string], { employeeId: string }>('SELECT employee_id AS employeeId FROM employee_positions WHERE id=?').get(assignmentId)
+    if (!row) throw new PersonnelError('NOT_FOUND')
+    return row.employeeId
+  }
+  private checkAssignmentDate(db: Database.Database, employeeId: string, input: AssignmentInput, excludeId: string | null = null) {
+    if (input.startDate > this.today()) throw new PersonnelError('FUTURE_ASSIGNMENT')
+    if (db.prepare('SELECT 1 FROM employee_positions WHERE employee_id=? AND start_date=? AND (? IS NULL OR id!=?)')
+      .get(employeeId, input.startDate, excludeId, excludeId)) throw new PersonnelError('DUPLICATE_ASSIGNMENT_DATE')
+  }
+  private checkChronology(db: Database.Database, employeeId: string) {
+    const employee = db.prepare<[string], { birthDate: string | null }>('SELECT birth_date AS birthDate FROM employees WHERE id=?').get(employeeId)
+    if (!employee) throw new PersonnelError('NOT_FOUND')
+    const history = db.prepare<[string], Assignment>('SELECT ' + assignmentColumns + ' FROM employee_positions WHERE employee_id=? ORDER BY start_date').all(employeeId)
+    if (!history.length) throw new PersonnelError('LAST_ASSIGNMENT')
+    const today = this.today()
+    for (let index = 0; index < history.length; index++) {
+      const row = history[index]
+      if (row.startDate > today) throw new PersonnelError('FUTURE_ASSIGNMENT')
+      if (employee.birthDate !== null && row.startDate < employee.birthDate) throw new PersonnelError('ASSIGNMENT_BEFORE_BIRTH')
+      const previous = history[index - 1]
+      if (previous && previous.departmentId === row.departmentId && previous.positionId === row.positionId && previous.category === row.category) {
+        throw new PersonnelError('NO_ASSIGNMENT_CHANGE')
+      }
+    }
+  }
+  createAssignment = (employeeId: string, input: AssignmentInput) => {
+    this.parse(schemas.id, employeeId)
+    const value = this.parse(schemas.assignmentInput, input)
+    return this.run(db => db.transaction(() => {
+      if (!db.prepare('SELECT 1 FROM employees WHERE id=?').get(employeeId)) throw new PersonnelError('NOT_FOUND')
+      this.checkReferences(db, value)
+      this.checkAssignmentDate(db, employeeId, value)
+      db.prepare('INSERT INTO employee_positions(id, employee_id, department_id, position_id, category, start_date) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(randomUUID(), employeeId, value.departmentId, value.positionId, value.category, value.startDate)
+      this.checkChronology(db, employeeId)
+      return this.card(db, employeeId)
+    }).immediate())
+  }
+  updateAssignment = (assignmentId: string, input: AssignmentInput) => {
+    this.parse(schemas.id, assignmentId)
+    const value = this.parse(schemas.assignmentInput, input)
+    return this.run(db => db.transaction(() => {
+      const employeeId = this.assignmentOwner(db, assignmentId)
+      this.checkReferences(db, value)
+      this.checkAssignmentDate(db, employeeId, value, assignmentId)
+      db.prepare('UPDATE employee_positions SET department_id=?, position_id=?, category=?, start_date=? WHERE id=?')
+        .run(value.departmentId, value.positionId, value.category, value.startDate, assignmentId)
+      this.checkChronology(db, employeeId)
+      return this.card(db, employeeId)
+    }).immediate())
+  }
+  deleteAssignment = (assignmentId: string) => {
+    this.parse(schemas.id, assignmentId)
+    return this.run(db => db.transaction(() => {
+      const employeeId = this.assignmentOwner(db, assignmentId)
+      db.prepare('DELETE FROM employee_positions WHERE id=?').run(assignmentId)
+      this.checkChronology(db, employeeId) // Includes last-record and newly adjacent duplicates; failure rolls back.
+      return this.card(db, employeeId)
+    }).immediate())
+  }
+  deleteEmployee = (employeeId: string) => {
+    this.parse(schemas.id, employeeId)
+    return this.run(db => db.transaction(() => {
+      if (!db.prepare('DELETE FROM employees WHERE id=?').run(employeeId).changes) throw new PersonnelError('NOT_FOUND')
+      return null // Existing FK CASCADE removes history, while dictionaries remain untouched.
+    }).immediate())
   }
   listDepartments = () => this.run(db => db.prepare<[], Department>('SELECT id, name FROM departments ORDER BY name_key, id').all())
   listPositions = () => this.run(db => db.prepare<[], Position>('SELECT id, name FROM positions ORDER BY name_key, id').all())

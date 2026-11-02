@@ -27,6 +27,9 @@ export const departmentInput = z.strictObject({ name: dictionaryName })
 export const positionInput = z.strictObject({ name: dictionaryName })
 export const department = z.strictObject({ id, name: text })
 export const position = z.strictObject({ id, name: text })
+export const assignmentInput = z.strictObject({
+  departmentId: id, positionId: id, category: text.nullable(), startDate: calendarDate,
+})
 export const assignment = z.strictObject({
   id, employeeId: id, positionId: id, departmentId: id, category: text.nullable(), startDate: calendarDate,
 })

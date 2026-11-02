@@ -210,7 +210,9 @@ test('every personnel channel enforces sender/frame/URL and strict argument sche
   const id = '11111111-1111-4111-8111-111111111111'
   const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
     employeeType: 'official', note: null }
+  const assignmentInput = { departmentId: id, positionId: id, category: null, startDate: '2026-02-01' }
   const operations = {
+    createAssignment: [id, assignmentInput], updateAssignment: [id, assignmentInput], deleteAssignment: [id], deleteEmployee: [id],
     listEmployees: [], getEmployee: [id], createEmployee: [{ ...details, positionId: id, departmentId: id, category: null, startDate: '2026-01-01' }],
     updateEmployee: [id, details], getHistory: [id], listDepartments: [],
     createDepartment: [{ name: 'Тест' }],
@@ -257,17 +259,17 @@ test('preload personnel methods expose exactly the allowlist and fixed argument 
   assert.deepEqual(Object.keys(api.personnel).sort(), methods.sort())
   for (const method of methods) {
     await api.personnel[method]('id', 'input', 'extra')
-    const expectedArgs = method.startsWith('list') ? [] : method.startsWith('update') ? ['id', 'input'] : ['id']
+    const expectedArgs = method.startsWith('list') ? [] : (method.startsWith('update') || method === 'createAssignment') ? ['id', 'input'] : ['id']
     assert.deepEqual(calls.at(-1), [`personnel:${method}`, ...expectedArgs])
   }
   for (const key of ['invoke', 'sql', 'fs', 'database', 'send']) assert.equal(api.personnel[key], undefined)
 })
 
-test('built preload → IPC → personnel → isolated SQLite supports employee creation, reading and personal updates', async t => {
+test('built preload → IPC → personnel → isolated SQLite supports personal updates, history mutations and complete employee deletion', async t => {
   const root = mkdtempSync(join(tmpdir(), 'hromadahr-personnel-ipc-'))
   const connection = await openStorageSafely(join(root, 'test.db'))
   t.after(() => { connection.close(); rmSync(root, { recursive: true, force: true }) })
-  const service = new PersonnelService({ getDatabase: () => connection.database }, () => false)
+  const service = new PersonnelService({ getDatabase: () => connection.database }, () => false, () => '2026-11-02')
   const f = setup(() => info, url, service)
   const api = preload(async (channel, ...args) => f.handlers.get(channel)(f.event, ...args)).personnel
   const department = (await api.createDepartment({ name: 'Відділ' })).data
@@ -282,8 +284,35 @@ test('built preload → IPC → personnel → isolated SQLite supports employee 
   assert.equal((await api.updateEmployee(employee.id, { ...details, note: 'Оновлено' })).data.note, 'Оновлено')
   assert.equal((await api.getEmployee(employee.id)).data.currentAssignment.position.id, position.id)
   assert.equal((await api.getEmployee(employee.id)).data.hireDate, '2026-01-01')
-  for (const method of ['deleteEmployee', 'addAssignment', 'updateAssignment', 'updatePosition', 'deletePosition', 'updateDepartment', 'deleteDepartment']) {
+  const assignment = { positionId: position.id, departmentId: department.id, category: 'Інша', startDate: '2026-02-01' }
+  assert.equal((await api.createAssignment(employee.id, assignment)).data.currentAssignment.category, 'Інша')
+  const latest = (await api.getHistory(employee.id)).data[1]
+  assert.equal((await api.updateAssignment(latest.id, { ...assignment, startDate: '2026-03-01' })).data.currentAssignment.startDate, '2026-03-01')
+  assert.equal((await api.deleteAssignment(latest.id)).data.currentAssignment.startDate, '2026-01-01')
+  assert.equal((await api.deleteAssignment((await api.getHistory(employee.id)).data[0].id)).error.code, 'LAST_ASSIGNMENT')
+  assert.equal((await api.deleteEmployee(employee.id)).ok, true)
+  assert.equal((await api.getEmployee(employee.id)).error.code, 'NOT_FOUND')
+  assert.equal(connection.database.prepare('SELECT count(*) n FROM employee_positions').get().n, 0)
+  assert.equal((await api.listDepartments()).data.length, 1)
+  assert.equal((await api.listPositions()).data.length, 1)
+  for (const method of ['addAssignment', 'updatePosition', 'deletePosition', 'updateDepartment', 'deleteDepartment']) {
     assert.equal(api[method], undefined)
     assert.equal(f.handlers.has('personnel:' + method), false)
+  }
+})
+
+test('new personnel mutations reject malformed input and invalid privileged replies', async () => {
+  const id = '11111111-1111-4111-8111-111111111111'
+  const input = { startDate: '2026-02-01', departmentId: id, positionId: id, category: null }
+  const methods = ['createAssignment', 'updateAssignment', 'deleteAssignment', 'deleteEmployee']
+  const fixture = setup(() => info, url, Object.fromEntries(methods.map(method => [method, () => undefined])))
+  for (const method of methods) {
+    const handler = fixture.handlers.get('personnel:' + method)
+    const args = method.startsWith('delete') ? [id] : [id, input]
+    assert.deepEqual(await handler(fixture.event, ...args), { ok: false, error: { code: 'INTERNAL_ERROR' } })
+    assert.deepEqual(await handler(fixture.event, 'not-id', ...args.slice(1)), { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+    if (!method.startsWith('delete')) for (const change of [{ startDate: '2026-02-30' }, { category: '' }, { sql: 'DELETE' }, { employeeId: id }]) {
+      assert.deepEqual(await handler(fixture.event, id, { ...input, ...change }), { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+    }
   }
 })

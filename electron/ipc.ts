@@ -55,6 +55,14 @@ export function registerIpcHandlers(
     z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }).nullable(), backup.chooseRestore)
   register(ipcChannels.backupConfirmRestore, z.tuple([token]), z.strictObject({ restored: z.boolean() }), ([value]) => backup.confirmRestore(value))
 
+  register(ipcChannels.personnelCreateAssignment, z.tuple([personnelSchemas.id, personnelSchemas.assignmentInput]), personnelSchemas.employeeCard,
+    ([id, input]) => personnel.createAssignment(id, input))
+  register(ipcChannels.personnelUpdateAssignment, z.tuple([personnelSchemas.id, personnelSchemas.assignmentInput]), personnelSchemas.employeeCard,
+    ([id, input]) => personnel.updateAssignment(id, input))
+  register(ipcChannels.personnelDeleteAssignment, z.tuple([personnelSchemas.id]), personnelSchemas.employeeCard,
+    ([id]) => personnel.deleteAssignment(id))
+  register(ipcChannels.personnelDeleteEmployee, z.tuple([personnelSchemas.id]), z.null(),
+    ([id]) => personnel.deleteEmployee(id))
   register(ipcChannels.personnelListEmployees, z.tuple([]), personnelSchemas.employeeCard.array(),
     (_args) => personnel.listEmployees())
   register(ipcChannels.personnelGetEmployee, z.tuple([personnelSchemas.id]), personnelSchemas.employeeCard,

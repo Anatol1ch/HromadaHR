@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react'
+import type { RefObject } from 'react'
+import DeleteConfirmation from './DeleteConfirmation'
+import useUnsavedChanges from './useUnsavedChanges'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import type { Assignment, Department, EmployeeCard as EmployeeData, Position } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, historyRows, personnelMessage } from '../../employees/model'
@@ -7,7 +10,8 @@ import DataState from '../DataState'
 
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
 interface CardData { employee: EmployeeData; history: Assignment[]; departments: Department[]; positions: Position[] }
-export default function EmployeeCard({ id, onBack, onEdit, onLoaded }: {
+export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, onDeleted, navigationGuard }: {
+  navigationGuard: RefObject<() => boolean>; onAssign: (employee: EmployeeData, assignment?: Assignment) => void; onDeleted: (id: string) => void
   id: string; onBack: () => void; onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
   const [data, setData] = useState<CardData | null>(null)
@@ -15,6 +19,33 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded }: {
   const [loading, setLoading] = useState(true)
   const [retry, setRetry] = useState(0)
   const [tab, setTab] = useState(0)
+  const [deleteTarget, setDeleteTarget] = useState<'employee' | Assignment | null>(null)
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [notice, setNotice] = useState('')
+  const inFlight = useRef(false), alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useUnsavedChanges(false, inFlight, navigationGuard)
+  async function confirmDelete() {
+    if (!deleteTarget || inFlight.current) return
+    inFlight.current = true; setDeleting(true); setDeleteError('')
+    try {
+      if (deleteTarget === 'employee') {
+        const result = await window.hromadaHR.personnel.deleteEmployee(id)
+        if (!alive.current) return
+        if (!result.ok) { setDeleteError(personnelMessage(result.error.code)); return }
+        onDeleted(id)
+      } else {
+        const result = await window.hromadaHR.personnel.deleteAssignment(deleteTarget.id)
+        if (!alive.current) return
+        if (!result.ok) { setDeleteError(personnelMessage(result.error.code)); return }
+        setDeleteTarget(null); setNotice('Помилкове призначення видалено. Історію оновлено.')
+        onLoaded(result.data); setRetry(value => value + 1)
+      }
+    } catch { if (alive.current) setDeleteError('Результат видалення не підтверджено. Закрийте цей діалог і оновіть картку перед повторною спробою.') }
+    finally { inFlight.current = false; if (alive.current) setDeleting(false) }
+  }
+  function askDelete(target: 'employee' | Assignment) { setDeleteError(''); setDeleteTarget(target) }
   useEffect(() => {
     let alive = true
     setLoading(true); setError('')
@@ -37,14 +68,15 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded }: {
   useEffect(() => {
     if (!loading) document.querySelector<HTMLElement>('[data-page-title]')?.focus()
   }, [loading])
+  const feedback = notice ? <Alert variant="success" onDismiss={() => setNotice('')}>{notice}</Alert> : null
   const back = <button className="employee-link employee-back" type="button" onClick={onBack}><ArrowLeft size={17} aria-hidden="true" />До реєстру</button>
-  if (loading) return <>{back}<h1 className="visually-hidden" tabIndex={-1} data-page-title>Особова картка</h1><section className="dashboard-panel"><DataState kind="loading" message="Завантаження особової картки…" /></section></>
-  if (error || !data) return <>{back}<h1 tabIndex={-1} data-page-title>Особова картка</h1><Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error || 'Картка недоступна.'}</Alert></>
+  if (loading) return <>{feedback}{back}<h1 className="visually-hidden" tabIndex={-1} data-page-title>Особова картка</h1><section className="dashboard-panel"><DataState kind="loading" message="Завантаження особової картки…" /></section></>
+  if (error || !data) return <>{feedback}{back}<h1 tabIndex={-1} data-page-title>Особова картка</h1><Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error || 'Картка недоступна.'}</Alert></>
   const { employee, history, departments, positions } = data
   const departmentNames = new Map(departments.map(value => [value.id, value.name]))
   const positionNames = new Map(positions.map(value => [value.id, value.name]))
   return <article className="employee-card">
-    {back}
+    {feedback}{back}
     <header className="dashboard-panel employee-card-header">
       <div className="employee-avatar" aria-hidden="true">{employee.lastName.slice(0, 1)}{employee.firstName.slice(0, 1)}</div>
       <div className="employee-card-identity"><div className="eyebrow">ОСОБОВА КАРТКА</div>
@@ -86,7 +118,8 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded }: {
           </section>
         </div>
         <section className="dashboard-panel employee-note-panel" aria-labelledby="employee-note-title"><h2 id="employee-note-title">Примітка</h2><p className="employee-note">{employee.note ?? 'Примітку не додано.'}</p></section>
-        <section className="dashboard-panel employee-history-panel" aria-labelledby="employee-history-title"><h2 id="employee-history-title">Історія посад</h2>
+        <section className="dashboard-panel employee-history-panel" aria-labelledby="employee-history-title"><div className="employee-history-heading"><h2 id="employee-history-title">Історія посад</h2>
+          <button className="secondary-button" type="button" disabled={deleting} onClick={() => onAssign(employee)}>Додати кадрову зміну</button></div>
           <p className="employee-muted">Від останнього призначення до першого</p>
           {history.length === 0 ? <DataState kind="empty" compact message="Історія призначень відсутня" /> :
             <ol className="employee-history">{historyRows(history).map((assignment, index) => <li key={assignment.id}>
@@ -95,9 +128,29 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded }: {
               <h3>{positionNames.get(assignment.positionId) ?? 'Посаду не знайдено у довіднику'}</h3>
               <p>{departmentNames.get(assignment.departmentId) ?? 'Підрозділ не знайдено у довіднику'}</p>
               <p className="employee-muted">Категорія: {assignment.category ?? 'не зазначено'}</p>
+              <div className="employee-actions employee-history-actions">
+                <button type="button" className="secondary-button" disabled={deleting} onClick={() => onAssign(employee, assignment)} aria-label={`Виправити призначення від ${displayDate(assignment.startDate)}`}>Виправити</button>
+                <button type="button" className="danger-button danger-button-outline" disabled={deleting || history.length <= 1}
+                  title={history.length <= 1 ? 'Єдиний запис історії не можна видалити' : undefined}
+                  aria-label={`Видалити призначення від ${displayDate(assignment.startDate)}`} onClick={() => askDelete(assignment)}>Видалити запис</button>
+              </div>
             </li>)}</ol>}
+          {history.length === 1 && <p className="employee-hint">Єдиний запис історії можна виправити, але не видалити.</p>}
         </section>
       </>}
     </div>)}
+    <section className="dashboard-panel employee-danger-zone" aria-labelledby="delete-employee-title">
+      <h2 id="delete-employee-title">Видалення працівника</h2>
+      <p>Повністю видалити особову картку та всю історію призначень без можливості скасувати цю дію.</p>
+      <button type="button" className="danger-button danger-button-outline" disabled={deleting} onClick={() => askDelete('employee')}>Видалити працівника</button>
+    </section>
+    {deleteTarget && <DeleteConfirmation title={deleteTarget === 'employee' ? 'Видалити працівника назавжди?' : 'Видалити помилкове призначення?'}
+      pending={deleting} error={deleteError} onCancel={() => { if (!inFlight.current) setDeleteTarget(null) }} onConfirm={() => { void confirmDelete() }}
+      confirmLabel={deleteTarget === 'employee' ? 'Видалити назавжди' : 'Видалити запис'}>
+      <p><strong>{fullName(employee)}</strong></p>
+      {deleteTarget === 'employee' ? <><p>Записів історії: <strong>{history.length}</strong>.</p><p>Особову картку й усі її призначення буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p></> :
+        <><p>Призначення від {displayDate(deleteTarget.startDate)}: {positionNames.get(deleteTarget.positionId) ?? 'Посада не знайдена'}, {departmentNames.get(deleteTarget.departmentId) ?? 'Підрозділ не знайдений'}.</p>
+          <p>Запис буде видалено. Дата прийняття та поточна посада визначатимуться за рештою історії.</p></>}
+    </DeleteConfirmation>}
   </article>
 }

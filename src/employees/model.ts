@@ -1,4 +1,4 @@
-import type { Assignment, CreateEmployee, EmployeeCard, EmployeeDetails, EmployeeType } from '../../shared/personnel'
+import type { Assignment, AssignmentInput, CreateEmployee, EmployeeCard, EmployeeDetails, EmployeeType } from '../../shared/personnel'
 import type { IpcErrorCode } from '../../shared/ipc'
 
 export const employeeTypeLabels: Record<EmployeeType, string> = {
@@ -22,7 +22,7 @@ export function historyRows(history: Assignment[]) {
   return ordered.map((assignment, index) => {
     const next = ordered[index + 1]
     let endDate: string | null = null
-    if (next) {
+    if (next && validDate(next.startDate) && validDate(assignment.startDate) && next.startDate > '0001-01-01' && next.startDate > assignment.startDate) {
       const date = new Date(`${next.startDate}T00:00:00Z`)
       date.setUTCDate(date.getUTCDate() - 1)
       endDate = date.toISOString().slice(0, 10)
@@ -82,6 +82,11 @@ export function validateEmployee(values: FormValues, editing: boolean): FormErro
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'FUTURE_ASSIGNMENT': return 'Майбутні кадрові зміни заборонені. Якщо така дата вже є в історії, відкрийте відповідний запис і виправте її явно.'
+    case 'DUPLICATE_ASSIGNMENT_DATE': return 'На цю дату вже є призначення. Виберіть іншу дату або виправте наявний запис.'
+    case 'NO_ASSIGNMENT_CHANGE': return 'Сусідні призначення не можуть мати однакові посаду, підрозділ і категорію. Перевірте попередній та наступний записи.'
+    case 'ASSIGNMENT_BEFORE_BIRTH': return 'Призначення не може починатися раніше дати народження працівника.'
+    case 'LAST_ASSIGNMENT': return 'Єдиний запис історії видалити не можна. Для повного видалення працівника є окрема дія.'
     case 'BUSY': return 'Зараз триває інша операція зі сховищем. Зачекайте й повторіть спробу.'
     case 'CONFLICT': return 'Виник конфлікт даних. Перевірте відомості та повторіть спробу.'
     case 'NOT_FOUND': return 'Запис більше не знайдено. Поверніться до реєстру та оновіть дані.'
@@ -89,4 +94,20 @@ export function personnelMessage(code: IpcErrorCode): string {
     case 'STORAGE_UNAVAILABLE': return 'Локальне сховище зараз недоступне. Спробуйте ще раз після його відновлення.'
     default: return 'Не вдалося виконати операцію. Перевірте доступність застосунку та повторіть спробу.'
   }
+}
+
+export type AssignmentValues = Omit<AssignmentInput, 'category'> & { category: string }
+export function localToday() {
+  const now = new Date()
+  return [String(now.getFullYear()).padStart(4, '0'), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-')
+}
+export function validateAssignment(values: AssignmentValues, birthDate: string | null, today: string): FormErrors {
+  const errors: FormErrors = {}
+  if (!validDate(values.startDate)) errors.startDate = 'Введіть коректну календарну дату.'
+  else if (values.startDate > today) errors.startDate = 'Майбутні кадрові зміни заборонені. Виправте дату.'
+  else if (birthDate && values.startDate < birthDate) errors.startDate = 'Дата не може бути ранішою за дату народження.'
+  if (!values.departmentId) errors.departmentId = 'Виберіть підрозділ.'
+  if (!values.positionId) errors.positionId = 'Виберіть посаду.'
+  if (values.category.trim().length > 200) errors.category = 'Не більше 200 символів.'
+  return errors
 }

@@ -35,6 +35,7 @@ export default function EmployeeRegistry({ employees, loading, error, query, dep
           <div className="employee-field"><label htmlFor="employee-department-filter">Підрозділ</label>
             <select id="employee-department-filter" value={departmentId} onChange={event => onDepartment(event.target.value)}>
               <option value="">Усі підрозділи</option>
+              {departmentId && !departments.some(department => department.id === departmentId) && <option value={departmentId}>Обраний підрозділ — немає працівників</option>}
               {departments.map(department => <option value={department.id} key={department.id}>{department.name}</option>)}
             </select>
           </div>

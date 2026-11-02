@@ -1,6 +1,7 @@
+import AssignmentForm from './AssignmentForm'
 import { useCallback, useEffect, useState } from 'react'
 import type { RefObject } from 'react'
-import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
+import type { Assignment, EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { fullName, personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import EmployeeRegistry from './EmployeeRegistry'
@@ -9,7 +10,7 @@ import EmployeeForm from './EmployeeForm'
 
 export interface EmployeeBreadcrumb { label: string; onBack: () => void }
 type View = { kind: 'registry' } | { kind: 'create' } |
-  { kind: 'card'; id: string; label: string } | { kind: 'edit'; employee: EmployeeData }
+  { kind: 'card'; id: string; label: string } | { kind: 'edit'; employee: EmployeeData } | { kind: 'assignment'; employee: EmployeeData; assignment?: Assignment }
 export default function EmployeesWorkspace({ navigationGuard, onBreadcrumb }: {
   navigationGuard: RefObject<() => boolean>
   onBreadcrumb: (value: EmployeeBreadcrumb | null) => void
@@ -28,7 +29,7 @@ export default function EmployeesWorkspace({ navigationGuard, onBreadcrumb }: {
     if (navigationGuard.current()) setView({ kind: 'registry' })
   }, [navigationGuard])
   const label = view.kind === 'create' ? 'Новий працівник' : view.kind === 'card' ? view.label :
-    view.kind === 'edit' ? `Редагування: ${fullName(view.employee)}` : ''
+    view.kind === 'edit' ? `Редагування: ${fullName(view.employee)}` : view.kind === 'assignment' ? `Історія: ${fullName(view.employee)}` : ''
   useEffect(() => {
     onBreadcrumb(isRegistry ? null : { label, onBack: goList })
     return () => onBreadcrumb(null)
@@ -49,13 +50,19 @@ export default function EmployeesWorkspace({ navigationGuard, onBreadcrumb }: {
     return () => { alive = false }
   }, [isRegistry, retry])
   const updateFromCard = useCallback((employee: EmployeeData) => {
+    setEmployees(current => current.map(value => value.id === employee.id ? employee : value))
     setView(current => current.kind === 'card' && current.id === employee.id && current.label !== fullName(employee) ?
       { ...current, label: fullName(employee) } : current)
   }, [])
   function saved(employee: EmployeeData) {
     setEmployees(current => current.some(value => value.id === employee.id) ? current.map(value => value.id === employee.id ? employee : value) : [...current, employee])
-    setNotice(view.kind === 'create' ? 'Працівника створено. Початкове призначення збережено.' : 'Персональні відомості оновлено.')
+    setNotice(view.kind === 'create' ? 'Працівника створено. Початкове призначення збережено.' : view.kind === 'assignment' ? 'Історію призначень оновлено.' : 'Персональні відомості оновлено.')
     setView({ kind: 'card', id: employee.id, label: fullName(employee) })
+  }
+  function cancelForm() {
+    if (!navigationGuard.current()) return
+    if (view.kind === 'edit' || view.kind === 'assignment') setView({ kind: 'card', id: view.employee.id, label: fullName(view.employee) })
+    else setView({ kind: 'registry' })
   }
   return <div className="employees-workspace">
     {notice && <Alert variant="success" onDismiss={() => setNotice('')}>{notice}</Alert>}
@@ -63,13 +70,12 @@ export default function EmployeesWorkspace({ navigationGuard, onBreadcrumb }: {
       query={query} departmentId={departmentId} descending={descending} onQuery={setQuery} onDepartment={setDepartmentId}
       onSort={() => setDescending(value => !value)} onRetry={() => setRetry(value => value + 1)}
       onCreate={() => { setNotice(''); setView({ kind: 'create' }) }} onOpen={employee => { setNotice(''); setView({ kind: 'card', id: employee.id, label: fullName(employee) }) }} /> :
-      view.kind === 'card' ? <EmployeeCard key={view.id} id={view.id} onBack={goList} onLoaded={updateFromCard}
+      view.kind === 'card' ? <EmployeeCard key={view.id} id={view.id} onBack={goList} onLoaded={updateFromCard} navigationGuard={navigationGuard}
+        onAssign={(employee, assignment) => { setNotice(''); setView({ kind: 'assignment', employee, assignment }) }}
+        onDeleted={id => { setEmployees(current => current.filter(employee => employee.id !== id)); setNotice('Працівника та всю історію призначень видалено.'); setView({ kind: 'registry' }) }}
         onEdit={employee => { setNotice(''); setView({ kind: 'edit', employee }) }} /> :
-        <EmployeeForm key={view.kind === 'edit' ? view.employee.id : 'new'} employee={view.kind === 'edit' ? view.employee : undefined}
-          navigationGuard={navigationGuard} onSaved={saved} onCancel={() => {
-            if (!navigationGuard.current()) return
-            if (view.kind === 'edit') setView({ kind: 'card', id: view.employee.id, label: fullName(view.employee) })
-            else setView({ kind: 'registry' })
-          }} />}
+        view.kind === 'assignment' ? <AssignmentForm key={view.assignment?.id ?? 'new-assignment'} employee={view.employee} assignment={view.assignment}
+          navigationGuard={navigationGuard} onCancel={cancelForm} onSaved={saved} /> : <EmployeeForm key={view.kind === 'edit' ? view.employee.id : 'new'} employee={view.kind === 'edit' ? view.employee : undefined}
+          navigationGuard={navigationGuard} onSaved={saved} onCancel={cancelForm} />}
   </div>
 }

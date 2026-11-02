@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { creationInput, dictionaryName, fullName, historyRows, personalDetails, selectEmployees,
-  validateEmployee, validDate, valuesForEmployee, emptyValues } from '../src/employees/model.ts'
+  validateAssignment, validateEmployee, validDate, valuesForEmployee, emptyValues } from '../src/employees/model.ts'
 import { createEmployee, employeeDetails, departmentInput } from '../dist-electron/electron/personnel/schemas.js'
 
 const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333']
@@ -71,5 +71,23 @@ test('quick dictionary creation normalizes the same name and length as Main', ()
     const normalized = dictionaryName(name)
     assert.equal(normalized.length > 0 && normalized.length <= 200, departmentInput.safeParse({ name }).success)
     if (normalized.length > 0 && normalized.length <= 200) assert.equal(normalized, departmentInput.parse({ name }).name)
+  }
+})
+
+test('history boundaries never underflow year 0001 or create reversed ranges', () => {
+  for (const rows of [[{ startDate: '0001-01-01' }], [{ startDate: '0001-01-01' }, { startDate: '0001-01-01' }],
+    [{ startDate: '0001-01-01' }, { startDate: '0001-01-02' }], [{ startDate: '0000-12-31' }, { startDate: '0001-01-01' }]]) {
+    for (const row of historyRows(rows)) if (row.endDate) {
+      assert.equal(validDate(row.endDate), true)
+      assert.ok(row.endDate >= row.startDate)
+    }
+  }
+})
+test('assignment form rejects future/before-birth/invalid dates and excessive category length', () => {
+  const input = { startDate: '2026-11-02', departmentId: ids[0], positionId: ids[1], category: '' }
+  assert.deepEqual(validateAssignment(input, null, '2026-11-02'), {})
+  for (const change of [{ startDate: '2026-11-03' }, { startDate: '1999-12-31' }, { startDate: '2026-02-30' },
+    { departmentId: '' }, { positionId: '' }, { category: 'X'.repeat(201) }]) {
+    assert.ok(Object.keys(validateAssignment({ ...input, ...change }, '2000-01-01', '2026-11-02')).length > 0)
   }
 })

@@ -1,7 +1,9 @@
-import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
+import type { PersonnelApi, PersonnelErrorCode, AssignmentInput, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  personnelCreateAssignment: 'personnel:createAssignment', personnelUpdateAssignment: 'personnel:updateAssignment',
+  personnelDeleteAssignment: 'personnel:deleteAssignment', personnelDeleteEmployee: 'personnel:deleteEmployee',
   personnelListEmployees: 'personnel:listEmployees',
   personnelGetEmployee: 'personnel:getEmployee',
   personnelCreateEmployee: 'personnel:createEmployee',
@@ -33,6 +35,10 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.personnelCreateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
+  [ipcChannels.personnelUpdateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
+  [ipcChannels.personnelDeleteAssignment]: { args: [string]; result: EmployeeCard }
+  [ipcChannels.personnelDeleteEmployee]: { args: [string]; result: null }
   [ipcChannels.personnelListEmployees]: { args: []; result: EmployeeCard[] }
   [ipcChannels.personnelGetEmployee]: { args: [string]; result: EmployeeCard }
   [ipcChannels.personnelCreateEmployee]: { args: [CreateEmployee]; result: EmployeeCard }
