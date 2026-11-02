@@ -5,6 +5,7 @@ import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
 import BackupSettings from './components/BackupSettings'
+import RecoveryScreen from './components/RecoveryScreen'
 
 const sections = [
   { id: 'home', label: 'Головна', icon: Home },
@@ -100,6 +101,7 @@ const storageErrors: Record<StorageErrorCode, string> = {
   INITIALIZATION_FAILED: 'Не вдалося підготувати локальне сховище. Потрібна технічна допомога.',
   BACKUP_REQUIRED: 'Оновлення сховища потребує захисної копії. Ця версія застосунку не виконує таке оновлення.',
   RECOVERY_REQUIRED: 'Не вдалося завершити безпечне відновлення сховища. Потрібна технічна допомога; файли збережено.',
+  MISSING_DATABASE: 'Файл раніше створеної бази відсутній. Нову порожню базу не створено.',
 }
 
 function StorageNotice({ showReady }: { showReady: boolean }) {
@@ -133,8 +135,26 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
+  useEffect(() => {
+    let alive = true, pending = false
+    const refresh = async () => {
+      if (pending) return
+      pending = true
+      try {
+        const result = await window.hromadaHR.storage.getStatus()
+        if (alive) setStorage(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
+      } catch { if (alive) setStorage({ state: 'error', code: 'INITIALIZATION_FAILED' }) }
+      finally { pending = false }
+    }
+    void refresh()
+    const timer = setInterval(() => { void refresh() }, 1000)
+    return () => { alive = false; clearInterval(timer) }
+  }, [])
   const current = sections.find(section => section.id === active)!
   const CurrentIcon = current.icon
+
+  if (storage.state !== 'ready') return <RecoveryScreen status={storage} />
 
   return <div className="app-shell">
     <a className="skip-link" href="#workspace-content">Перейти до вмісту</a>

@@ -1,12 +1,13 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
-import { accessSync, closeSync, constants, fsyncSync, linkSync, lstatSync, mkdirSync, openSync,
+import { accessSync, closeSync, constants, fsyncSync, lstatSync, mkdirSync, openSync,
   realpathSync, readdirSync, statSync, unlinkSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import type { BackupErrorCode } from '../../shared/backup.js'
 import { inspectDatabase } from '../storage/validation.js'
 import { migrations } from '../storage/migrations.js'
 import type { Migration } from '../storage/migrations.js'
+import { moveNoReplace } from './windows-files.js'
 
 export class BackupError extends Error {
   constructor(readonly code: BackupErrorCode) { super(code) }
@@ -54,8 +55,8 @@ export function syncFile(path: string) {
   try { fsyncSync(fd) } finally { closeSync(fd) }
 }
 
-// Only a closed, verified SQLite snapshot is published. A hard link is atomic
-// and refuses existing names; unsupported filesystems fail without publishing.
+// Only a closed, verified SQLite snapshot is published via a same-directory,
+// no-replace Windows move; no hardlink or exists-then-rename fallback.
 export async function snapshot(db: Database.Database, folder: string, label: string,
   manifest: readonly Migration[] = migrations, now = new Date()) {
   const fileName = `hromadahr-${label}-${now.toISOString().replace(/[:.]/g, '-')}-${randomUUID()}.db`
@@ -73,7 +74,7 @@ export async function snapshot(db: Database.Database, folder: string, label: str
     } finally { complete.close() }
     inspectDatabase(temporary, manifest)
     syncFile(temporary)
-    linkSync(temporary, final)
+    moveNoReplace(temporary, final)
     return final
   } finally {
     for (const suffix of ['', '-wal', '-shm', '-journal']) {

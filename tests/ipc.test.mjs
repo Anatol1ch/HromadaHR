@@ -24,7 +24,8 @@ function setup(getInfo = () => info, allowedUrl = url) {
     chooseFolder: async () => null, chooseRestore: async () => null,
     saveConfig: async () => { throw new Error('Not selected') }, runManual: async () => { throw new Error('Not configured') },
     confirmRestore: async () => { throw new Error('Not selected') },
-  })
+    retryStorage: async () => ({ state: 'ready', created: false, schemaVersion: 1 }),
+  }, () => {})
   const event = { sender: contents, senderFrame: contents.mainFrame }
   return {
     handlers, event, contents,
@@ -56,6 +57,22 @@ test('only allowlisted channel is registered; arbitrary channels have no handler
   for (const channel of ['system:delete', 'employees:list', '__proto__', 'invoke']) {
     assert.equal(handlers.has(channel), false)
   }
+})
+
+test('recovery retry and quit retain sender/frame/URL checks and reject arbitrary filesystem arguments', async () => {
+  const fixture = setup()
+  for (const channel of [ipcChannels.storageRetry, ipcChannels.systemQuit, ipcChannels.backupChooseRestore, ipcChannels.backupConfirmRestore]) {
+    const handler = fixture.handlers.get(channel)
+    for (const event of [{ ...fixture.event, sender: {} }, { ...fixture.event, senderFrame: { url } }]) {
+      assert.deepEqual(await handler(event), { ok: false, error: { code: 'FORBIDDEN' } })
+    }
+    assert.deepEqual(await handler(fixture.event, { path: 'C:\\arbitrary.db', confirmed: true }),
+      { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
+    fixture.contents.mainFrame.url = 'https://example.com/'
+    assert.deepEqual(await handler(fixture.event), { ok: false, error: { code: 'FORBIDDEN' } })
+    fixture.contents.mainFrame.url = url
+  }
+  assert.equal((await fixture.handlers.get(ipcChannels.storageRetry)(fixture.event)).data.state, 'ready')
 })
 
 test('foreign WebContents is rejected even with the trusted URL and frame', () => {
@@ -119,8 +136,8 @@ test('built preload exposes only the typed method and invokes the real handler',
   })
   assert.deepEqual(Object.keys(api).sort(), ['backup', 'storage', 'system'])
   assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getStatus', 'runManual', 'saveConfig'])
-  assert.deepEqual(Object.keys(api.system), ['getInfo'])
-  assert.deepEqual(Object.keys(api.storage), ['getStatus'])
+  assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'quit'])
+  assert.deepEqual(Object.keys(api.storage).sort(), ['getStatus', 'retry'])
   assert.deepEqual(await api.system.getInfo(), { ok: true, data: info })
   // JS callers cannot smuggle a channel/arguments through the public method.
   await api.system.getInfo('system:delete', { path: 'secret' })

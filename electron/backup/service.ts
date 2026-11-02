@@ -1,12 +1,13 @@
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
 import { basename, dirname, join } from 'node:path'
-import { existsSync, linkSync, mkdirSync, unlinkSync } from 'node:fs'
+import { constants, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
 import type { BackupSlot, BackupStatus, BackupTarget, FolderSelection, RestoreSelection } from '../../shared/backup.js'
 import type { Storage } from '../storage/index.js'
 import { inspectDatabase } from '../storage/validation.js'
-import { BackupError, directory, rotateAutomatic, sameFile, snapshot, validateDestination, validateFolders } from './files.js'
-import { beginReplacement, recoverInterruptedRestore, restoreFiles } from './recovery.js'
+import { BackupError, directory, rotateAutomatic, sameFile, snapshot, syncFile, validateDestination, validateFolders } from './files.js'
+import { beginEmergencyReplacement, beginReplacement, preserveDamagedSet, recoverInterruptedRestore, restoreFiles } from './recovery.js'
+import { storageErrorCode } from '../storage/errors.js'
 
 const retryInterval = 15 * 60 * 1000
 interface Config { instance_id: string; folder1: string | null; folder2: string | null }
@@ -28,6 +29,7 @@ export class BackupService {
 
   constructor(private storage: Storage, private now: () => Date = () => new Date()) {}
   isBusy() { return this.busy }
+  emergencyAvailable() { return this.storage.canRecover() }
   private db() {
     if (this.storage.getStatus().state !== 'ready') throw new BackupError('STORAGE_UNAVAILABLE')
     return this.storage.getDatabase()
@@ -163,6 +165,16 @@ export class BackupService {
     this.timer.unref()
   }
   stop() { if (this.timer) clearInterval(this.timer); this.timer = undefined }
+  async retryStorage() {
+    return this.exclusive(async () => {
+      this.invalidateSelections()
+      if (this.storage.getStatus().state !== 'ready') {
+        try { await this.storage.reopen() } catch { /* Status retains the specific error. No automatic reset/retry loop. */ }
+      }
+      if (this.storage.getStatus().state === 'ready') this.start()
+      return this.storage.getStatus()
+    })
+  }
   invalidateSelections() {
     this.folders.clear()
     if (this.restoreSelection) {
@@ -173,13 +185,13 @@ export class BackupService {
 
   async chooseRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {
     return this.exclusive(async () => {
-      this.db()
+      if (this.storage.getStatus().state !== 'ready' && !this.storage.canRecover()) throw new BackupError('STORAGE_UNAVAILABLE')
       this.invalidateSelections()
       const selected = await pick()
       if (!selected) return null
       let version: number
       try {
-        if (sameFile(selected, this.storage.getFile())) throw new BackupError('INVALID_BACKUP')
+        if (existsSync(this.storage.getFile()) && sameFile(selected, this.storage.getFile())) throw new BackupError('INVALID_BACKUP')
         version = inspectDatabase(selected, this.storage.manifest)
       } catch (error) {
         if (error && typeof error === 'object' && 'code' in error && error.code === 'UNSUPPORTED_SCHEMA') throw new BackupError('UNSUPPORTED_SCHEMA')
@@ -208,24 +220,37 @@ export class BackupService {
       const id = randomUUID()
       const paths = restoreFiles(active, id)
       let suspended = false
+      const emergency = this.storage.canRecover()
+      let preservation: ReturnType<typeof preserveDamagedSet> | undefined
+      let incomingOwned = false
       try {
         if (!await confirm()) return { restored: false }
         inspectDatabase(selected.staged, this.storage.manifest)
-        const config = this.config()
-        const protection = join(dirname(active), 'protection')
-        mkdirSync(protection, { recursive: true })
-        await snapshot(this.db(), protection, 'protect-restore', this.storage.manifest, this.now())
-        linkSync(selected.staged, paths.incoming)
-        const checkpoint = this.db().pragma('wal_checkpoint(TRUNCATE)') as { busy: number }[]
-        if (checkpoint.some(row => row.busy !== 0)) throw new BackupError('BUSY')
-        this.storage.close()
-        suspended = true
-        if (existsSync(active + '-wal') || existsSync(active + '-shm')) throw new BackupError('BUSY')
-        beginReplacement(active, id)
+        const config = emergency ? null : this.config()
+        copyFileSync(selected.staged, paths.incoming, constants.COPYFILE_EXCL) // Closed snapshot, never the active WAL DB.
+        incomingOwned = true
+        inspectDatabase(paths.incoming, this.storage.manifest)
+        syncFile(paths.incoming)
+        if (emergency) {
+          preservation = preserveDamagedSet(active, id)
+          suspended = true
+          beginEmergencyReplacement(active, id, preservation.moveOriginals)
+          preservation.release()
+        } else {
+          const protection = join(dirname(active), 'protection')
+          mkdirSync(protection, { recursive: true })
+          await snapshot(this.db(), protection, 'protect-restore', this.storage.manifest, this.now())
+          const checkpoint = this.db().pragma('wal_checkpoint(TRUNCATE)') as { busy: number }[]
+          if (checkpoint.some(row => row.busy !== 0)) throw new BackupError('BUSY')
+          this.storage.close()
+          suspended = true
+          if (existsSync(active + '-wal') || existsSync(active + '-shm')) throw new BackupError('BUSY')
+          beginReplacement(active, id)
+        }
         await this.storage.reopen(false)
         // Destination choices belong to this installation; clear daily markers
         // so restored data receives a fresh automatic cycle.
-        this.db().transaction(() => {
+        if (config) this.db().transaction(() => {
           this.db().prepare('INSERT OR REPLACE INTO backup_config(id,instance_id,folder1,folder2) VALUES (1,?,?,?)')
             .run(config.instance_id, config.folder1, config.folder2)
           this.db().exec(`UPDATE backup_state SET auto_day=NULL, retry_after=0, attempt_day=NULL, attempt_count=0,
@@ -233,22 +258,28 @@ export class BackupService {
         }).immediate()
         inspectDatabase(active, this.storage.manifest)
         unlinkSync(paths.journal) // Commit restore only after successful reopen.
-        try { unlinkSync(paths.previous) } catch { /* Protective online snapshot is retained regardless. */ }
+        if (!emergency) try { unlinkSync(paths.previous) } catch { /* Protective online snapshot is retained regardless. */ }
         this.lastRestore = 'success'
         return { restored: true }
       } catch (error) {
         if (suspended) {
           try {
             this.storage.close()
+            preservation?.release()
             recoverInterruptedRestore(active)
-            await this.storage.reopen()
+            try { await this.storage.reopen() } catch (cause) {
+              // Restoring the original damaged/absent state is a successful
+              // rollback, but it must remain behind the startup recovery screen.
+              if (!emergency || !this.storage.canRecover()) throw cause
+            }
             this.lastRestore = 'rolled-back'
           } catch { this.storage.failRecovery(); throw new BackupError('RECOVERY_REQUIRED') }
           throw new BackupError('RESTORE_FAILED')
         }
-        throw error instanceof BackupError ? error : new BackupError('RESTORE_FAILED')
+        throw error instanceof BackupError ? error : new BackupError(storageErrorCode(error) === 'BUSY' ? 'BUSY' : 'RESTORE_FAILED')
       } finally {
-        for (const file of [selected.staged, paths.incoming]) { try { unlinkSync(file) } catch {} }
+        preservation?.release()
+        for (const file of [selected.staged, ...(incomingOwned ? [paths.incoming] : [])]) { try { unlinkSync(file) } catch {} }
       }
     })
   }

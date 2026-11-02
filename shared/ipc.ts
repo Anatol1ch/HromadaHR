@@ -2,12 +2,13 @@
 import type { BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
+  storageRetry: 'storage:retry', systemQuit: 'system:quit',
   backupGetStatus: 'backup:getStatus', backupChooseFolder: 'backup:chooseFolder', backupSaveConfig: 'backup:saveConfig',
   backupRunManual: 'backup:runManual', backupChooseRestore: 'backup:chooseRestore', backupConfirmRestore: 'backup:confirmRestore',
 } as const
 
 export type StorageErrorCode = 'CORRUPT' | 'UNSUPPORTED_SCHEMA' | 'FILESYSTEM' | 'BUSY' |
-  'MIGRATION_FAILED' | 'INITIALIZATION_FAILED' | 'BACKUP_REQUIRED' | 'RECOVERY_REQUIRED'
+  'MIGRATION_FAILED' | 'INITIALIZATION_FAILED' | 'BACKUP_REQUIRED' | 'RECOVERY_REQUIRED' | 'MISSING_DATABASE'
 export type StorageStatus = { state: 'initializing' | 'closed' } |
   { state: 'ready'; created: boolean; schemaVersion: number } |
   { state: 'error'; code: StorageErrorCode }
@@ -24,6 +25,8 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: I
 export interface IpcOperations {
   [ipcChannels.systemGetInfo]: { args: []; result: SystemInfo }
   [ipcChannels.storageGetStatus]: { args: []; result: StorageStatus }
+  [ipcChannels.storageRetry]: { args: []; result: StorageStatus }
+  [ipcChannels.systemQuit]: { args: []; result: null }
   [ipcChannels.backupGetStatus]: { args: []; result: BackupStatus }
   [ipcChannels.backupChooseFolder]: { args: [BackupSlot]; result: FolderSelection | null }
   [ipcChannels.backupSaveConfig]: { args: [[string | null, string | null]]; result: BackupStatus }
@@ -35,9 +38,11 @@ export interface IpcOperations {
 export interface HromadaHRApi {
   readonly backup: BackupApi
   readonly system: {
+    readonly quit: () => Promise<IpcResult<null>>
     readonly getInfo: (...args: IpcOperations[typeof ipcChannels.systemGetInfo]['args']) => Promise<IpcResult<SystemInfo>>
   }
   readonly storage: {
+    readonly retry: () => Promise<IpcResult<StorageStatus>>
     readonly getStatus: () => Promise<IpcResult<StorageStatus>>
   }
 }

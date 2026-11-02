@@ -18,6 +18,7 @@ const api: HromadaHRApi = {
     confirmRestore: token => call(ipcChannels.backupConfirmRestore, token),
   },
   system: {
+    quit: () => call(ipcChannels.systemQuit),
     getInfo: async () => {
       try {
         return await ipcRenderer.invoke(ipcChannels.systemGetInfo)
@@ -27,6 +28,7 @@ const api: HromadaHRApi = {
     },
   },
   storage: {
+    retry: () => call(ipcChannels.storageRetry),
     getStatus: async () => {
       try {
         return await ipcRenderer.invoke(ipcChannels.storageGetStatus)

@@ -16,7 +16,7 @@ const storageStatus = z.union([
   z.strictObject({ state: z.enum(['initializing', 'closed']) }),
   z.strictObject({ state: z.literal('ready'), created: z.boolean(), schemaVersion: z.number().int().positive() }),
   z.strictObject({ state: z.literal('error'), code: z.enum([
-    'CORRUPT', 'UNSUPPORTED_SCHEMA', 'FILESYSTEM', 'BUSY', 'MIGRATION_FAILED', 'INITIALIZATION_FAILED', 'BACKUP_REQUIRED', 'RECOVERY_REQUIRED',
+    'CORRUPT', 'UNSUPPORTED_SCHEMA', 'FILESYSTEM', 'BUSY', 'MIGRATION_FAILED', 'INITIALIZATION_FAILED', 'BACKUP_REQUIRED', 'RECOVERY_REQUIRED', 'MISSING_DATABASE',
   ]) }),
 ]) satisfies z.ZodType<StorageStatus>
 
@@ -35,10 +35,13 @@ export function registerIpcHandlers(
   allowedUrl: string,
   getInfo: () => SystemInfo,
   getStorageStatus: () => StorageStatus,
-  backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore'>,
+  backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
+  quit: () => void,
 ) {
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
+  register(ipcChannels.storageRetry, z.tuple([]), storageStatus, backup.retryStorage)
+  register(ipcChannels.systemQuit, z.tuple([]), z.null(), () => { quit(); return null })
   register(ipcChannels.backupGetStatus, z.tuple([]), backupStatus, backup.getStatus)
   register(ipcChannels.backupChooseFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]),
     z.strictObject({ token, path: z.string() }).nullable(), ([slot]) => backup.chooseFolder(slot))

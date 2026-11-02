@@ -27,6 +27,8 @@
 .formation-spinner { animation: formation-spin 1s linear infinite; }
 @keyframes formation-spin { to { transform: rotate(360deg); } }
 .backup-panel { padding: var(--space-6); }
+.recovery-screen { min-height: 100vh; display: grid; place-items: center; padding: var(--space-6); background: var(--surface-page, #F7F6FA); }
+.recovery-screen > section { width: min(760px, 100%); }
 .backup-panel > h2 { margin-top: 0; }
 .backup-panel p { color: var(--color-text-secondary); line-height: 1.5; }
 .backup-target { padding: var(--space-4) 0; border-bottom: 1px solid var(--border-surface); }

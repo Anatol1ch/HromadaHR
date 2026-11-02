@@ -10,6 +10,7 @@ export class BackupController {
   invalidate() { this.generation++; this.service.invalidateSelections() }
   getStatus = () => this.service.getStatus()
   runManual = () => this.service.runManual()
+  retryStorage = () => this.service.retryStorage()
   saveConfig = async (tokens: [string | null, string | null]) => {
     const status = await this.service.saveConfig(tokens)
     setImmediate(() => { void this.service.runAutomatic().catch(() => {}) })
@@ -41,7 +42,9 @@ export class BackupController {
       const window = this.window(), generation = this.generation
       const answer = await dialog.showMessageBox(window, { type: 'warning', title: 'Відновлення HromadaHR',
         message: 'Замінити поточні дані вибраною резервною копією?',
-        detail: 'Перед заміною буде створено захисну копію. Після відновлення інтерфейс перезавантажиться.',
+        detail: this.service.emergencyAvailable() ?
+          'Початкові файли буде збережено для діагностики. Це не гарантовано справна SQLite-копія. Після відновлення інтерфейс перезавантажиться.' :
+          'Перед заміною буде створено захисну копію. Після відновлення інтерфейс перезавантажиться.',
         buttons: ['Скасувати', 'Відновити дані'], defaultId: 0, cancelId: 0, noLink: true })
       this.check(window, generation)
       return answer.response === 1

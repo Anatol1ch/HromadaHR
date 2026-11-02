@@ -4,3 +4,5 @@ allowBuilds:
   # v13 ships Node-API prebuilds; do not invoke a local compiler on install.
   better-sqlite3: false
   electron: true
+  # Platform Node-API prebuild is supplied as an optional package.
+  koffi: false

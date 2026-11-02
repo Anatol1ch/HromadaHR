@@ -13,9 +13,10 @@ export function checkIntegrity(db: Database.Database) {
 export function validateExistingFile(path: string) {
   const stat = lstatSync(path)
   if (!stat.isFile()) throw new StorageError('FILESYSTEM')
-  if (stat.size < 100) throw new StorageError('CORRUPT')
   const descriptor = openSync(path, 'r')
   try {
+    // Establish read access before diagnosing even a short/invalid header.
+    if (stat.size < 100) throw new StorageError('CORRUPT')
     const header = Buffer.alloc(16)
     if (readSync(descriptor, header, 0, 16, 0) !== 16 || header.toString() !== 'SQLite format 3\0') throw new StorageError('CORRUPT')
   } finally { closeSync(descriptor) }

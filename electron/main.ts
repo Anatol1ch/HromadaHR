@@ -65,7 +65,7 @@ if (!hasLock) {
 } else {
   registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
     name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
-  }), () => storage.getStatus(), backupController)
+  }), () => storage.getStatus(), backupController, () => app.quit())
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
