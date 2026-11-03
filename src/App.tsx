@@ -2,12 +2,13 @@ import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import type { EmployeeBreadcrumb } from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
-import BackupSettings from './components/BackupSettings'
+import SettingsPage from './components/SettingsPage'
+import HelpDialog from './components/HelpDialog'
 import RecoveryScreen from './components/RecoveryScreen'
 
 const sections = [
@@ -23,12 +24,11 @@ const sections = [
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
-const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees'>, string> = {
+const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'settings'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
   leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
-  settings: 'Налаштування назви громади та герба буде додано пізніше.',
 }
 
 function NavigationItem({ section, active, onNavigate }: {
@@ -76,24 +76,6 @@ function HomePage() {
   </div>
 }
 
-function ApplicationVersion() {
-  const [version, setVersion] = useState('Завантаження версії…')
-  useEffect(() => {
-    let active = true
-    const load = async () => {
-      try {
-        const result = await window.hromadaHR.system.getInfo()
-        if (active) setVersion(result.ok ? `${result.data.name} · Версія ${result.data.version}` : 'Версія застосунку недоступна')
-      } catch {
-        if (active) setVersion('Версія застосунку недоступна')
-      }
-    }
-    void load()
-    return () => { active = false }
-  }, [])
-  return <footer className="page-footer"><p role="status">{version}</p></footer>
-}
-
 const storageErrors: Record<StorageErrorCode, string> = {
   CORRUPT: 'Виявлено пошкодження локального сховища. Дані не замінено. Потрібна технічна допомога.',
   UNSUPPORTED_SCHEMA: 'Версія або структура сховища не підтримується цим застосунком. Дані не змінено.',
@@ -137,6 +119,7 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [helpOpen, setHelpOpen] = useState(false)
   const [employeeBreadcrumb, setEmployeeBreadcrumb] = useState<EmployeeBreadcrumb | null>(null)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
@@ -183,6 +166,7 @@ export default function App() {
         <nav aria-label="Система">
           <NavigationItem section={sections[6]} active={active} onNavigate={navigate} />
         </nav>
+        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
       </div>
     </aside>
     <div className="main-area">
@@ -202,19 +186,19 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice showReady={active === 'settings'} />
         {active === 'home' ? <HomePage /> : active === 'employees' ?
-          <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> :
+          <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
             </div>
-            {active === 'settings' ? <BackupSettings /> : <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
+            <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
               <DataState kind="planned" message="Функціональність ще не реалізована"
                 description={sectionDescriptions[active]}
                 icon={<CurrentIcon size={22} aria-hidden="true" />} />
-            </section>}
-            {active === 'settings' && <ApplicationVersion />}
+            </section>
           </div>}
       </main>
     </div>
+    {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
   </div>
 }
