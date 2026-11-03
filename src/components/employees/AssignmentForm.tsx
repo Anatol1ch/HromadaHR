@@ -1,3 +1,8 @@
+import type { NavigationGuard } from './useUnsavedChanges'
+import DateField from '../DateField'
+import ValidatedInput from '../ValidatedInput'
+import { formatDateInput } from '../../lib/dates'
+import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useRef, useState } from 'react'
 import type { RefObject, FormEvent } from 'react'
 import type { Assignment, EmployeeCard } from '../../../shared/personnel'
@@ -8,7 +13,7 @@ import useUnsavedChanges from './useUnsavedChanges'
 import Alert from '../Alert'
 
 export default function AssignmentForm({ employee, assignment, navigationGuard, onCancel, onSaved }: {
-  employee: EmployeeCard; assignment?: Assignment; navigationGuard: RefObject<() => boolean>
+  employee: EmployeeCard; assignment?: Assignment; navigationGuard: RefObject<NavigationGuard>
   onCancel: () => void; onSaved: (employee: EmployeeCard) => void
 }) {
   const [initial] = useState<AssignmentValues>(() => ({
@@ -23,7 +28,8 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
   const inFlight = useRef(false), alive = useRef(true)
   const form = useRef<HTMLFormElement>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
-  useUnsavedChanges(JSON.stringify(values) !== JSON.stringify(initial) || directory.dirty, inFlight, navigationGuard)
+  const [dateDraftDirty, setDateDraftDirty] = useState(false)
+  useUnsavedChanges(dateDraftDirty || JSON.stringify(values) !== JSON.stringify(initial) || directory.dirty, inFlight, navigationGuard)
   function change(key: keyof AssignmentValues, value: string) {
     setValues(current => ({ ...current, [key]: value })); setErrors(current => ({ ...current, [key]: undefined }))
   }
@@ -33,9 +39,10 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
     const errors = validateAssignment(values, employee.birthDate, localToday())
     if (Object.keys(errors).length) {
       setErrors(errors); setError('Перевірте позначені поля.')
-      requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
+      requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
+    if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
       const input = { ...values, category: values.category.trim() || null }
@@ -57,15 +64,14 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
       <fieldset className="dashboard-panel employee-form-panel" disabled={saving || directory.pending}>
         <legend>{assignment ? 'Відомості призначення' : 'Кадрова зміна'}</legend>
         <div className="employee-form-grid">
-          <div className="employee-field"><label htmlFor="assignment-date">Дата початку *</label>
-            <input id="assignment-date" type="date" required min="0001-01-01" max={localToday()} value={values.startDate}
-              onChange={event => change('startDate', event.target.value)} aria-invalid={!!errors.startDate} aria-describedby={errors.startDate ? 'assignment-date-error' : undefined} />
-            {errors.startDate && <span className="field-error" id="assignment-date-error">{errors.startDate}</span>}</div>
-          <div className="employee-field"><label htmlFor="assignment-category">Категорія посади</label>
-            <input id="assignment-category" maxLength={200} value={values.category} onChange={event => change('category', event.target.value)}
+          <div className="recipient-field employee-field"><label htmlFor="assignment-date">Дата початку *</label>
+            <DateField id="assignment-date" required min="0001-01-01" max={localToday()} value={values.startDate} disabled={saving || directory.pending}
+              onChange={value => change('startDate', value)} onDraftChange={display => setDateDraftDirty(display !== formatDateInput(initial.startDate))} error={errors.startDate} /></div>
+          <div className="recipient-field employee-field"><label htmlFor="assignment-category">Категорія посади</label>
+            <ValidatedInput id="assignment-category" maxLength={200} value={values.category} onChange={event => change('category', event.target.value)}
               aria-invalid={!!errors.category} aria-describedby={errors.category ? 'assignment-category-error' : undefined} />
             {errors.category && <span className="field-error" id="assignment-category-error">{errors.category}</span>}</div>
-          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} inFlight={inFlight} onState={setDirectory}
+          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
         <p className="employee-hint">Можна внести минулу дату або виправити перше призначення. Дата прийняття й поточна посада будуть визначені з оновленої історії.</p>

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Info, LoaderCircle, SearchX, TableProperties } from 'lucide-react'
 
-/** Shared data feedback; planned features are distinct from empty responses. */
+/** Shared presentation of successful empty responses and real pending requests. */
 export default function DataState({ kind, message, description, compact = false, className = '', icon }: {
   kind: 'loading' | 'empty' | 'search' | 'planned'; message: ReactNode; description?: ReactNode
   compact?: boolean; className?: string; icon?: ReactNode

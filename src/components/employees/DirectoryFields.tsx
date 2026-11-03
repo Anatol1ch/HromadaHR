@@ -1,3 +1,6 @@
+import { notifySystemToast } from '../SystemToastHost'
+import Select from '../Select'
+import ValidatedInput from '../ValidatedInput'
 import { useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { Department, Position } from '../../../shared/personnel'
@@ -7,9 +10,9 @@ import DataState from '../DataState'
 
 export interface DirectoryState { loading: boolean; error: string; draft: boolean; dirty: boolean; pending: boolean }
 export const initialDirectoryState: DirectoryState = { loading: true, error: '', draft: false, dirty: false, pending: false }
-export default function DirectoryFields({ departmentId, positionId, onDepartment, onPosition, errors, inFlight, onState }: {
+export default function DirectoryFields({ departmentId, positionId, onDepartment, onPosition, errors, disabled = false, inFlight, onState }: {
   departmentId: string; positionId: string; onDepartment: (id: string) => void; onPosition: (id: string) => void
-  errors: { departmentId?: string; positionId?: string }; inFlight: RefObject<boolean>; onState: (state: DirectoryState) => void
+  disabled?: boolean; errors: { departmentId?: string; positionId?: string }; inFlight: RefObject<boolean>; onState: (state: DirectoryState) => void
 }) {
   const [departments, setDepartments] = useState<Department[]>([])
   const [positions, setPositions] = useState<Position[]>([])
@@ -19,7 +22,6 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
   const [draft, setDraft] = useState<{ kind: 'department' | 'position'; name: string } | null>(null)
   const [draftError, setDraftError] = useState('')
   const [pending, setPending] = useState(false)
-  const [notice, setNotice] = useState('')
   const root = useRef<HTMLDivElement>(null)
   const alive = useRef(true)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -38,7 +40,7 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
     return () => { active = false }
   }, [retry])
   function focusSelect(kind: 'department' | 'position') {
-    requestAnimationFrame(() => root.current?.querySelector<HTMLSelectElement>(`#directory-${kind}`)?.focus())
+    requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`[data-directory="${kind}"] [role="combobox"]`)?.focus())
   }
   async function add() {
     if (!draft || inFlight.current) return
@@ -67,37 +69,33 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
         setPositions(current => [...current, result.data].sort((a, b) => a.name.localeCompare(b.name, 'uk'))); onPosition(result.data.id)
       }
       setDraft(null); focusSelect(kind)
-      setNotice(`Запис «${result.data.name}» створено та вибрано. Він залишиться у довіднику після скасування форми.`)
+      notifySystemToast('success', 'Запис створено', `Запис «${result.data.name}» створено та вибрано. Він залишиться у довіднику після скасування форми.`)
     } catch { if (alive.current) setDraftError('Не вдалося підтвердити створення. Перевірте перелік перед повторною спробою.') }
     finally { inFlight.current = false; if (alive.current) setPending(false) }
   }
-  return <div className="employee-field-full employee-directory-fields" ref={root}>
+  return <div className="recipient-field employee-field-full employee-directory-fields" ref={root}>
     {loading && <DataState kind="loading" compact message="Завантаження довідників…" />}
     {error && <Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error}</Alert>}
     <div className="employee-form-grid">
       {(['department', 'position'] as const).map(kind => {
         const key = kind === 'department' ? 'departmentId' : 'positionId'
-        return <div className="employee-field" key={kind}>
-          <label htmlFor={`directory-${kind}`}>{kind === 'department' ? 'Підрозділ' : 'Посада'} *</label>
+        return <div className="recipient-field employee-field" key={kind} data-directory={kind}>
+          <span>{kind === 'department' ? 'Підрозділ' : 'Посада'} *</span>
           <div className="employee-select-action">
-            <select id={`directory-${kind}`} required value={kind === 'department' ? departmentId : positionId} disabled={loading || !!error || pending}
-              aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `directory-error-${kind}` : undefined}
-              onChange={event => { if (kind === 'department') onDepartment(event.target.value); else onPosition(event.target.value) }}>
-              <option value="">Виберіть {kind === 'department' ? 'підрозділ' : 'посаду'}</option>
-              {(kind === 'department' ? departments : positions).map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
-            </select>
+            <Select label={kind === 'department' ? 'Підрозділ' : 'Посада'} required searchable value={kind === 'department' ? departmentId : positionId}
+              disabled={disabled || loading || !!error || pending} error={errors[key]}
+              options={(kind === 'department' ? departments : positions).map(entry => ({ value: entry.id, label: entry.name }))}
+              onChange={id => { if (kind === 'department') onDepartment(id); else onPosition(id) }} />
             <button className="secondary-button" type="button" disabled={loading || !!error || hasDraft || pending}
               aria-label={`Додати ${kind === 'department' ? 'підрозділ' : 'посаду'}`} onClick={() => { setDraft({ kind, name: '' }); setDraftError('') }}>Додати</button>
           </div>
-          {errors[key] && <span className="field-error" id={`directory-error-${kind}`}>{errors[key]}</span>}
         </div>
       })}
     </div>
     <p className="employee-hint">Нові посади й підрозділи зберігаються одразу та залишаються у довіднику після скасування форми.</p>
-    {notice && <Alert variant="success" onDismiss={() => setNotice('')}>{notice}</Alert>}
-    {draft && <div className="employee-quick-add" role="group" aria-label="Новий запис довідника">
+    {draft && <div className="recipient-field employee-quick-add" role="group" aria-label="Новий запис довідника">
       <label htmlFor="dictionary-name">{draft.kind === 'department' ? 'Назва нового підрозділу' : 'Назва нової посади'}</label>
-      <input id="dictionary-name" autoFocus value={draft.name} disabled={pending} aria-invalid={!!draftError} aria-describedby={draftError ? 'dictionary-error' : undefined}
+      <ValidatedInput id="dictionary-name" autoFocus value={draft.name} disabled={pending} aria-invalid={!!draftError} aria-describedby={draftError ? 'dictionary-error' : undefined}
         onChange={event => { setDraft({ ...draft, name: event.target.value }); setDraftError('') }}
         onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void add() } }} />
       {draftError && <span className="field-error" role="alert" id="dictionary-error">{draftError}</span>}

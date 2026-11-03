@@ -1,3 +1,6 @@
+import { notifySystemToast } from '../SystemToastHost'
+import { navigateTabs } from '../../lib/tabNavigation'
+import type { NavigationGuard } from './useUnsavedChanges'
 import type { RefObject } from 'react'
 import DeleteConfirmation from './DeleteConfirmation'
 import useUnsavedChanges from './useUnsavedChanges'
@@ -11,7 +14,7 @@ import DataState from '../DataState'
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
 interface CardData { employee: EmployeeData; history: Assignment[]; departments: Department[]; positions: Position[] }
 export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, onDeleted, navigationGuard }: {
-  navigationGuard: RefObject<() => boolean>; onAssign: (employee: EmployeeData, assignment?: Assignment) => void; onDeleted: (id: string) => void
+  navigationGuard: RefObject<NavigationGuard>; onAssign: (employee: EmployeeData, assignment?: Assignment) => void; onDeleted: (id: string) => void
   id: string; onBack: () => void; onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
   const [data, setData] = useState<CardData | null>(null)
@@ -22,7 +25,6 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, o
   const [deleteTarget, setDeleteTarget] = useState<'employee' | Assignment | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [notice, setNotice] = useState('')
   const inFlight = useRef(false), alive = useRef(true)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   useUnsavedChanges(false, inFlight, navigationGuard)
@@ -39,7 +41,7 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, o
         const result = await window.hromadaHR.personnel.deleteAssignment(deleteTarget.id)
         if (!alive.current) return
         if (!result.ok) { setDeleteError(personnelMessage(result.error.code)); return }
-        setDeleteTarget(null); setNotice('Помилкове призначення видалено. Історію оновлено.')
+        setDeleteTarget(null); notifySystemToast('success', 'Призначення видалено', 'Історію оновлено.')
         onLoaded(result.data); setRetry(value => value + 1)
       }
     } catch { if (alive.current) setDeleteError('Результат видалення не підтверджено. Закрийте цей діалог і оновіть картку перед повторною спробою.') }
@@ -68,15 +70,14 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, o
   useEffect(() => {
     if (!loading) document.querySelector<HTMLElement>('[data-page-title]')?.focus()
   }, [loading])
-  const feedback = notice ? <Alert variant="success" onDismiss={() => setNotice('')}>{notice}</Alert> : null
   const back = <button className="employee-link employee-back" type="button" onClick={onBack}><ArrowLeft size={17} aria-hidden="true" />До реєстру</button>
-  if (loading) return <>{feedback}{back}<h1 className="visually-hidden" tabIndex={-1} data-page-title>Особова картка</h1><section className="dashboard-panel"><DataState kind="loading" message="Завантаження особової картки…" /></section></>
-  if (error || !data) return <>{feedback}{back}<h1 tabIndex={-1} data-page-title>Особова картка</h1><Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error || 'Картка недоступна.'}</Alert></>
+  if (loading) return <>{back}<h1 className="visually-hidden" tabIndex={-1} data-page-title>Особова картка</h1><section className="dashboard-panel"><DataState kind="loading" message="Завантаження особової картки…" /></section></>
+  if (error || !data) return <>{back}<h1 tabIndex={-1} data-page-title>Особова картка</h1><Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error || 'Картка недоступна.'}</Alert></>
   const { employee, history, departments, positions } = data
   const departmentNames = new Map(departments.map(value => [value.id, value.name]))
   const positionNames = new Map(positions.map(value => [value.id, value.name]))
   return <article className="employee-card">
-    {feedback}{back}
+    {back}
     <header className="dashboard-panel employee-card-header">
       <div className="employee-avatar" aria-hidden="true">{employee.lastName.slice(0, 1)}{employee.firstName.slice(0, 1)}</div>
       <div className="employee-card-identity"><div className="eyebrow">ОСОБОВА КАРТКА</div>
@@ -86,19 +87,9 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, o
       </div>
       <button className="secondary-button employee-edit" type="button" onClick={() => onEdit(employee)}><Pencil size={16} aria-hidden="true" />Редагувати</button>
     </header>
-    <div className="employee-tabs" role="tablist" aria-label="Розділи особової картки">
+    <div className="employee-tabs" role="tablist" aria-label="Розділи особової картки" onKeyDown={navigateTabs}>
       {tabs.map((label, index) => <button type="button" role="tab" key={label} id={`employee-tab-${index}`} aria-selected={tab === index}
-        aria-controls={`employee-panel-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}
-        onKeyDown={event => {
-          let next = index
-          if (event.key === 'ArrowRight') next = (index + 1) % tabs.length
-          else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length
-          else if (event.key === 'Home') next = 0
-          else if (event.key === 'End') next = tabs.length - 1
-          else return
-          event.preventDefault(); setTab(next)
-          document.getElementById(`employee-tab-${next}`)?.focus()
-        }}>{label}</button>)}
+        aria-controls={`employee-panel-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
     </div>
     {tabs.map((label, index) => <div key={label} role="tabpanel" id={`employee-panel-${index}`} aria-labelledby={`employee-tab-${index}`} hidden={tab !== index} tabIndex={0}>
       {index !== 0 ? <section className="dashboard-panel"><DataState kind="planned" message="Функціональність буде додано пізніше" compact /></section> : <>
@@ -145,7 +136,7 @@ export default function EmployeeCard({ id, onBack, onEdit, onLoaded, onAssign, o
       <button type="button" className="danger-button danger-button-outline" disabled={deleting} onClick={() => askDelete('employee')}>Видалити працівника</button>
     </section>
     {deleteTarget && <DeleteConfirmation title={deleteTarget === 'employee' ? 'Видалити працівника назавжди?' : 'Видалити помилкове призначення?'}
-      pending={deleting} error={deleteError} onCancel={() => { if (!inFlight.current) setDeleteTarget(null) }} onConfirm={() => { void confirmDelete() }}
+      pending={deleting} error={deleteError} onCancel={() => { if (!inFlight.current) setDeleteTarget(null) }} onConfirm={() => confirmDelete()}
       confirmLabel={deleteTarget === 'employee' ? 'Видалити назавжди' : 'Видалити запис'}>
       <p><strong>{fullName(employee)}</strong></p>
       {deleteTarget === 'employee' ? <><p>Записів історії: <strong>{history.length}</strong>.</p><p>Особову картку й усі її призначення буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p></> :

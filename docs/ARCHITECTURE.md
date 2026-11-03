@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує версію 0.1.0 після етапу 3.3 (кадрові зміни, історія та повне видалення). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
+Документ описує версію 0.1.0 у робочій гілці після 3.4.1 (UI-основа HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
 
 ## Стек та структура
 
@@ -161,11 +161,11 @@ Restore складається з окремих chooseRestore і confirmRestore
 - `shell.css`: sidebar, topbar, breadcrumbs, головний блок і адаптивність;
 - `employees.css`: кадрові форми, таблиця, картка/історія, вкладки й container queries на чинних tokens.
 
-Використано відібрані універсальні правила HromadaAID на [коміті 16582ce](https://github.com/Anatol1ch/HromadaAID/tree/16582ce252086bb39d2276ac3c1de90e4895f21f), без залежності від його коду або історії. Власна палітра HromadaHR: акцент `#6F5AA5`, темний `#594681`, світлий `#EFEAF7`, фон `#F7F6FA`, межі `#E4DFEC`, текст `#252738`, допоміжний текст `#687084`, картки `#FFFFFF`. Кольори success/error/warning відокремлені від акценту.
+На 3.4.1 стилі та спільні компоненти перенесено з HromadaAID [33eca107](https://github.com/Anatol1ch/HromadaAID/tree/33eca10733caaf73b1a99e75a24ff35e706a0afb), без runtime-залежності або приєднання Git-історії. На 3.4.1 палітра — актуальна HromadaAID: --accent-green `#286343`, strong `#1f5539`, soft `#e8f1eb`, source нейтральні поверхні/текст/бордери. Старі --accent* — aliases цих токенів. Кольори success/error/warning відокремлені від акценту.
 
 Збережено sidebar 258 px (244 px до 1280 px; піктограми 68 px до 1100 px), topbar 68 px, контент до 1500 px, стандартний контроль 44 px і шкалу 4/8/12/16/20/24/32 px. За ширини до 760 px topbar має 58 px, до 600 px головний блок стає одноколонковим, topbar — автоматичної висоти з мінімумом 68 px. Окремої мобільної версії немає.
 
-Розрахунки палітри на етапі 1.2.1: білий текст кнопки 5,70:1 (hover 8,02:1), основний текст на фоні 13,69:1, допоміжний на білому 4,95:1 і на робочому фоні 4,60:1, темний акцент на світлому 6,79:1. Це не замінює ручного приймання всього інтерфейсу.
+Історичні розрахунки попередньої палітри на етапі 1.2.1 (не підтверджують новий UI 3.4.1): білий текст кнопки 5,70:1 (hover 8,02:1), основний текст на фоні 13,69:1, допоміжний на білому 4,95:1 і на робочому фоні 4,60:1, темний акцент на світлому 6,79:1. Це не замінює ручного приймання всього інтерфейсу.
 
 ### Реєстр і картки (3.2)
 
@@ -194,6 +194,22 @@ PersonnelService проводить кожну мутацію в IMMEDIATE-тр�
 Повне видалення — DELETE employees в IMMEDIATE-транзакції з чинним ON DELETE CASCADE employee_positions. Довідники й інші працівники не видаляються; можливий SQL-збій відкочує і працівника, і каскад. Soft-delete/кошика/архіву/журналу аудиту немає. Перед додаванням модулів відпусток, стажу, рангів, документів політику повного видалення потрібно поширити на їхні фактичні employee_id FK/залежні записи та перевірити атомарність; зараз таких таблиць/умовних каскадів немає. SQLite owner, backup/restore, міграції 1–3/checksum та залежності незмінні.
 
 tests/personnel-history.test.mjs перевіряє додавання/вставку заднім числом/виправлення першого й проміжного рядка/перестановку, дублі дат і станів з обох боків, birth/today/future межі, видалення поточного/першого/єдиного рядка, міст A → B → A, каскад і відкат employee-delete через ін’єкцію SQL-збою. Після кожної відмови порівнюються всі кадрові таблиці та виконуються integrity_check/foreign_key_check. Checksum 3 зафіксовано поряд із наявними 1–2. IPC-тести охоплюють нові сигнатури/відправників/невалідні відповіді та bundled preload → handler → SQLite → видалення. Electron Main smoke виконує всі чотири операції й перевіряє повернення історії через чинний backup/recovery. Повний pnpm test — 96/96 + smoke, typecheck/build/diff-check успішні. Лише mkdtemp; продукційна БД не відкривалася. GUI-кліки не автоматизувалися, ручний чекліст у HANDOFF ще не виконаний. Етап 04 не розпочато.
+
+## Спільна UI-основа HromadaAID (3.4.1)
+
+Нове погоджене рішення: головний еталон стилю/поведінки — HromadaAID. Source 33eca10733caaf73b1a99e75a24ff35e706a0afb, HR base c479d23577e1f61cf16f6c732476a64ef487b2e1. Робоча гілка codex/3.4.1-aid-ui-foundation не зливається в main. Повна таблиця source→target, точні адаптації/виключення та ручний чекліст — UI-TRANSFER.md. Це повторне використання UI-коду без приєднання Git-історії/серверної бази/workspace.
+
+Перенесені source Modal (portal stack/focus trap/Escape/busy/scroll lock/nested inert), ConfirmDialog/closeConfirmation, toast queue, DatePicker/DateField, Select/SearchField, DictionaryTable, Skeleton, KeyboardNavigation/ValidatedInput і чотири lib-модулі. Alert ідентичний source, DataState зберігає HR planned. Auth access-denied вилучено; предметних source repositories/account/year/API-контрактів немає. App зберігає HR бренд, сім розділів і власний герб. main.tsx монтує один keyboard boundary та hosts.
+
+NavigationGuard тепер callback-based: на dirty source confirmModalClose виконає перехід лише після явного discard. Owner форми інвалідується при unmount. beforeunload залишається sync native confirmation, оскільки async UI-діалог не може без зміни Electron lifecycle затримати нативне закриття. Кадровий DeleteConfirmation — тонкий adapter source ConfirmDialog, передає Promise onConfirm/error/disabled та чинне предметне попередження. Повні кадрові форми до 3.4.2 залишаються page-based; це тимчасовий layout, не інший набір контролів.
+
+DateField замінює всі native date inputs, зберігає source min/max/календар/popover/keyboard і ДД.ММ.РРРР. dates/calendar — єдина UI-бібліотека parsing/formatting/day math; model helpers делегують їй. Додано локальний timestamp ДД.ММ.РРРР ГГ:ХХ, виправлено backup autoDay. ISO SQL/IPC, технічні timestamps/filenames не змінені. DatePicker передає ISO тільки для коректного тексту в межах; onDraftChange враховує помилковий видимий draft у dirty. Форми перевіряють checkValidity/reportValidity перед IPC, щоб не зберегти попередній ISO. ISO clipboard одразу форматується у видиме ДД.ММ.РРРР.
+
+Select/ValidatedInput повторно використано у формах/довідниках; реєстр — SearchField/DictionaryTable (ReactNode header/aria-sort adaptation)/TableSkeleton. Картка використовує source navigateTabs. Enter/keyboard highlight і Ctrl+Enter беруться з source helpers; Ctrl+Enter на main дозволений лише з відповідної форми, textarea/IME/popups мають власні клавіші. Toast підтримує чотири kind і source queue/3500+180 ms/close/ARIA; контекстні form/SQLite/restore помилки лишаються persistent Alert.
+
+Source CSS відібрано через AST за залежностями selectors, розкладено в tokens/base/components/shell зі збереженням порядку, пізніх green override, медіа/анімацій/reduced-motion. Financial/report/auth/print rules та --program-* виключено. Scoped employee layout тимчасовий; .employee-form-panel застосовує source field declarations, --accent* aliases не є іншою палітрою. PostCSS уже є залежністю Vite; нових пакетів немає. App noEmit дозволяє .ts imports для прямих Node-тестів.
+
+Міграції 1–3/checksum, кадрові сервіси/13 IPC, backup/restore й Electron security незмінні. Автоматично: typecheck, 104/104 тести + Electron Main smoke, build, diff-check. Лише temp БД/профілі. Ручне візуальне/клавіатурне приймання не виконане, GUI snapshot/елементарні кліки не автоматизувалися. Наступний підетап — source Modal-композиції конкретних кадрових форм і видалення legacy layout; 3.4.2 та merge main потребують окремого завдання.
 
 ## Герб і діагностика старого вікна
 

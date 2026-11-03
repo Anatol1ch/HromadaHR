@@ -9,11 +9,7 @@
 .employee-toolbar { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-4); padding: var(--space-5); }
 .employee-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .employee-field label, .employee-quick-add > label { font-size: 13px; font-weight: 600; }
-.employees-workspace :is(input, select, textarea) { width: 100%; min-width: 0; min-height: var(--control-height); border: 1px solid var(--border-surface); border-radius: var(--radius-control); background: var(--surface-card); color: var(--color-text); padding: 10px 12px; font: inherit; }
 .employees-workspace textarea { resize: vertical; line-height: 1.5; }
-.employees-workspace :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--border-error); }
-.employees-workspace input::placeholder { color: var(--color-text-secondary); }
-.employees-workspace :is(input, select, textarea):disabled { opacity: .65; }
 .employee-search-input { position: relative; }
 .employee-search-input > svg { position: absolute; left: 12px; top: 13px; color: var(--color-text-secondary); pointer-events: none; }
 .employee-search-input input { padding-left: 39px; }
@@ -97,17 +93,15 @@
 .employee-history-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .employee-history-heading h2 { margin-bottom: 0; }
 .employee-history-actions { margin-top: var(--space-3); }
-.danger-button { min-height: var(--control-height); padding: var(--space-2) var(--space-4); border: 1px solid var(--feedback-error-text); border-radius: var(--radius-control); background: var(--feedback-error-text); color: var(--surface-card); font: inherit; }
 .danger-button-outline { background: var(--surface-card); color: var(--feedback-error-text); }
-.danger-button:disabled { opacity: .55; cursor: default; }
-.danger-button:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
 .employee-danger-zone { margin-top: var(--space-6); border-color: var(--feedback-error-border); }
 .employee-danger-zone p { line-height: 1.6; }
-.employee-delete-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: var(--space-6); border: 1px solid var(--border-surface); border-radius: var(--radius-card); background: var(--surface-card); color: var(--color-text); }
-.employee-delete-dialog::backdrop { background: rgb(37 39 56 / 45%); }
-.employee-delete-dialog h2 { margin-top: 0; font-size: 21px; }
-.employee-delete-dialog p { overflow-wrap: anywhere; line-height: 1.6; }
-.employee-delete-dialog .employee-actions { margin-top: var(--space-5); }
 @container (max-width: 580px) {
   .employee-directory-fields > .employee-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Temporary layout adapters for full-page personnel forms until 3.4.2. Controls use AID tokens. */
+.employee-field .date-field-control, .employee-field .app-select { width: 100%; min-width: 0; }
+
+.hr-employee-table { min-width: 810px; }
+.employee-field > span:first-child { font-weight: 600; font-size: 13px; }

@@ -1,3 +1,5 @@
+import { formatDate, isIsoCalendarDate, todayIsoDate } from '../lib/dates.ts'
+import { shiftDays } from '../lib/calendar.ts'
 import type { Assignment, AssignmentInput, CreateEmployee, EmployeeCard, EmployeeDetails, EmployeeType } from '../../shared/personnel'
 import type { IpcErrorCode } from '../../shared/ipc'
 
@@ -15,7 +17,7 @@ export function selectEmployees(employees: EmployeeCard[], query: string, depart
     .sort((a, b) => (collator.compare(fullName(a), fullName(b)) || a.id.localeCompare(b.id)) * (descending ? -1 : 1))
 }
 export function displayDate(value: string | null) {
-  return value ? `${value.slice(8, 10)}.${value.slice(5, 7)}.${value.slice(0, 4)}` : 'Не зазначено'
+  return formatDate(value)
 }
 export function historyRows(history: Assignment[]) {
   const ordered = [...history].sort((a, b) => a.startDate.localeCompare(b.startDate))
@@ -23,9 +25,7 @@ export function historyRows(history: Assignment[]) {
     const next = ordered[index + 1]
     let endDate: string | null = null
     if (next && validDate(next.startDate) && validDate(assignment.startDate) && next.startDate > '0001-01-01' && next.startDate > assignment.startDate) {
-      const date = new Date(`${next.startDate}T00:00:00Z`)
-      date.setUTCDate(date.getUTCDate() - 1)
-      endDate = date.toISOString().slice(0, 10)
+      endDate = shiftDays(next.startDate, -1)
     }
     return { ...assignment, endDate }
   }).reverse()
@@ -54,11 +54,7 @@ export function creationInput(values: FormValues): CreateEmployee {
   return { ...personalDetails(values), startDate: values.startDate, departmentId: values.departmentId,
     positionId: values.positionId, category: optional(values.category) }
 }
-export function validDate(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) return false
-  const date = new Date(`${value}T00:00:00Z`)
-  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value
-}
+export const validDate = isIsoCalendarDate
 export type FormErrors = Partial<Record<keyof FormValues, string>>
 export function validateEmployee(values: FormValues, editing: boolean): FormErrors {
   const errors: FormErrors = {}
@@ -97,10 +93,7 @@ export function personnelMessage(code: IpcErrorCode): string {
 }
 
 export type AssignmentValues = Omit<AssignmentInput, 'category'> & { category: string }
-export function localToday() {
-  const now = new Date()
-  return [String(now.getFullYear()).padStart(4, '0'), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-')
-}
+export const localToday = todayIsoDate
 export function validateAssignment(values: AssignmentValues, birthDate: string | null, today: string): FormErrors {
   const errors: FormErrors = {}
   if (!validDate(values.startDate)) errors.startDate = 'Введіть коректну календарну дату.'

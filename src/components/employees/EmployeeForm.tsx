@@ -1,3 +1,9 @@
+import type { NavigationGuard } from './useUnsavedChanges'
+import DateField from '../DateField'
+import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
+import Select from '../Select'
+import { formatDateInput } from '../../lib/dates'
+import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, RefObject } from 'react'
 import type { EmployeeCard } from '../../../shared/personnel'
@@ -10,7 +16,7 @@ import type { FormErrors, FormValues } from '../../employees/model'
 
 type Props = {
   employee?: EmployeeCard
-  navigationGuard: RefObject<() => boolean>
+  navigationGuard: RefObject<NavigationGuard>
   onCancel: () => void
   onSaved: (employee: EmployeeCard) => void
 }
@@ -24,7 +30,8 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const inFlight = useRef(false)
   const alive = useRef(true)
   const form = useRef<HTMLFormElement>(null)
-  const dirty = JSON.stringify(values) !== JSON.stringify(initial) || (!employee && directory.dirty)
+  const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({})
+  const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial) || (!employee && directory.dirty)
   const busy = saving || (!employee && directory.pending)
 
   useEffect(() => {
@@ -44,9 +51,10 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     const nextErrors = validateEmployee(values, !!employee)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors); setError('Перевірте позначені поля.')
-      requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
+      requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
+    if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
       const result = employee ? await window.hromadaHR.personnel.updateEmployee(employee.id, personalDetails(values)) :
@@ -63,13 +71,13 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   }
   function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'startDate' | 'category', label: string, required = false) {
     const isDate = key === 'birthDate' || key === 'startDate'
-    return <div className="employee-field">
+    return <div className="recipient-field employee-field">
       <label htmlFor={`employee-${key}`}>{label}{required && <span aria-hidden="true"> *</span>}</label>
-      <input id={`employee-${key}`} name={key} type={isDate ? 'date' : 'text'} required={required}
-        min={isDate ? '0001-01-01' : undefined} max={isDate ? '9999-12-31' : undefined} maxLength={isDate ? undefined : 200}
-        value={values[key]} onChange={event => change(key, event.target.value)}
-        aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} />
-      {errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
+      {isDate ? <DateField id={`employee-${key}`} required={required} disabled={busy} value={values[key]} error={errors[key]}
+        onChange={value => change(key, value)} onDraftChange={display => setDateDrafts(current => ({ ...current, [key]: display !== formatDateInput(initial[key]) }))} /> :
+        <ValidatedInput id={`employee-${key}`} name={key} required={required} maxLength={200} value={values[key]} onChange={event => change(key, event.target.value)}
+          aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} />}
+      {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
   return <div className="employee-form-page">
@@ -84,14 +92,12 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
         <div className="employee-form-grid">
           {textField('lastName', 'Прізвище', true)}{textField('firstName', 'Ім’я', true)}{textField('middleName', 'По батькові')}
           {textField('birthDate', 'Дата народження')}
-          <div className="employee-field employee-field-wide"><label htmlFor="employee-type">Тип працівника *</label>
-            <select id="employee-type" value={values.employeeType} required onChange={event => change('employeeType', event.target.value as FormValues['employeeType'])}
-              aria-invalid={!!errors.employeeType} aria-describedby={errors.employeeType ? 'error-employeeType' : undefined}>
-              <option value="official">{employeeTypeLabels.official}</option><option value="staff">{employeeTypeLabels.staff}</option>
-            </select>{errors.employeeType && <span className="field-error" id="error-employeeType">{errors.employeeType}</span>}
+          <div className="recipient-field employee-field employee-field-wide"><span>Тип працівника *</span>
+            <Select label="Тип працівника" required disabled={busy} value={values.employeeType} error={errors.employeeType}
+              options={Object.entries(employeeTypeLabels).map(([value, label]) => ({ value, label }))} onChange={value => change('employeeType', value as FormValues['employeeType'])} />
           </div>
-          <div className="employee-field employee-field-full"><label htmlFor="employee-note">Примітка <span className="employee-hint">до 4000 символів</span></label>
-            <textarea id="employee-note" rows={4} maxLength={4000} value={values.note} onChange={event => change('note', event.target.value)}
+          <div className="recipient-field employee-field employee-field-full"><label htmlFor="employee-note">Примітка <span className="employee-hint">до 4000 символів</span></label>
+            <ValidatedTextarea id="employee-note" rows={4} maxLength={4000} value={values.note} onChange={event => change('note', event.target.value)}
               aria-invalid={!!errors.note} aria-describedby={errors.note ? 'error-note' : undefined} />
             {errors.note && <span className="field-error" id="error-note">{errors.note}</span>}
           </div>
@@ -108,7 +114,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
         <legend>Початкове призначення</legend>
         <div className="employee-form-grid">
           {textField('startDate', 'Дата прийняття', true)}{textField('category', 'Категорія посади')}
-          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} inFlight={inFlight} onState={setDirectory}
+          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
       </fieldset>}

@@ -1,3 +1,6 @@
+/* Adapted from HromadaAID 33eca10733caaf73b1a99e75a24ff35e706a0afb src/styles.css. See docs/UI-TRANSFER.md. */
+
+
 :root {
 
   font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -27,8 +30,13 @@ button { cursor: pointer; }
   :root button:is(:disabled, [aria-busy="true"], [aria-disabled="true"]) { cursor: default; }
 }
 
+@media screen {
+  button:not([role="combobox"]):focus-visible { outline: 2px solid var(--button-focus-color); outline-offset: 3px; }
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+  button, input, textarea { transition: none !important; }
+}
 button:focus-visible, .skip-link:focus-visible { outline: 2px solid var(--button-focus-color); outline-offset: 3px; }
-/* Keep keyboard access to the main landmark without changing the shell. */
 .skip-link { position: fixed; top: var(--space-2); left: var(--space-2); z-index: 5; transform: translateY(-200%); padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--surface-card); color: var(--accent-strong); }
 .skip-link:focus { transform: translateY(0); }
-@media (prefers-reduced-motion: reduce) { button { transition: none !important; } }

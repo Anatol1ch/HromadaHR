@@ -1,3 +1,5 @@
+import { formatDate, formatDateTime } from '../lib/dates'
+import { notifySystemToast } from './SystemToastHost'
 import { useEffect, useRef, useState } from 'react'
 import type { BackupStatus, FolderSelection, RestoreSelection } from '../../shared/backup'
 import type { IpcErrorCode, IpcResult } from '../../shared/ipc'
@@ -17,7 +19,7 @@ const messages: Partial<Record<IpcErrorCode, string>> = {
   STORAGE_UNAVAILABLE: 'Сховище недоступне. Спочатку усуньте помилку його відкриття.',
 }
 const message = (code: IpcErrorCode) => messages[code] ?? 'Операція недоступна. Перезапустіть застосунок або зверніться по технічну допомогу.'
-const time = (value: string | null) => value ? new Date(value).toLocaleString('uk-UA') : 'Ще немає'
+const time = (value: string | null) => value ? formatDateTime(value) : 'Ще немає'
 
 export default function BackupSettings() {
   const [status, setStatus] = useState<BackupStatus | null>(null)
@@ -60,6 +62,7 @@ export default function BackupSettings() {
     } catch { if (mounted.current) setFeedback({ error: true, text: message('UNAVAILABLE') }) }
     finally { actionInFlight.current = false; if (mounted.current) setRunning(false) }
   }
+  useEffect(() => { if (feedback) notifySystemToast(feedback.error ? 'error' : 'success', feedback.error ? 'Резервування' : 'Готово', feedback.text) }, [feedback])
   const busy = running || status?.busy === true
   const configured = status?.targets.every(target => target.path !== null) === true
   return <section className="dashboard-panel backup-panel" aria-labelledby="backup-title" aria-busy={busy}>
@@ -78,7 +81,7 @@ export default function BackupSettings() {
         {choices[index] ? <p>Новий вибір ще не збережено.</p> : <p>{target?.path ? target.available ? 'Тека доступна' : 'Тека недоступна' : 'Очікує налаштування'}</p>}
         <p>Остання спроба: {time(target?.lastAttempt ?? null)}. Успішна копія: {time(target?.lastSuccess ?? null)}.</p>
         {target?.fileName && <p className="backup-path">{target.fileName}</p>}
-        <p>Автоматичну копію створено за: {target?.autoDay ?? 'ще немає'}.</p>
+        <p>Автоматичну копію створено за: {target?.autoDay ? formatDate(target.autoDay) : 'ще немає'}.</p>
         {target?.error && <Alert variant="warning">{message(target.error)} Автоматичні спроби — з інтервалом 15 хвилин, до чотирьох на добу. Ручну копію можна спробувати будь-коли.</Alert>}
       </div>
     })}

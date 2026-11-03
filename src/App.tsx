@@ -1,3 +1,4 @@
+import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import type { EmployeeBreadcrumb } from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
@@ -46,7 +47,7 @@ function NavigationItem({ section, active, onNavigate }: {
 }
 
 function HomePage() {
-  return <div className="workspace-page">
+  return <div className="workspace-page page-transition">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
       <div className="workspace-mark-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
       <div className="workspace-identity-copy">
@@ -137,9 +138,9 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const [employeeBreadcrumb, setEmployeeBreadcrumb] = useState<EmployeeBreadcrumb | null>(null)
-  const navigationGuard = useRef<() => boolean>(() => true)
+  const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active && navigationGuard.current()) setActive(id)
+    if (id !== active) navigationGuard.current(() => setActive(id))
   }
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
@@ -202,7 +203,7 @@ export default function App() {
         <StorageNotice showReady={active === 'settings'} />
         {active === 'home' ? <HomePage /> : active === 'employees' ?
           <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> :
-          <div>
+          <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
             </div>
