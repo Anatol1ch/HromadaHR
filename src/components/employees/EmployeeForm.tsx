@@ -1,3 +1,4 @@
+import CategoryField from './CategoryField'
 import Modal from '../Modal'
 import { Check, UserRound, X } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
@@ -12,7 +13,7 @@ import type { EmployeeCard } from '../../../shared/personnel'
 import Alert from '../Alert'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
-import { creationInput, displayDate, employeeTypeLabels, emptyValues, personalDetails,
+import { creationInput, employeeTypeLabels, emptyValues, personalDetails,
   personnelMessage, validateEmployee, valuesForEmployee } from '../../employees/model'
 import type { FormErrors, FormValues } from '../../employees/model'
 
@@ -25,6 +26,8 @@ type Props = {
 export default function EmployeeForm({ employee, navigationGuard, onCancel, onSaved }: Props) {
   const [initial] = useState(() => employee ? valuesForEmployee(employee) : { ...emptyValues })
   const [values, setValues] = useState(initial)
+  const [noteOpen, setNoteOpen] = useState(() => !!employee?.note)
+  const noteDetails = useRef<HTMLDetailsElement>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -54,6 +57,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     const nextErrors = validateEmployee(values, !!employee)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors); setError('Перевірте позначені поля.')
+      if (nextErrors.note) { setNoteOpen(true); if (noteDetails.current) noteDetails.current.open = true }
       requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
@@ -72,7 +76,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     } catch { if (alive.current) setError('Не вдалося підтвердити збереження. Введені дані залишилися у формі; перевірте реєстр перед повторною спробою.') }
     finally { inFlight.current = false; if (alive.current) setSaving(false) }
   }
-  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'startDate' | 'category', label: string, required = false) {
+  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'startDate', label: string, required = false) {
     const isDate = key === 'birthDate' || key === 'startDate'
     return <div className="recipient-field employee-field">
       <label htmlFor={`employee-${key}`}>{label}{required && <span aria-hidden="true"> *</span>}</label>
@@ -95,28 +99,29 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
             <Select label="Тип працівника" required disabled={busy} value={values.employeeType} error={errors.employeeType}
               options={Object.entries(employeeTypeLabels).map(([value, label]) => ({ value, label }))} onChange={value => change('employeeType', value as FormValues['employeeType'])} />
           </div>
-          <div className="recipient-field employee-field employee-field-full"><label htmlFor="employee-note">Примітка <span className="employee-hint">до 4000 символів</span></label>
-            <ValidatedTextarea id="employee-note" rows={4} maxLength={4000} value={values.note} onChange={event => change('note', event.target.value)}
-              aria-invalid={!!errors.note} aria-describedby={errors.note ? 'error-note' : undefined} />
-            {errors.note && <span className="field-error" id="error-note">{errors.note}</span>}
-          </div>
         </div>
       </fieldset>
-      {employee ? <fieldset className="recipient-fieldset">
-        <legend>Кадрові відомості</legend>
-        <p className="employee-muted">Ця форма змінює лише персональні відомості. Для зміни призначення скористайтеся історією посад у картці.</p>
-        <dl className="employee-facts"><div><dt>Дата прийняття</dt><dd>{displayDate(employee.hireDate)}</dd></div>
-          <div><dt>Посада</dt><dd>{employee.currentAssignment.position.name}</dd></div>
-          <div><dt>Підрозділ</dt><dd>{employee.currentAssignment.department.name}</dd></div>
-          <div><dt>Категорія</dt><dd>{employee.currentAssignment.category ?? 'Не зазначено'}</dd></div></dl>
-      </fieldset> : <fieldset className="recipient-fieldset" disabled={busy}>
+      {employee ? <p className="employee-hint">Кадрові призначення змінюються окремо в історії особової картки.</p> : <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Початкове призначення</legend>
         <div className="recipient-form-grid">
-          {textField('startDate', 'Дата прийняття', true)}{textField('category', 'Категорія посади')}
+          {textField('startDate', 'Дата прийняття', true)}
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
+        <details className="employee-additional employee-field-full">
+          <summary>Додаткові кадрові реквізити</summary>
+          <div className="recipient-form-grid"><CategoryField value={values.category} onChange={value => change('category', value)} disabled={busy} error={errors.category}/></div>
+          <p className="recipient-field-hint">Необов’язково. Для іншого персоналу можна залишити «Не зазначено».</p>
+        </details>
       </fieldset>}
+      <details className="employee-additional" ref={noteDetails} open={noteOpen} onToggle={event => setNoteOpen(event.currentTarget.open)}>
+        <summary>Додаткові відомості</summary>
+          <div className="recipient-field employee-field employee-field-full"><label htmlFor="employee-note">Примітка <span className="employee-hint">до 4000 символів</span></label>
+            <ValidatedTextarea id="employee-note" disabled={busy} rows={3} maxLength={4000} value={values.note} onChange={event => change('note', event.target.value)}
+              aria-invalid={!!errors.note} aria-describedby={errors.note ? 'error-note' : undefined} />
+            {errors.note && <span className="field-error" id="error-note">{errors.note}</span>}
+          </div>
+      </details>
       <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
         <button type="button" className="secondary-button" disabled={busy} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
         <button type="submit" className="primary-button" disabled={busy || (!employee && (directory.loading || !!directory.error || directory.draft))} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>

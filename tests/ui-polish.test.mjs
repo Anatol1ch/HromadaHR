@@ -1,0 +1,99 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { categoryOptions } from '../src/employees/categories.ts'
+import { assignmentInput, creationInput, emptyValues, personalDetails, valuesForEmployee, validateEmployee } from '../src/employees/model.ts'
+import { backupOverview } from '../src/backup/presentation.ts'
+import { assignmentInput as assignmentSchema, createEmployee, employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
+
+const positionId = '11111111-1111-4111-8111-111111111111'
+const departmentId = '22222222-2222-4222-8222-222222222222'
+const fields = { ...emptyValues, lastName: 'Синтетичний', firstName: 'Приклад', startDate: '2026-01-01', positionId, departmentId }
+
+test('new employee can omit both additional fields, and every category choice respects existing nullable IPC schemas', () => {
+  assert.deepEqual(validateEmployee(fields, false), {})
+  const payload = creationInput(fields)
+  assert.equal(payload.note, null)
+  assert.equal(payload.category, null)
+  assert.equal(payload.birthDate, null)
+  assert.equal(createEmployee.safeParse(payload).success, true)
+  const options = categoryOptions()
+  assert.deepEqual(options.map(option => option.label), ['Не зазначено', 'I категорія', 'II категорія', 'III категорія', 'IV категорія', 'V категорія', 'VI категорія', 'VII категорія'])
+  assert.equal(options[0].value, '')
+  for (const { value } of options) {
+    const values = { ...fields, category: value }
+    assert.equal(createEmployee.safeParse(creationInput(values)).success, true)
+    assert.equal(assignmentSchema.safeParse(assignmentInput(values)).success, true)
+    assert.equal(assignmentInput(values).category, value || null)
+  }
+})
+
+test('existing notes and historical category strings survive form roundtrips without changing personal/history boundaries', () => {
+  for (const category of ['V', 'І категорія', 'Історична довільна категорія', 'VII категорія']) {
+    const original = { ...personalDetails(fields), id: positionId, note: 'Збережена примітка\nДругий рядок', hireDate: fields.startDate,
+      currentAssignment: { ...assignmentInput({ ...fields, category }), id: departmentId, employeeId: positionId,
+        position: { id: positionId, name: 'Умовна посада' }, department: { id: departmentId, name: 'Умовний відділ' } } }
+    const values = valuesForEmployee(original)
+    assert.equal(categoryOptions(values.category).find(option => option.value === category).value, category)
+    assert.equal(new Set(categoryOptions(category).map(option => option.value)).size, categoryOptions(category).length)
+    const personal = personalDetails({ ...values, firstName: 'Оновлений' })
+    assert.equal(personal.note, original.note)
+    assert.equal(employeeDetails.safeParse(personal).success, true)
+    assert.equal('category' in personal, false)
+    assert.equal('startDate' in personal, false)
+    assert.equal(assignmentInput(values).category, category)
+    assert.equal(assignmentInput(values).startDate, original.hireDate)
+    assert.equal(values.note, original.note)
+    assert.deepEqual(categoryOptions().length, 8)
+  }
+})
+
+function target(change = {}) {
+  return { slot: 1, path: null, available: false, autoDay: null, lastAttempt: null, lastSuccess: null, lastKind: null, error: null, fileName: null, ...change }
+}
+test('backup overview distinguishes unconfigured, partial failure, same volume, and busy without implying disk protection', () => {
+  assert.equal(backupOverview(null).configured, false)
+  const status = { targets: [target(), target({ slot: 2 })], sameVolume: false, busy: false, lastRestore: null }
+  assert.equal(backupOverview(status).label, 'Потрібно вибрати дві теки')
+  status.targets = [target({ path: 'X:\\one', available: true, lastSuccess: '2026-11-02T10:00:00+02:00' }),
+    target({ slot: 2, path: 'Y:\\two', available: false, lastSuccess: '2026-11-02T08:30:00Z', error: 'BACKUP_FAILED' })]
+  const before = structuredClone(status)
+  assert.deepEqual(backupOverview(status), { configured: true, successes: 2, lastSuccess: '2026-11-02T08:30:00Z', errors: 1, label: 'Потребує уваги' })
+  assert.deepEqual(status, before)
+  status.targets[1].error = null
+  assert.equal(backupOverview(status).errors, 1) // unavailable remains visible without an error code
+  status.targets[1].available = true
+  status.sameVolume = true
+  assert.equal(backupOverview(status).label, 'Обидві теки на одному томі')
+  status.busy = true
+  assert.equal(backupOverview(status).label, 'Виконується операція')
+})
+
+const css = readFileSync(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
+const tokens = Object.fromEntries([...css.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(match => [match[1], match[2].trim()]))
+function resolve(name) {
+  const value = tokens[name]
+  assert.ok(value, name)
+  return value.startsWith('var(') ? resolve(value.slice(4, -1)) : value
+}
+function luminance(hex) {
+  let digits = hex.slice(1)
+  if (digits.length === 3) digits = [...digits].map(char => char + char).join('')
+  const rgb = [0, 2, 4].map(offset => parseInt(digits.slice(offset, offset + 2), 16) / 255)
+    .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+  return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722
+}
+function contrast(a, b) {
+  const values = [luminance(resolve(a)), luminance(resolve(b))].sort((x, y) => y - x)
+  return (values[0] + .05) / (values[1] + .05)
+}
+test('lilac normal text and semantic feedback meet WCAG AA; focus is distinguishable on light surfaces', () => {
+  for (const foreground of ['--color-text', '--color-text-secondary', '--color-text-muted', '--color-text-label', '--color-text-hint', '--accent', '--accent-hover']) {
+    for (const background of ['--surface-card', '--surface-app', '--surface-panel', '--accent-soft']) {
+      assert.ok(contrast(foreground, background) >= 4.5, `${foreground} on ${background}: ${contrast(foreground, background)}`)
+    }
+  }
+  for (const background of ['--accent', '--accent-hover']) assert.ok(contrast('--color-on-accent', background) >= 4.5)
+  for (const kind of ['success', 'error', 'warning', 'info']) assert.ok(contrast(`--feedback-${kind}-text`, `--feedback-${kind}-bg`) >= 4.5, kind)
+  assert.ok(contrast('--border-focus', '--surface-card') >= 3)
+})

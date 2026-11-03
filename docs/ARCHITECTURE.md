@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує версію 0.1.0 у робочій гілці після 3.4.2 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
+Документ описує версію 0.1.0 у робочій гілці після 3.4.2.1 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
 
 ## Стек та структура
 
@@ -161,7 +161,7 @@ Restore складається з окремих chooseRestore і confirmRestore
 - `shell.css`: sidebar, topbar, breadcrumbs, головний блок і адаптивність;
 - `employees.css`: кадрові форми, таблиця, картка/історія, вкладки й container queries на чинних tokens.
 
-На 3.4.1 стилі та спільні компоненти перенесено з HromadaAID [33eca107](https://github.com/Anatol1ch/HromadaAID/tree/33eca10733caaf73b1a99e75a24ff35e706a0afb), без runtime-залежності або приєднання Git-історії. На 3.4.1 палітра — актуальна HromadaAID: --accent-green `#286343`, strong `#1f5539`, soft `#e8f1eb`, source нейтральні поверхні/текст/бордери. Старі --accent* — aliases цих токенів. Кольори success/error/warning відокремлені від акценту.
+На 3.4.1 стилі та спільні компоненти перенесено з HromadaAID [33eca107](https://github.com/Anatol1ch/HromadaAID/tree/33eca10733caaf73b1a99e75a24ff35e706a0afb), без runtime-залежності або приєднання Git-історії. Історично на 3.4.1 палітра відповідала HromadaAID (замінена остаточним рішенням 3.4.2.1 нижче): --accent-green `#286343`, strong `#1f5539`, soft `#e8f1eb`, source нейтральні поверхні/текст/бордери. На тому етапі старі --accent* були aliases цих токенів; на 3.4.2.1 green назви вилучено. Кольори success/error/warning відокремлені від акценту.
 
 Збережено sidebar 258 px (244 px до 1280 px; піктограми 68 px до 1100 px), topbar 68 px, контент до 1500 px, стандартний контроль 44 px і шкалу 4/8/12/16/20/24/32 px. За ширини до 760 px topbar має 58 px, до 600 px головний блок стає одноколонковим, topbar — автоматичної висоти з мінімумом 68 px. Окремої мобільної версії немає.
 
@@ -207,7 +207,7 @@ DateField замінює всі native date inputs, зберігає source min/
 
 Select/ValidatedInput повторно використано у формах/довідниках; реєстр — SearchField/DictionaryTable (ReactNode header/aria-sort adaptation)/TableSkeleton. Картка використовує source navigateTabs. Enter/keyboard highlight і Ctrl+Enter беруться з source helpers; Ctrl+Enter на main дозволений лише з відповідної форми, textarea/IME/popups мають власні клавіші. Toast підтримує чотири kind і source queue/3500+180 ms/close/ARIA; контекстні form/SQLite/restore помилки лишаються persistent Alert.
 
-Source CSS відібрано через AST за залежностями selectors, розкладено в tokens/base/components/shell зі збереженням порядку, пізніх green override, медіа/анімацій/reduced-motion. Financial/report/auth/print rules та --program-* виключено. Scoped employee layout тимчасовий; .employee-form-panel застосовує source field declarations, --accent* aliases не є іншою палітрою. PostCSS уже є залежністю Vite; нових пакетів немає. App noEmit дозволяє .ts imports для прямих Node-тестів.
+Source CSS відібрано через AST за залежностями selectors, розкладено в tokens/base/components/shell зі збереженням порядку, пізніх green override, медіа/анімацій/reduced-motion. Financial/report/auth/print rules та --program-* виключено. Тимчасовий employee-form-panel adapter видалено на 3.4.2; green token aliases замінено семантичними сиреневими токенами на 3.4.2.1. PostCSS уже є залежністю Vite; нових пакетів немає. App noEmit дозволяє .ts imports для прямих Node-тестів.
 
 Міграції 1–3/checksum, кадрові сервіси/13 IPC, backup/restore й Electron security незмінні. Автоматично: typecheck, 104/104 тести + Electron Main smoke, build, diff-check. Лише temp БД/профілі. Ручне візуальне/клавіатурне приймання не виконане, GUI snapshot/елементарні кліки не автоматизувалися. Наступний підетап — source Modal-композиції конкретних кадрових форм і видалення legacy layout; 3.4.2 та merge main потребують окремого завдання.
 
@@ -258,3 +258,15 @@ EmployeeForm та AssignmentForm самі компонують готовий Mo
 closeGuards.ts — невелика чиста координація закриття, не друга реалізація Modal. useUnsavedChanges реєструє явні owner refs зі свіжими dirty/busy getters у контролері workspace. Закриття можливе лише для верхнього зареєстрованого власника; вихід із розділу перевіряє всіх зверху вниз. Зміна стеку або активна операція скасовує відкладений перехід. Скасований/від’єднаний власник не закривається; source closeConfirmation виконує лише явне підтвердження. На workspace є один beforeunload listener, без async втручання в Electron close lifecycle. Стек візуальних діалогів, inert, trap, Escape, overflow та focus restore залишаються реалізацією Modal 3.4.1.
 
 Кадрові форми використовують ISO payload лише після native validity + предметної перевірки; видимий draft дати враховується в dirty та validity, тож старе валідне ISO не виправдовує невалідний текст. Assignment input має явні чотири поля. Реєстр і картка отримують Main employeeCard після мутацій; картка перечитує getHistory та довідники за revision. Жодного нового джерела поточного призначення/дати прийняття, localStorage, таблиць або IPC не додано. UI source — AID 33eca107; provenance/відмінності/GUI-чекліст — UI-TRANSFER.md. Typecheck/build і 110 тестів успішні, ручне GUI-приймання відкрите.
+
+## UI-полірування 3.4.2.1
+
+Єдина тема HR задає accent/hover/soft і нейтральні текст/поверхні/межі в tokens.css; колишні accent-green та їх aliases видалено. Components/shell/employees/settings використовують семантичні токени, зелені literal залишені тільки для success. Error/danger і warning не перефарбовані. Текстові значення трохи посилено для AA, focus — окрема контрастна обводка. Немає другої теми чи копій компонентів.
+
+Головний банер використовує джерельний workspace-coat-area з обмеженими розмірами чинного assets/community-coat.png; HomePage отримує callback навігації до працівників. Footer відтворює структуру AID без нових IPC. Це зміни головного робочого екрана, не нового startup lifecycle.
+
+BackupSettings зберігає попередні polling/act/ref-guard і явні шість IPC-викликів. src/backup/presentation.ts лише узагальнює persisted BackupStatus: налаштованість, кількість історичних успіхів, найновіший успіх за timestamp, помилки/недоступність, sameVolume/busy. Drafts не беруть участі у визначенні захисту. Заміна тек/копії/відновлення викликаються з тими самими token/slot аргументами. UI розділяє overview, responsive target cards, details і restore; backend не змінений.
+
+CategoryField — спільний необов’язковий Select; src/employees/categories.ts додає legacy string до варіантів, не класифікує посади й не змінює історію. Payload category лишається string|null. Персональний payload як раніше не містить кадрових полів. Note details лишається змонтованим; початковий open визначається наявною приміткою, редагування/згортання не стирають значення. Порожня note-секція картки не рендериться. Для юридичного модуля рангів потрібна окрема оцінка законодавства/дати чинності, див. DECISIONS.
+
+ARIA validation лишається у source controls із touched/onInvalid та domain errors. Вилучено незалежне :user-invalid оформлення, щоб Chromium не показував випереджальні помилки; submit/native validity/focus-first-invalid не вимкнено. Modal stack/IPC unchanged. Контраст перевірено для явних пар токенів; масштабування, scroll і візуальне приймання ще ручні.

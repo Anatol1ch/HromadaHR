@@ -2,7 +2,7 @@ import Modal from '../Modal'
 import { Check, X, BriefcaseBusiness } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
-import ValidatedInput from '../ValidatedInput'
+import CategoryField from './CategoryField'
 import { formatDateInput } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useRef, useState } from 'react'
@@ -23,6 +23,8 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
     positionId: assignment?.positionId ?? employee.currentAssignment.positionId, category: (assignment ?? employee.currentAssignment).category ?? '',
   }))
   const [values, setValues] = useState(initial)
+  const [categoryOpen, setCategoryOpen] = useState(() => !!assignment?.category)
+  const categoryDetails = useRef<HTMLDetailsElement>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -42,6 +44,7 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
     const errors = validateAssignment(values, employee.birthDate, localToday())
     if (Object.keys(errors).length) {
       setErrors(errors); setError('Перевірте позначені поля.')
+      if (errors.category) { setCategoryOpen(true); if (categoryDetails.current) categoryDetails.current.open = true }
       requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
@@ -67,14 +70,12 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
           <div className="recipient-field employee-field"><label htmlFor="assignment-date">Дата початку *</label>
             <DateField id="assignment-date" required min="0001-01-01" max={localToday()} value={values.startDate} disabled={saving || directory.pending}
               onChange={value => change('startDate', value)} onDraftChange={display => setDateDraftDirty(display !== formatDateInput(initial.startDate))} error={errors.startDate} /></div>
-          <div className="recipient-field employee-field"><label htmlFor="assignment-category">Категорія посади</label>
-            <ValidatedInput id="assignment-category" maxLength={200} value={values.category} onChange={event => change('category', event.target.value)}
-              aria-invalid={!!errors.category} aria-describedby={errors.category ? 'assignment-category-error' : undefined} />
-            {errors.category && <span className="field-error" id="assignment-category-error">{errors.category}</span>}</div>
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
-        <p className="employee-hint">Можна внести минулу дату або виправити перше призначення. Дата прийняття й поточна посада будуть визначені з оновленої історії.</p>
+        <details className="employee-additional" ref={categoryDetails} open={categoryOpen} onToggle={event => setCategoryOpen(event.currentTarget.open)}><summary>Додаткові кадрові реквізити</summary>
+          <CategoryField value={values.category} onChange={value => change('category', value)} disabled={saving || directory.pending} error={errors.category}/>
+        </details>
       </fieldset>
       <div className="recipient-form-actions"><span>Дата прийняття та посада визначаються з історії.</span><div>
         <button className="secondary-button" type="button" disabled={saving || directory.pending} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>

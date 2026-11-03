@@ -1,7 +1,7 @@
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
@@ -45,10 +45,10 @@ function NavigationItem({ section, active, onNavigate }: {
   </button>
 }
 
-function HomePage() {
+function HomePage({ onEmployees }: { onEmployees: () => void }) {
   return <div className="workspace-page page-transition">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
-      <div className="workspace-mark-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
+      <div className="workspace-coat-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
       <div className="workspace-identity-copy">
         <div className="eyebrow">РОБОЧИЙ ПРОСТІР ГРОМАДИ</div>
         <h1 id="home-title"><span>Вишнівська селищна</span>{' '}<span>територіальна громада</span></h1>
@@ -56,22 +56,15 @@ function HomePage() {
         <p className="subtitle">Автоматизована система кадрового обліку</p>
       </div>
     </section>
-    <section className="dashboard-panel" aria-labelledby="workspace-title">
-      <div className="workspace-primary">
-        <div>
-          <h2 id="workspace-title">Ваш робочий простір</h2>
-          <p>Єдине середовище для кадрового обліку громади.</p>
-        </div>
+    <section className="dashboard-panel workspace-actions" aria-labelledby="workspace-title">
+      <div className="workspace-primary"><div><h2 id="workspace-title">Кадрова робота</h2><p>Працівники, особові картки та історія призначень громади.</p></div>
+        <button type="button" className="primary-button" onClick={onEmployees}><UsersRound size={19} aria-hidden="true"/>Відкрити реєстр працівників<ArrowUpRight size={17} aria-hidden="true"/></button>
       </div>
-      <div className="workspace-status">
-        <Alert variant="info">
-          <strong>Реєстр працівників доступний</strong>
-          <span>У розділі «Працівники» можна вести реєстр, створювати та редагувати особові картки.</span>
-        </Alert>
-        <p>Облік відпусток, стажу, рангів і кадрових документів буде додано на наступних етапах.</p>
-      </div>
+      <p className="workspace-next-modules">Відпустки, стаж, ранги й документи будуть доступні на наступних етапах.</p>
     </section>
-    <footer className="page-footer"><p>HromadaHR · Автоматизована система кадрового обліку</p></footer>
+    <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>
+      <p className="home-footer-credit"><Code2 size={17} strokeWidth={1.7} aria-hidden="true"/><span>Developed by <strong>Anatolii Myronenko</strong></span></p>
+    </footer>
   </div>
 }
 
@@ -87,7 +80,7 @@ const storageErrors: Record<StorageErrorCode, string> = {
   MISSING_DATABASE: 'Файл раніше створеної бази відсутній. Нову порожню базу не створено.',
 }
 
-function StorageNotice({ showReady }: { showReady: boolean }) {
+function StorageNotice() {
   const [status, setStatus] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
     let active = true
@@ -107,9 +100,7 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
     const timer = setInterval(() => { void refresh() }, 5000)
     return () => { active = false; clearInterval(timer) }
   }, [])
-  if (status.state === 'ready') return showReady ? <Alert variant="info">
-    Локальне сховище готове. Версія схеми: {status.schemaVersion}.
-  </Alert> : null
+  if (status.state === 'ready') return null
   return <Alert variant={status.state === 'error' ? 'error' : 'info'}>
     {status.state === 'error' ? storageErrors[status.code] :
       status.state === 'closed' ? 'Локальне сховище закрито.' : 'Перевірка локального сховища…'}
@@ -180,8 +171,8 @@ export default function App() {
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
-        <StorageNotice showReady={active === 'settings'} />
-        {active === 'home' ? <HomePage /> : active === 'employees' ?
+        <StorageNotice />
+        {active === 'home' ? <HomePage onEmployees={() => navigate('employees')} /> : active === 'employees' ?
           <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">

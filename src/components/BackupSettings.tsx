@@ -1,3 +1,5 @@
+import { DatabaseBackup, FolderOpen, HardDrive, History, Save, ShieldAlert, RefreshCw } from 'lucide-react'
+import { backupOverview } from '../backup/presentation.ts'
 import { formatDate, formatDateTime } from '../lib/dates'
 import { notifySystemToast } from './SystemToastHost'
 import { useEffect, useRef, useState } from 'react'
@@ -62,60 +64,89 @@ export default function BackupSettings() {
     } catch { if (mounted.current) setFeedback({ error: true, text: message('UNAVAILABLE') }) }
     finally { actionInFlight.current = false; if (mounted.current) setRunning(false) }
   }
-  useEffect(() => { if (feedback) notifySystemToast(feedback.error ? 'error' : 'success', feedback.error ? 'Резервування' : 'Готово', feedback.text) }, [feedback])
+  useEffect(() => { if (feedback && !feedback.error) notifySystemToast('success', 'Готово', feedback.text) }, [feedback])
   const busy = running || status?.busy === true
   const configured = status?.targets.every(target => target.path !== null) === true
-  return <section className="dashboard-panel backup-panel" aria-labelledby="backup-title" aria-busy={busy}>
-    <h2 id="backup-title">Резервне копіювання</h2>
-    <p>Виберіть дві незалежні теки. Поки HromadaHR відкрито, застосунок створює по одній автоматичній копії на добу в кожній теці. Зберігаються 14 останніх автоматичних копій; ручні копії не видаляються.</p>
-    {([0, 1] as const).map(index => {
-      const target = status?.targets[index]
-      return <div className="backup-target" key={index}>
-        <h3>Тека {index + 1}</h3>
-        <p className="backup-path">{choices[index]?.path ?? target?.path ?? 'Не вибрано'}</p>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => {
-          void act(() => window.hromadaHR.backup.chooseFolder(index === 0 ? 1 : 2), choice => {
-            if (choice) setChoices(previous => index === 0 ? [choice, previous[1]] : [previous[0], choice])
-          })
-        }}>Вибрати теку {index + 1}</button>
-        {choices[index] ? <p>Новий вибір ще не збережено.</p> : <p>{target?.path ? target.available ? 'Тека доступна' : 'Тека недоступна' : 'Очікує налаштування'}</p>}
-        <p>Остання спроба: {time(target?.lastAttempt ?? null)}. Успішна копія: {time(target?.lastSuccess ?? null)}.</p>
-        {target?.fileName && <p className="backup-path">{target.fileName}</p>}
-        <p>Автоматичну копію створено за: {target?.autoDay ? formatDate(target.autoDay) : 'ще немає'}.</p>
-        {target?.error && <Alert variant="warning">{message(target.error)} Автоматичні спроби — з інтервалом 15 хвилин, до чотирьох на добу. Ручну копію можна спробувати будь-коли.</Alert>}
+  const overview = backupOverview(status)
+  return <section className="backup-settings" aria-labelledby="backup-title" aria-busy={busy}>
+    <section className="dashboard-panel backup-overview">
+      <div className="settings-card-heading"><span className="settings-icon"><DatabaseBackup size={21} aria-hidden="true"/></span><div><h2 id="backup-title">Резервне копіювання</h2><p>Два місця зберігання для локальних даних HromadaHR.</p></div></div>
+      <div className="backup-overview-status" role="status">
+        <strong>{busy ? 'Виконується операція…' : overview.label}</strong>
+        {status && <span>Теки: {overview.configured ? 'обидві налаштовано' : 'потрібно вибрати та зберегти дві теки'}.</span>}
+        <span>Успіх зафіксовано для {overview.successes} з 2 тек. Остання успішна копія: {time(overview.lastSuccess)}.</span>
       </div>
-    })}
-    <div className="backup-actions">
-      <button type="button" className="primary-button" disabled={busy || !choices.some(Boolean) || !([0, 1] as const).every(i => choices[i] || status?.targets[i].path)}
-        onClick={() => { void act(() => window.hromadaHR.backup.saveConfig([choices[0]?.token ?? null, choices[1]?.token ?? null]), data => {
-          setStatus(data); setChoices([null, null]); setFeedback({ error: false, text: 'Теки збережено. Автоматичне резервування активовано.' })
-        }) }}>Зберегти теки</button>
-      <button type="button" className="secondary-button" disabled={busy || !configured}
-        onClick={() => { void act(() => window.hromadaHR.backup.runManual(), data => {
-          setStatus(data)
-          const failures = data.targets.filter(target => target.error).length
-          setFeedback({ error: failures > 0, text: failures === 0 ? 'Ручні копії створено в обох теках.' : 'Резервування завершено з помилками. Перевірте результат для кожної теки.' })
-        }) }}>Створити резервну копію</button>
-      <button type="button" className="secondary-button" disabled={busy || !status}
-        onClick={() => { void act(() => window.hromadaHR.backup.chooseRestore(), setRestore) }}>Відновити з резервної копії</button>
+      {status?.sameVolume && <Alert variant="warning">Обидві теки на одному томі. Це не захищає від відмови цього диска. Виберіть другу теку на іншому носії.</Alert>}
+      {choices.some(Boolean) && <Alert variant="info">Вибір тек ще не збережено. Автоматичні копії використовують попередню конфігурацію.</Alert>}
+      {feedback?.error && <Alert variant="error">{feedback.text}</Alert>}
+      {status?.lastRestore === 'success' && <Alert variant="success">Дані відновлено з резервної копії.</Alert>}
+      {status?.lastRestore === 'rolled-back' && <Alert variant="warning">Відновлення не вдалося. Попередню справну базу повернуто.</Alert>}
+      <p className="backup-policy">Поки застосунок відкрито — одна автоматична копія на добу в кожній теці. Зберігаються 14 останніх автоматичних копій; ручні залишаються.</p>
+    </section>
+    <div className="backup-target-grid">
+      {([0, 1] as const).map(index => {
+        const target = status?.targets[index]
+        const choice = choices[index]
+        const path = choice?.path ?? target?.path
+        return <section className="dashboard-panel backup-target-card" key={index} aria-labelledby={`backup-slot-${index}`}>
+          <div className="backup-target-heading"><span className="settings-icon"><HardDrive size={20} aria-hidden="true"/></span><div><span className="backup-slot-label">Місце резервування {index + 1}</span><h3 id={`backup-slot-${index}`}>Тека {index + 1}</h3></div></div>
+          <p className="backup-path" title={path ?? undefined}>{path ?? 'Теку ще не вибрано'}</p>
+          <span className={`backup-target-state${target?.error || (target?.path && !target.available) ? ' has-error' : ''}`}>
+            {choice ? 'Очікує збереження' : !target ? 'Завантаження…' : target.path ? target.available ? 'Тека доступна' : 'Тека недоступна' : 'Не налаштовано'}
+          </span>
+          <dl className="backup-target-facts"><div><dt>{choice ? 'Остання копія у попередній теці' : 'Остання успішна копія'}</dt><dd>{time(target?.lastSuccess ?? null)}</dd></div>
+            {target?.error && <div><dt>Невдала спроба</dt><dd>{time(target.lastAttempt)}</dd></div>}</dl>
+          {target?.error && <Alert variant="error">{message(target.error)}</Alert>}
+          {target?.path && !target.available && !target.error && <Alert variant="warning">Тека недоступна. Перевірте підключення носія та доступ до неї.</Alert>}
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => {
+            void act(() => window.hromadaHR.backup.chooseFolder(index === 0 ? 1 : 2), value => {
+              if (value) setChoices(previous => index === 0 ? [value, previous[1]] : [previous[0], value])
+            })
+          }}><FolderOpen size={17} aria-hidden="true"/>{path ? 'Змінити теку' : 'Вибрати теку'}</button>
+          <details className="backup-technical"><summary>Технічні відомості</summary>
+            <dl><div><dt>Остання спроба</dt><dd>{time(target?.lastAttempt ?? null)}</dd></div>
+              <div><dt>День автоматичної копії</dt><dd>{target?.autoDay ? formatDate(target.autoDay) : 'Ще немає'}</dd></div>
+              <div><dt>Файл останньої копії</dt><dd>{target?.fileName ?? 'Ще немає'}</dd></div>
+              {choice && target?.path && <div><dt>Збережена тека</dt><dd>{target.path}</dd></div>}
+            </dl>
+            <p>Повторні автоматичні спроби — не раніше ніж через 15 хвилин, до чотирьох на теку за добу.</p>
+          </details>
+        </section>
+      })}
     </div>
-    {status?.sameVolume && <Alert variant="warning">Обидві теки розташовані на одному томі. Для захисту від відмови диска виберіть другу теку на іншому носії.</Alert>}
-    {restore && <Alert variant="warning">
-      <strong>Відновлення замінить поточні дані.</strong>
-      <span>Перевірено файл «{restore.fileName}», схема {restore.schemaVersion}. Перед заміною буде збережено захисну копію.</span>
+    <section className="dashboard-panel backup-regular-actions" aria-label="Збереження та резервування">
+      <div><h3>Зберегти та створити копії</h3><p>Після зміни тек спочатку збережіть нову конфігурацію.</p></div>
       <div className="backup-actions">
-        <button type="button" className="primary-button" disabled={busy} onClick={() => {
-          void act(() => window.hromadaHR.backup.confirmRestore(restore.token), result => {
-            setRestore(null)
-            setFeedback({ error: false, text: result.restored ? 'Дані відновлено. Інтерфейс перезавантажується.' : 'Відновлення скасовано.' })
-          })
-        }}>Підтвердити відновлення</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => setRestore(null)}>Скасувати</button>
+        <button type="button" className="primary-button" disabled={busy || !choices.some(Boolean) || !([0, 1] as const).every(i => choices[i] || status?.targets[i].path)}
+          onClick={() => { void act(() => window.hromadaHR.backup.saveConfig([choices[0]?.token ?? null, choices[1]?.token ?? null]), data => {
+            setStatus(data); setChoices([null, null]); setFeedback({ error: false, text: 'Теки збережено. Автоматичне резервування активовано.' })
+          }) }}><Save size={17} aria-hidden="true"/>Зберегти зміни тек</button>
+        <button type="button" className="secondary-button" disabled={busy || !configured}
+          onClick={() => { void act(() => window.hromadaHR.backup.runManual(), data => {
+            setStatus(data)
+            const failures = data.targets.filter(target => target.error).length
+            setFeedback({ error: failures > 0, text: failures === 0 ? 'Ручні копії створено в обох теках.' : 'Резервування завершено з помилками. Перевірте результат для кожної теки.' })
+          }) }}><RefreshCw size={17} aria-hidden="true"/>Створити копії зараз</button>
       </div>
-    </Alert>}
-    {status?.lastRestore === 'success' && <Alert variant="success">Дані відновлено з резервної копії.</Alert>}
-    {status?.lastRestore === 'rolled-back' && <Alert variant="warning">Попереднє відновлення не вдалося. Попередню справну базу повернуто.</Alert>}
-    {busy && <p role="status">Операція виконується… Не від’єднуйте носії.</p>}
-    {feedback && <Alert variant={feedback.error ? 'error' : 'success'}>{feedback.text}</Alert>}
+      {busy && <p role="status">Операція виконується. Не від’єднуйте носії.</p>}
+    </section>
+    <section className="dashboard-panel backup-restore" aria-labelledby="backup-restore-title">
+      <div className="settings-card-heading"><span className="backup-restore-icon"><ShieldAlert size={21} aria-hidden="true"/></span><div><h3 id="backup-restore-title">Відновлення даних</h3><p>Замінює поточні дані вмістом вибраної копії. Використовуйте для повернення збережених даних.</p></div></div>
+      <button type="button" className="secondary-button" disabled={busy || !status}
+        onClick={() => { void act(() => window.hromadaHR.backup.chooseRestore(), setRestore) }}><History size={17} aria-hidden="true"/>Вибрати копію для відновлення</button>
+      {restore && <Alert variant="warning">
+        <strong>Відновлення замінить поточні дані.</strong><span>Перед заміною буде збережено захисну копію; далі з’явиться системне підтвердження.</span>
+        <details className="backup-technical"><summary>Відомості про вибрану копію</summary><p className="backup-path">{restore.fileName}</p><p>Версія схеми: {restore.schemaVersion}.</p></details>
+        <div className="backup-actions">
+          <button type="button" className="danger-button" disabled={busy} onClick={() => {
+            void act(() => window.hromadaHR.backup.confirmRestore(restore.token), result => {
+              setRestore(null)
+              setFeedback({ error: false, text: result.restored ? 'Дані відновлено. Інтерфейс перезавантажується.' : 'Відновлення скасовано.' })
+            })
+          }}>Продовжити відновлення</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => setRestore(null)}>Скасувати</button>
+        </div>
+      </Alert>}
+    </section>
   </section>
 }
