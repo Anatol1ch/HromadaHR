@@ -1,4 +1,4 @@
-import { ArrowDownAZ, ArrowUpAZ, Plus } from 'lucide-react'
+import { ArrowDownAZ, ArrowUpAZ, Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, selectEmployees } from '../../employees/model'
 import Alert from '../Alert'
@@ -12,10 +12,10 @@ type Props = {
   employees: EmployeeCard[]; loading: boolean; error: string
   query: string; departmentId: string; descending: boolean
   onQuery: (value: string) => void; onDepartment: (value: string) => void; onSort: () => void
-  onRetry: () => void; onCreate: () => void; onOpen: (employee: EmployeeCard) => void
+  onRetry: () => void; onCreate: () => void; onOpen: (employee: EmployeeCard) => void; onEdit: (employee: EmployeeCard) => void; onDelete: (employee: EmployeeCard) => void
 }
 export default function EmployeeRegistry({ employees, loading, error, query, departmentId, descending,
-  onQuery, onDepartment, onSort, onRetry, onCreate, onOpen }: Props) {
+  onQuery, onDepartment, onSort, onRetry, onCreate, onOpen, onEdit, onDelete }: Props) {
   const visible = selectEmployees(employees, query, departmentId, descending)
   const departments = [...new Map(employees.map(employee => [employee.currentAssignment.departmentId, employee.currentAssignment.department])).values()]
     .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
@@ -30,7 +30,7 @@ export default function EmployeeRegistry({ employees, loading, error, query, dep
       <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true" />Додати працівника</button>
     </div>
     {error ? <Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert> :
-      loading ? <TableSkeleton columns={5} label="Завантаження працівників…" /> :
+      loading ? <TableSkeleton columns={6} label="Завантаження працівників…" /> :
       employees.length === 0 ? <section className="dashboard-panel employee-empty"><DataState kind="empty" message="Працівників ще немає"
         description="Додайте першого працівника, щоб почати вести кадровий облік." /></section> :
       <section className="dashboard-panel employee-register-panel" aria-label="Реєстр працівників">
@@ -46,11 +46,16 @@ export default function EmployeeRegistry({ employees, loading, error, query, dep
           {(query || departmentId) && <button className="employee-link" type="button" onClick={() => { onQuery(''); onDepartment('') }}>Скинути пошук і фільтр</button>}</div>
         <DictionaryTable label="Таблиця працівників" className="hr-employee-table" filtered={!!query || !!departmentId} empty={visible.length ? undefined : 'Нічого не знайдено'}
           columns={[{ label: <button className="employee-sort" type="button" onClick={onSort} aria-label={`ПІБ. Змінити сортування на ${descending ? 'за зростанням' : 'за спаданням'}`}>ПІБ <SortIcon size={17} aria-hidden="true" /></button>, sort: descending ? 'descending' : 'ascending', width: '25%' },
-            { label: 'Посада', width: '22%' }, { label: 'Підрозділ', width: '22%' }, { label: 'Тип працівника', width: '20%' }, { label: 'Дата прийняття', width: '11%' }]}>
+            { label: 'Посада', width: '22%' }, { label: 'Підрозділ', width: '22%' }, { label: 'Тип працівника', width: '20%' }, { label: 'Дата прийняття', width: '11%' }, { label: 'Дії', width: '100px' }]}>
           {visible.map(employee => <tr key={employee.id}>
             <td><button className="employee-name-link" type="button" onClick={() => onOpen(employee)}>{fullName(employee)}</button></td>
             <td>{employee.currentAssignment.position.name}</td><td>{employee.currentAssignment.department.name}</td>
             <td>{employeeTypeLabels[employee.employeeType]}</td><td className="employee-date">{displayDate(employee.hireDate)}</td>
+            <td className="dictionary-actions-cell"><div className="registry-row-actions">
+              <button type="button" className="table-action" title="Переглянути" aria-label={`Переглянути: ${fullName(employee)}`} onClick={() => onOpen(employee)}><Eye size={17} aria-hidden="true"/></button>
+              <button type="button" className="table-action" title="Редагувати" aria-label={`Редагувати: ${fullName(employee)}`} onClick={() => onEdit(employee)}><Pencil size={16} aria-hidden="true"/></button>
+              <button type="button" className="table-action danger-action" title="Видалити" aria-label={`Видалити: ${fullName(employee)}`} onClick={() => onDelete(employee)}><Trash2 size={16} aria-hidden="true"/></button>
+            </div></td>
           </tr>)}
         </DictionaryTable>
       </section>}

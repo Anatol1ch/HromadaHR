@@ -1,6 +1,5 @@
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
-import type { EmployeeBreadcrumb } from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
 import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
@@ -120,7 +119,6 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const [helpOpen, setHelpOpen] = useState(false)
-  const [employeeBreadcrumb, setEmployeeBreadcrumb] = useState<EmployeeBreadcrumb | null>(null)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
     if (id !== active) navigationGuard.current(() => setActive(id))
@@ -176,9 +174,7 @@ export default function App() {
             <ol>
               <li>{active === 'home' ? <span>Робочий простір</span> :
                 <button type="button" onClick={() => navigate('home')}>Робочий простір</button>}</li>
-              <li><ChevronRight size={15} aria-hidden="true" />{active === 'employees' && employeeBreadcrumb ?
-                <button type="button" onClick={employeeBreadcrumb.onBack}>Працівники</button> : <span aria-current="page">{current.label}</span>}</li>
-              {active === 'employees' && employeeBreadcrumb && <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{employeeBreadcrumb.label}</span></li>}
+              <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>
             </ol>
           </nav>
         </div>
@@ -186,7 +182,7 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice showReady={active === 'settings'} />
         {active === 'home' ? <HomePage /> : active === 'employees' ?
-          <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> : active === 'settings' ? <SettingsPage /> :
+          <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>

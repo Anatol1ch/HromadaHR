@@ -93,6 +93,9 @@ export function personnelMessage(code: IpcErrorCode): string {
 }
 
 export type AssignmentValues = Omit<AssignmentInput, 'category'> & { category: string }
+export function assignmentInput(values: AssignmentValues): AssignmentInput {
+  return { startDate: values.startDate, departmentId: values.departmentId, positionId: values.positionId, category: optional(values.category) }
+}
 export const localToday = todayIsoDate
 export function validateAssignment(values: AssignmentValues, birthDate: string | null, today: string): FormErrors {
   const errors: FormErrors = {}

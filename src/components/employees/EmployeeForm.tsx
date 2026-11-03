@@ -1,3 +1,5 @@
+import Modal from '../Modal'
+import { Check, UserRound, X } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
@@ -31,14 +33,15 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const alive = useRef(true)
   const form = useRef<HTMLFormElement>(null)
   const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({})
-  const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial) || (!employee && directory.dirty)
+  const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial)
   const busy = saving || (!employee && directory.pending)
 
   useEffect(() => {
     alive.current = true
     return () => { alive.current = false }
   }, [])
-  useUnsavedChanges(dirty, inFlight, navigationGuard)
+  const requestClose = useUnsavedChanges(dirty, inFlight, navigationGuard, form)
+  const close = () => requestClose(onCancel)
 
   function change<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues(current => ({ ...current, [key]: value }))
@@ -80,16 +83,12 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
-  return <div className="employee-form-page">
-    <div className="page-heading employee-heading"><div><div className="eyebrow">ПРАЦІВНИКИ</div>
-      <h1 tabIndex={-1} data-page-title>{employee ? 'Редагування відомостей' : 'Новий працівник'}</h1>
-      <p className="subtitle">Поля зі знаком * обов’язкові. Решту можна заповнити пізніше.</p>
-    </div></div>
+  return <Modal title={employee ? 'Редагувати персональні відомості' : 'Додати працівника'} description="Поля зі знаком * обов’язкові. Решту можна заповнити пізніше." size="large" className="employee-form-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={busy} onClose={close}>
     {error && <Alert variant="error">{error}</Alert>}
     <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={busy}>
-      <fieldset className="dashboard-panel employee-form-panel" disabled={busy}>
+      <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Персональні відомості</legend>
-        <div className="employee-form-grid">
+        <div className="recipient-form-grid">
           {textField('lastName', 'Прізвище', true)}{textField('firstName', 'Ім’я', true)}{textField('middleName', 'По батькові')}
           {textField('birthDate', 'Дата народження')}
           <div className="recipient-field employee-field employee-field-wide"><span>Тип працівника *</span>
@@ -103,25 +102,25 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
           </div>
         </div>
       </fieldset>
-      {employee ? <section className="dashboard-panel employee-form-panel" aria-labelledby="fixed-assignment-title">
-        <h2 id="fixed-assignment-title">Кадрові відомості</h2>
+      {employee ? <fieldset className="recipient-fieldset">
+        <legend>Кадрові відомості</legend>
         <p className="employee-muted">Ця форма змінює лише персональні відомості. Для зміни призначення скористайтеся історією посад у картці.</p>
         <dl className="employee-facts"><div><dt>Дата прийняття</dt><dd>{displayDate(employee.hireDate)}</dd></div>
           <div><dt>Посада</dt><dd>{employee.currentAssignment.position.name}</dd></div>
           <div><dt>Підрозділ</dt><dd>{employee.currentAssignment.department.name}</dd></div>
           <div><dt>Категорія</dt><dd>{employee.currentAssignment.category ?? 'Не зазначено'}</dd></div></dl>
-      </section> : <fieldset className="dashboard-panel employee-form-panel" disabled={busy}>
+      </fieldset> : <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Початкове призначення</legend>
-        <div className="employee-form-grid">
+        <div className="recipient-form-grid">
           {textField('startDate', 'Дата прийняття', true)}{textField('category', 'Категорія посади')}
-          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} onState={setDirectory}
+          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
       </fieldset>}
-      <div className="employee-actions employee-form-footer">
-        <button type="submit" className="primary-button" disabled={busy || (!employee && (directory.loading || !!directory.error || directory.draft))} aria-busy={saving}>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={onCancel}>Скасувати</button>
-      </div>
+      <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
+        <button type="button" className="secondary-button" disabled={busy} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
+        <button type="submit" className="primary-button" disabled={busy || (!employee && (directory.loading || !!directory.error || directory.draft))} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
+      </div></div>
     </form>
-  </div>
+  </Modal>
 }

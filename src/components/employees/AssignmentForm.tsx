@@ -1,3 +1,5 @@
+import Modal from '../Modal'
+import { Check, X, BriefcaseBusiness } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput from '../ValidatedInput'
@@ -6,7 +8,7 @@ import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useRef, useState } from 'react'
 import type { RefObject, FormEvent } from 'react'
 import type { Assignment, EmployeeCard } from '../../../shared/personnel'
-import { fullName, localToday, personnelMessage, validateAssignment } from '../../employees/model'
+import { assignmentInput, fullName, localToday, personnelMessage, validateAssignment } from '../../employees/model'
 import type { AssignmentValues, FormErrors } from '../../employees/model'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
@@ -29,7 +31,8 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
   const form = useRef<HTMLFormElement>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const [dateDraftDirty, setDateDraftDirty] = useState(false)
-  useUnsavedChanges(dateDraftDirty || JSON.stringify(values) !== JSON.stringify(initial) || directory.dirty, inFlight, navigationGuard)
+  const requestClose = useUnsavedChanges(dateDraftDirty || JSON.stringify(values) !== JSON.stringify(initial), inFlight, navigationGuard, form)
+  const close = () => requestClose(onCancel)
   function change(key: keyof AssignmentValues, value: string) {
     setValues(current => ({ ...current, [key]: value })); setErrors(current => ({ ...current, [key]: undefined }))
   }
@@ -45,7 +48,7 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
     if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
-      const input = { ...values, category: values.category.trim() || null }
+      const input = assignmentInput(values)
       const result = assignment ? await window.hromadaHR.personnel.updateAssignment(assignment.id, input) :
         await window.hromadaHR.personnel.createAssignment(employee.id, input)
       if (!alive.current) return
@@ -54,16 +57,13 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
     } catch { if (alive.current) setError('Не вдалося підтвердити збереження. Дані форми збережено; перевірте історію перед повторною спробою.') }
     finally { inFlight.current = false; if (alive.current) setSaving(false) }
   }
-  return <div>
-    <div className="page-heading employee-heading"><div><div className="eyebrow">ІСТОРІЯ ПОСАД</div>
-      <h1 tabIndex={-1} data-page-title>{assignment ? 'Виправлення призначення' : 'Нова кадрова зміна'}</h1>
-      <p className="subtitle">{fullName(employee)}</p></div></div>
+  return <Modal title={assignment ? 'Виправити призначення' : 'Додати кадрову зміну'} description={fullName(employee)} headerIcon={<BriefcaseBusiness size={21} aria-hidden="true"/>} size="wide" className="employee-form-modal" busy={saving || directory.pending} onClose={close}>
     {assignment && assignment.startDate > localToday() && <Alert variant="warning">У записі є майбутня дата. Її не змінено автоматично: перед збереженням потрібно явно вказати коректну дату не пізніше сьогодні.</Alert>}
     {error && <Alert variant="error">{error}</Alert>}
     <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={saving || directory.pending}>
-      <fieldset className="dashboard-panel employee-form-panel" disabled={saving || directory.pending}>
+      <fieldset className="recipient-fieldset" disabled={saving || directory.pending}>
         <legend>{assignment ? 'Відомості призначення' : 'Кадрова зміна'}</legend>
-        <div className="employee-form-grid">
+        <div className="recipient-form-grid">
           <div className="recipient-field employee-field"><label htmlFor="assignment-date">Дата початку *</label>
             <DateField id="assignment-date" required min="0001-01-01" max={localToday()} value={values.startDate} disabled={saving || directory.pending}
               onChange={value => change('startDate', value)} onDraftChange={display => setDateDraftDirty(display !== formatDateInput(initial.startDate))} error={errors.startDate} /></div>
@@ -71,15 +71,15 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
             <ValidatedInput id="assignment-category" maxLength={200} value={values.category} onChange={event => change('category', event.target.value)}
               aria-invalid={!!errors.category} aria-describedby={errors.category ? 'assignment-category-error' : undefined} />
             {errors.category && <span className="field-error" id="assignment-category-error">{errors.category}</span>}</div>
-          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} onState={setDirectory}
+          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
         <p className="employee-hint">Можна внести минулу дату або виправити перше призначення. Дата прийняття й поточна посада будуть визначені з оновленої історії.</p>
       </fieldset>
-      <div className="employee-actions employee-form-footer">
-        <button className="primary-button" type="submit" disabled={saving || directory.pending || directory.loading || !!directory.error || directory.draft} aria-busy={saving}>{saving ? 'Збереження…' : 'Зберегти призначення'}</button>
-        <button className="secondary-button" type="button" disabled={saving || directory.pending} onClick={onCancel}>Скасувати</button>
-      </div>
+      <div className="recipient-form-actions"><span>Дата прийняття та посада визначаються з історії.</span><div>
+        <button className="secondary-button" type="button" disabled={saving || directory.pending} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
+        <button className="primary-button" type="submit" disabled={saving || directory.pending || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : 'Зберегти призначення'}</button>
+      </div></div>
     </form>
-  </div>
+  </Modal>
 }

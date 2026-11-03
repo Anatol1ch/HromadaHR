@@ -171,53 +171,53 @@ table:where(.dictionary-table) { width: 100%; border-collapse: collapse; table-l
 .dictionary-table .table-action:disabled { opacity: .45; cursor: default; }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field { align-content: start; color: var(--color-text-label); font-size: 12px; font-weight: 600; }
+  .app-modal .recipient-field { align-content: start; color: var(--color-text-label); font-size: 12px; font-weight: 600; }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity), :is(.app-modal, .employee-form-panel) .recipient-field textarea, :is(.app-modal, .employee-form-panel) .recipient-field .app-select-trigger {
+  .app-modal .recipient-field input:not(.app-select-validity), .app-modal .recipient-field textarea, .app-modal .recipient-field .app-select-trigger {
     min-height: var(--control-height); border: 1px solid var(--border-standard); border-radius: var(--radius-control); background: var(--surface-card); color: var(--color-text-control); font-size: 13px; font-weight: 400;
   }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity) { height: var(--control-height); padding-inline: 11px; }
+  .app-modal .recipient-field input:not(.app-select-validity) { height: var(--control-height); padding-inline: 11px; }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field textarea { padding: 10px 11px; }
+  .app-modal .recipient-field textarea { padding: 10px 11px; }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .date-field-control > input[type="text"] { padding-right: 42px; }
+  .app-modal .date-field-control > input[type="text"] { padding-right: 42px; }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity):focus, :is(.app-modal, .employee-form-panel) .recipient-field textarea:focus, :is(.app-modal, .employee-form-panel) .recipient-field .app-select-trigger:focus-visible {
+  .app-modal .recipient-field input:not(.app-select-validity):focus, .app-modal .recipient-field textarea:focus, .app-modal .recipient-field .app-select-trigger:focus-visible {
     border-color: var(--border-focus); box-shadow: var(--shadow-focus); outline: none;
   }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity):disabled, :is(.app-modal, .employee-form-panel) .recipient-field textarea:disabled, :is(.app-modal, .employee-form-panel) .recipient-field .app-select-trigger:disabled {
+  .app-modal .recipient-field input:not(.app-select-validity):disabled, .app-modal .recipient-field textarea:disabled, .app-modal .recipient-field .app-select-trigger:disabled {
     background: var(--surface-disabled); color: var(--color-text-disabled); cursor: default;
   }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity)[aria-invalid="true"], :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity):user-invalid, :is(.app-modal, .employee-form-panel) .recipient-field textarea[aria-invalid="true"], :is(.app-modal, .employee-form-panel) .recipient-field textarea:user-invalid, :is(.app-modal, .employee-form-panel) .recipient-field .app-select-invalid .app-select-trigger { border-color: var(--border-error); }
+  .app-modal .recipient-field input:not(.app-select-validity)[aria-invalid="true"], .app-modal .recipient-field input:not(.app-select-validity):user-invalid, .app-modal .recipient-field textarea[aria-invalid="true"], .app-modal .recipient-field textarea:user-invalid, .app-modal .recipient-field .app-select-invalid .app-select-trigger { border-color: var(--border-error); }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field input:not(.app-select-validity)[aria-invalid="true"]:focus, :is(.app-modal, .employee-form-panel) .recipient-field textarea[aria-invalid="true"]:focus, :is(.app-modal, .employee-form-panel) .recipient-field textarea:user-invalid:focus { box-shadow: var(--shadow-error); }
+  .app-modal .recipient-field input:not(.app-select-validity)[aria-invalid="true"]:focus, .app-modal .recipient-field textarea[aria-invalid="true"]:focus, .app-modal .recipient-field textarea:user-invalid:focus { box-shadow: var(--shadow-error); }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field-error, .app-modal .app-select-error { color: var(--color-text-error); font-size: 12px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
+  .app-modal .recipient-field-error, .app-modal .app-select-error { color: var(--color-text-error); font-size: 12px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; }
 }
 
 @media screen {
-  :is(.app-modal, .employee-form-panel) .recipient-field-hint { color: var(--color-text-hint); font-size: 11px; font-weight: 400; line-height: 1.4; }
+  .app-modal .recipient-field-hint { color: var(--color-text-hint); font-size: 11px; font-weight: 400; line-height: 1.4; }
 }
 
 @media screen {
