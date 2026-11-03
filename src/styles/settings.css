@@ -57,4 +57,3 @@
   .settings-about-grid, .settings-origin-grid, .support-contact-card { grid-template-columns: minmax(0, 1fr); }
   .settings-section-current { min-height: 48px; white-space: normal; }
 }
-
