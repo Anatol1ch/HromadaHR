@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує версію 0.1.0 у робочій гілці після 3.4.2.1 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
+Документ описує версію 0.1.0 у робочій гілці після 3.4.2.2 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
 
 ## Стек та структура
 
@@ -270,3 +270,15 @@ BackupSettings зберігає попередні polling/act/ref-guard і яв
 CategoryField — спільний необов’язковий Select; src/employees/categories.ts додає legacy string до варіантів, не класифікує посади й не змінює історію. Payload category лишається string|null. Персональний payload як раніше не містить кадрових полів. Note details лишається змонтованим; початковий open визначається наявною приміткою, редагування/згортання не стирають значення. Порожня note-секція картки не рендериться. Для юридичного модуля рангів потрібна окрема оцінка законодавства/дати чинності, див. DECISIONS.
 
 ARIA validation лишається у source controls із touched/onInvalid та domain errors. Вилучено незалежне :user-invalid оформлення, щоб Chromium не показував випереджальні помилки; submit/native validity/focus-first-invalid не вимкнено. Modal stack/IPC unchanged. Контраст перевірено для явних пар токенів; масштабування, scroll і візуальне приймання ще ручні.
+
+## Актуальна кадрова модель та реєстр (3.4.2.2)
+
+Міграція 4/remove_employee_note додається після незмінних 1–3, requiresBackup=true. Один DROP COLUMN видаляє тільки employees.note; STRICT, FK, інші поля, dictionaries та history зберігаються. Використано чинні verified snapshot та immediate transaction з ledger/user_version/FK. Note вилучено зі shared EmployeeDetails, strict Zod та PersonnelService SQL; allowlist 13 IPC незмінний. Старі note аргументи — INVALID_ARGUMENTS. Fresh startup проходить до версії 4, з pre-v3 та pre-v4 snapshots. Старі checksum не переписуються.
+
+Pre-v4 snapshot зберігає старі note, не входить до auto-ротації. Старі копії не модифікуються; restore v3 застосовує v4 до staged даних, джерело лишається незмінним. В активній БД старих приміток немає і після restore. UI експорту/редагування note немає; старі клієнти відхиляють версію 4. Backup/recovery runtime не перероблено.
+
+src/employees/registry.ts — спільні filter/sort/group/count/options. EmployeeRegistry компонує одну панель за RecipientRegistry/AidRegistry та дві EmployeeGroupTable wrappers над DictionaryTable. Одна логіка пошуку/filters, незалежні sort states; групи похідні від listEmployees/відповідей мутацій за employeeType без нового поля БД. Чотири sortable колонки, uk/base Collator, перевірений ISO, tie FIO/id, aria-sort. Параметри та filtersOpen — workspaceReducer; не зберігаються між перезапусками чи виходом із розділу. Home EmployeeSummary використовує count helper/listEmployees і відокремлює loading/error від успішного порожнього результату.
+
+AssignmentValues містить тільки startDate/positionId/departmentId; category передається окремо з assignmentPolicy. Correction зберігає category конкретного рядка дослівно. New change очікує getHistory, обирає попередника на дату (або перший відомий рядок до початку історії). Same position — inherit, different position — null. Це політика збереження даних, не нормативна класифікація: виправлення посади не переоцінює юридичну доречність старої категорії. Керування відкладається до рангів. Main chronology/atomicity незмінні. Category UI/enum choices вилучено; read-only відомості/історія зберігаються.
+
+Backup presentation розділяє config/availability/latest-attempt success/volume independence. SameVolume є лише warning, без дублювання в summary. Успіх останньої спроби визначається lastSuccess/lastAttempt/error, історичний lastSuccess відображається окремо. Backend untouched. Source SHA/адаптації/ручне приймання — UI-TRANSFER/HROMADAAID_REUSE.

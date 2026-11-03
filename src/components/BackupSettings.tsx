@@ -73,8 +73,8 @@ export default function BackupSettings() {
       <div className="settings-card-heading"><span className="settings-icon"><DatabaseBackup size={21} aria-hidden="true"/></span><div><h2 id="backup-title">Резервне копіювання</h2><p>Два місця зберігання для локальних даних HromadaHR.</p></div></div>
       <div className="backup-overview-status" role="status">
         <strong>{busy ? 'Виконується операція…' : overview.label}</strong>
-        {status && <span>Теки: {overview.configured ? 'обидві налаштовано' : 'потрібно вибрати та зберегти дві теки'}.</span>}
-        <span>Успіх зафіксовано для {overview.successes} з 2 тек. Остання успішна копія: {time(overview.lastSuccess)}.</span>
+        {status && <><span>Налаштовано місць: {status.targets.filter(target => target.path !== null).length} із 2.</span>
+          <span>Успішна остання спроба: {overview.successes} із 2 тек. Останній успіх: {time(overview.lastSuccess)}.</span></>}
       </div>
       {status?.sameVolume && <Alert variant="warning">Обидві теки на одному томі. Це не захищає від відмови цього диска. Виберіть другу теку на іншому носії.</Alert>}
       {choices.some(Boolean) && <Alert variant="info">Вибір тек ще не збережено. Автоматичні копії використовують попередню конфігурацію.</Alert>}

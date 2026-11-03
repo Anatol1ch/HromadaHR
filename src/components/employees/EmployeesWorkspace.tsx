@@ -14,7 +14,6 @@ import type { NavigationGuard } from './useUnsavedChanges'
 export default function EmployeesWorkspace({ navigationGuard }: { navigationGuard: RefObject<NavigationGuard> }) {
   const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
-  const { query, departmentId, descending } = workspace.registry
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -54,9 +53,9 @@ export default function EmployeesWorkspace({ navigationGuard }: { navigationGuar
   }
   return <div className="employees-workspace page-transition">
     <EmployeeRegistry employees={employees} loading={loading} error={error}
-      query={query} departmentId={departmentId} descending={descending}
-      onQuery={query => dispatch({ type: 'registry', registry: { query } })} onDepartment={departmentId => dispatch({ type: 'registry', registry: { departmentId } })}
-      onSort={() => dispatch({ type: 'registry', registry: { descending: !descending } })} onRetry={() => setRetry(value => value + 1)}
+      state={workspace.registry} onState={registry => dispatch({ type: 'registry', registry })}
+      onSort={(employeeType, key) => dispatch({ type: 'sort', employeeType, key })} onResetSort={() => dispatch({ type: 'resetSort' })}
+      onClear={() => dispatch({ type: 'clearFilters' })} onRetry={() => setRetry(value => value + 1)}
       onCreate={() => { rememberOpener(); dispatch({ type: 'form', form: { kind: 'create' } }) }}
       onOpen={employee => { rememberOpener(); dispatch({ type: 'card', id: employee.id }) }}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}

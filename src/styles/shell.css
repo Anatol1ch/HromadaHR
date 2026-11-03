@@ -153,6 +153,12 @@
 .home-footer-credit svg { flex: none; color: var(--accent); }
 .home-footer-credit strong { color: var(--color-text); font-weight: 600; white-space: nowrap; }
 .workspace-next-modules { margin: 14px 0 0; font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; }
+.employee-summary { margin-top: 16px; }
+.employee-summary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.employee-summary dl > div { min-width: 0; padding: 14px; border: 1px solid var(--border-surface); border-radius: var(--radius-control); background: var(--surface-panel); }
+.employee-summary dt { color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }
+.employee-summary dd { margin: 8px 0 0; color: var(--accent-hover); font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { .employee-summary dl { grid-template-columns: minmax(0, 1fr); } }
 .topbar { position: sticky; top: 0; z-index: 3; }
 @media (max-width: 600px) {
  .workspace-coat-area { padding: 14px; border-right: 0; border-bottom: 1px solid var(--border-accent); }

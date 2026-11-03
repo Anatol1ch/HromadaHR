@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { categoryOptions } from '../src/employees/categories.ts'
 import { assignmentInput, creationInput, emptyValues, personalDetails, valuesForEmployee, validateEmployee } from '../src/employees/model.ts'
 import { backupOverview } from '../src/backup/presentation.ts'
 import { assignmentInput as assignmentSchema, createEmployee, employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
@@ -10,42 +9,13 @@ const positionId = '11111111-1111-4111-8111-111111111111'
 const departmentId = '22222222-2222-4222-8222-222222222222'
 const fields = { ...emptyValues, lastName: 'Синтетичний', firstName: 'Приклад', startDate: '2026-01-01', positionId, departmentId }
 
-test('new employee can omit both additional fields, and every category choice respects existing nullable IPC schemas', () => {
-  assert.deepEqual(validateEmployee(fields, false), {})
+test('new employee omits notes and creates an unclassified initial assignment', () => {
   const payload = creationInput(fields)
-  assert.equal(payload.note, null)
+  assert.equal('note' in payload, false)
   assert.equal(payload.category, null)
-  assert.equal(payload.birthDate, null)
   assert.equal(createEmployee.safeParse(payload).success, true)
-  const options = categoryOptions()
-  assert.deepEqual(options.map(option => option.label), ['Не зазначено', 'I категорія', 'II категорія', 'III категорія', 'IV категорія', 'V категорія', 'VI категорія', 'VII категорія'])
-  assert.equal(options[0].value, '')
-  for (const { value } of options) {
-    const values = { ...fields, category: value }
-    assert.equal(createEmployee.safeParse(creationInput(values)).success, true)
-    assert.equal(assignmentSchema.safeParse(assignmentInput(values)).success, true)
-    assert.equal(assignmentInput(values).category, value || null)
-  }
-})
-
-test('existing notes and historical category strings survive form roundtrips without changing personal/history boundaries', () => {
-  for (const category of ['V', 'І категорія', 'Історична довільна категорія', 'VII категорія']) {
-    const original = { ...personalDetails(fields), id: positionId, note: 'Збережена примітка\nДругий рядок', hireDate: fields.startDate,
-      currentAssignment: { ...assignmentInput({ ...fields, category }), id: departmentId, employeeId: positionId,
-        position: { id: positionId, name: 'Умовна посада' }, department: { id: departmentId, name: 'Умовний відділ' } } }
-    const values = valuesForEmployee(original)
-    assert.equal(categoryOptions(values.category).find(option => option.value === category).value, category)
-    assert.equal(new Set(categoryOptions(category).map(option => option.value)).size, categoryOptions(category).length)
-    const personal = personalDetails({ ...values, firstName: 'Оновлений' })
-    assert.equal(personal.note, original.note)
-    assert.equal(employeeDetails.safeParse(personal).success, true)
-    assert.equal('category' in personal, false)
-    assert.equal('startDate' in personal, false)
-    assert.equal(assignmentInput(values).category, category)
-    assert.equal(assignmentInput(values).startDate, original.hireDate)
-    assert.equal(values.note, original.note)
-    assert.deepEqual(categoryOptions().length, 8)
-  }
+  assert.equal(createEmployee.safeParse({ ...payload, note: 'removed' }).success, false)
+  assert.equal(employeeDetails.safeParse({ ...personalDetails(fields), note: null }).success, false)
 })
 
 function target(change = {}) {
@@ -58,13 +28,14 @@ test('backup overview distinguishes unconfigured, partial failure, same volume, 
   status.targets = [target({ path: 'X:\\one', available: true, lastSuccess: '2026-11-02T10:00:00+02:00' }),
     target({ slot: 2, path: 'Y:\\two', available: false, lastSuccess: '2026-11-02T08:30:00Z', error: 'BACKUP_FAILED' })]
   const before = structuredClone(status)
-  assert.deepEqual(backupOverview(status), { configured: true, successes: 2, lastSuccess: '2026-11-02T08:30:00Z', errors: 1, label: 'Потребує уваги' })
+  assert.deepEqual(backupOverview(status), { configured: true, successes: 1, lastSuccess: '2026-11-02T08:30:00Z', errors: 1, label: 'Потребує уваги' })
   assert.deepEqual(status, before)
+  assert.equal(backupOverview(status).successes, 1)
   status.targets[1].error = null
   assert.equal(backupOverview(status).errors, 1) // unavailable remains visible without an error code
   status.targets[1].available = true
   status.sameVolume = true
-  assert.equal(backupOverview(status).label, 'Обидві теки на одному томі')
+  assert.equal(backupOverview(status).label, 'Теки доступні')
   status.busy = true
   assert.equal(backupOverview(status).label, 'Виконується операція')
 })

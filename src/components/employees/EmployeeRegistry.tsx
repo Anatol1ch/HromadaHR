@@ -1,63 +1,54 @@
-import { ArrowDownAZ, ArrowUpAZ, Eye, Pencil, Plus, Trash2 } from 'lucide-react'
-import type { EmployeeCard } from '../../../shared/personnel'
-import { displayDate, employeeTypeLabels, fullName, selectEmployees } from '../../employees/model'
+import { useId } from 'react'
+import { FilterX, ListRestart, Plus, SlidersHorizontal } from 'lucide-react'
+import type { EmployeeCard, EmployeeType } from '../../../shared/personnel'
+import { employeeCounts, employeeGroups, registryOptions } from '../../employees/registry.ts'
+import type { RegistryState, SortKey } from '../../employees/registry.ts'
 import Alert from '../Alert'
-import DataState from '../DataState'
-import DictionaryTable from '../DictionaryTable'
 import SearchField from '../SearchField'
 import Select from '../Select'
-import { TableSkeleton } from '../Skeleton'
+import EmployeeGroupTable from './EmployeeGroupTable'
+import type { EmployeeActions } from './EmployeeGroupTable'
 
-type Props = {
-  employees: EmployeeCard[]; loading: boolean; error: string
-  query: string; departmentId: string; descending: boolean
-  onQuery: (value: string) => void; onDepartment: (value: string) => void; onSort: () => void
-  onRetry: () => void; onCreate: () => void; onOpen: (employee: EmployeeCard) => void; onEdit: (employee: EmployeeCard) => void; onDelete: (employee: EmployeeCard) => void
+type Props = EmployeeActions & {
+  employees: EmployeeCard[]; loading: boolean; error: string; state: RegistryState
+  onState: (value: Partial<RegistryState>) => void; onSort: (type: EmployeeType, key: SortKey) => void
+  onResetSort: () => void; onClear: () => void; onRetry: () => void; onCreate: () => void
 }
-export default function EmployeeRegistry({ employees, loading, error, query, departmentId, descending,
-  onQuery, onDepartment, onSort, onRetry, onCreate, onOpen, onEdit, onDelete }: Props) {
-  const visible = selectEmployees(employees, query, departmentId, descending)
-  const departments = [...new Map(employees.map(employee => [employee.currentAssignment.departmentId, employee.currentAssignment.department])).values()]
-    .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
-  const SortIcon = descending ? ArrowUpAZ : ArrowDownAZ
-  const departmentOptions = [{ value: '', label: 'Усі підрозділи' },
-    ...departments.map(value => ({ value: value.id, label: value.name }))]
-  if (departmentId && !departments.some(department => department.id === departmentId)) departmentOptions.push({ value: departmentId, label: 'Обраний підрозділ — немає працівників' })
+export default function EmployeeRegistry({ employees, loading, error, state, onState, onSort, onResetSort, onClear, onRetry, onCreate, ...actions }: Props) {
+  const panelId = useId()
+  const groups = employeeGroups(employees, state)
+  const counts = employeeCounts(employees)
+  const activeFilters = Number(!!state.departmentId) + Number(!!state.positionId)
+  const filtered = !!state.query.trim() || activeFilters > 0
+  const sorted = Object.values(state.sorts).some(sort => sort.key !== 'fullName' || sort.direction !== 'asc')
   return <section className="employee-registry" aria-labelledby="employees-title">
     <div className="page-heading employee-heading">
-      <div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="employees-title" tabIndex={-1} data-page-title>Працівники <span className="employee-count" aria-label="Кількість працівників">{loading ? '…' : error ? '—' : employees.length}</span></h1>
+      <div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
         <p className="subtitle">Реєстр працівників та особові картки громади</p></div>
-      <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true" />Додати працівника</button>
+      <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true"/>Додати працівника</button>
     </div>
-    {error ? <Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert> :
-      loading ? <TableSkeleton columns={6} label="Завантаження працівників…" /> :
-      employees.length === 0 ? <section className="dashboard-panel employee-empty"><DataState kind="empty" message="Працівників ще немає"
-        description="Додайте першого працівника, щоб почати вести кадровий облік." /></section> :
-      <section className="dashboard-panel employee-register-panel" aria-label="Реєстр працівників">
-        <div className="employee-toolbar">
-          <div className="employee-field employee-search"><span>Пошук за ПІБ</span>
-            <SearchField value={query} onChange={onQuery} label="Пошук за ПІБ" placeholder="Прізвище, ім’я або по батькові" />
-          </div>
-          <div className="employee-field"><span>Підрозділ</span>
-            <Select label="Фільтр за підрозділом" value={departmentId} onChange={onDepartment} options={departmentOptions} advanceOnSelect={false} />
-          </div>
-        </div>
-        <div className="employee-results"><span role="status" aria-atomic="true">Знайдено: {visible.length} із {employees.length}</span>
-          {(query || departmentId) && <button className="employee-link" type="button" onClick={() => { onQuery(''); onDepartment('') }}>Скинути пошук і фільтр</button>}</div>
-        <DictionaryTable label="Таблиця працівників" className="hr-employee-table" filtered={!!query || !!departmentId} empty={visible.length ? undefined : 'Нічого не знайдено'}
-          columns={[{ label: <button className="employee-sort" type="button" onClick={onSort} aria-label={`ПІБ. Змінити сортування на ${descending ? 'за зростанням' : 'за спаданням'}`}>ПІБ <SortIcon size={17} aria-hidden="true" /></button>, sort: descending ? 'descending' : 'ascending', width: '25%' },
-            { label: 'Посада', width: '22%' }, { label: 'Підрозділ', width: '22%' }, { label: 'Тип працівника', width: '20%' }, { label: 'Дата прийняття', width: '11%' }, { label: 'Дії', width: '100px' }]}>
-          {visible.map(employee => <tr key={employee.id}>
-            <td><button className="employee-name-link" type="button" onClick={() => onOpen(employee)}>{fullName(employee)}</button></td>
-            <td>{employee.currentAssignment.position.name}</td><td>{employee.currentAssignment.department.name}</td>
-            <td>{employeeTypeLabels[employee.employeeType]}</td><td className="employee-date">{displayDate(employee.hireDate)}</td>
-            <td className="dictionary-actions-cell"><div className="registry-row-actions">
-              <button type="button" className="table-action" title="Переглянути" aria-label={`Переглянути: ${fullName(employee)}`} onClick={() => onOpen(employee)}><Eye size={17} aria-hidden="true"/></button>
-              <button type="button" className="table-action" title="Редагувати" aria-label={`Редагувати: ${fullName(employee)}`} onClick={() => onEdit(employee)}><Pencil size={16} aria-hidden="true"/></button>
-              <button type="button" className="table-action danger-action" title="Видалити" aria-label={`Видалити: ${fullName(employee)}`} onClick={() => onDelete(employee)}><Trash2 size={16} aria-hidden="true"/></button>
-            </div></td>
-          </tr>)}
-        </DictionaryTable>
-      </section>}
+    <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри працівників">
+      <div className="aid-toolbar">
+        <SearchField value={state.query} onChange={query => onState({ query })} label="Пошук за ПІБ" placeholder="Прізвище, ім’я або по батькові"/>
+        <button type="button" className={`secondary-button aid-filter-toggle${state.filtersOpen ? ' expanded' : ''}`} aria-expanded={state.filtersOpen}
+          aria-controls={panelId} onClick={() => onState({ filtersOpen: !state.filtersOpen })}><SlidersHorizontal size={18} aria-hidden="true"/>Фільтри
+          {activeFilters > 0 && <span className="aid-filter-count" aria-label={`Застосовано фільтрів: ${activeFilters}`}>{activeFilters}</span>}
+        </button>
+        <button type="button" className="secondary-button aid-filter-reset" disabled={!filtered} onClick={onClear}><FilterX size={17} aria-hidden="true"/>Очистити фільтри</button>
+        <button type="button" className="secondary-button aid-sort-reset" disabled={!sorted} onClick={onResetSort}><ListRestart size={17} aria-hidden="true"/>Скинути сортування</button>
+      </div>
+      <div id={panelId} className="aid-filter-panel" hidden={!state.filtersOpen}><div className="aid-filter-grid">
+        <div className="employee-field"><span>Підрозділ</span><Select label="Фільтр за підрозділом" value={state.departmentId} onChange={departmentId => onState({ departmentId })}
+          options={registryOptions(employees, 'department', state.departmentId)} advanceOnSelect={false}/></div>
+        <div className="employee-field"><span>Посада</span><Select label="Фільтр за посадою" value={state.positionId} onChange={positionId => onState({ positionId })}
+          options={registryOptions(employees, 'position', state.positionId)} advanceOnSelect={false}/></div>
+      </div></div>
+      <p className="employee-results" role="status">{loading ? 'Завантаження реєстру…' : error ? 'Дані реєстру недоступні' :
+        `Усього працівників: ${counts.total}. Результатів: ${groups.official.length + groups.staff.length}.`}</p>
+    </section>
+    {error && <Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert>}
+    {(['official', 'staff'] as const).map(type => <EmployeeGroupTable key={type} title={type === 'official' ? 'Посадові особи місцевого самоврядування' : 'Інші працівники'}
+      rows={error ? [] : groups[type]} total={counts[type]} loading={loading} error={error} filtered={filtered} sort={state.sorts[type]}
+      onSort={key => onSort(type, key)} {...actions}/>)}
   </section>
 }

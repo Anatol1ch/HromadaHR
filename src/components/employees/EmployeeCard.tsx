@@ -70,7 +70,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onAssign, 
   const positionNames = new Map(positions.map(value => [value.id, value.name]))
   const sections = [
     { title: 'Персональні відомості', fields: [['Прізвище', employee.lastName], ['Ім’я', employee.firstName], ['По батькові', employee.middleName ?? 'Не зазначено'], ['Дата народження', displayDate(employee.birthDate)], ['Тип працівника', employeeTypeLabels[employee.employeeType]]] },
-    { title: 'Кадрові відомості', fields: [['Дата прийняття', displayDate(employee.hireDate)], ['Початок поточного призначення', displayDate(employee.currentAssignment.startDate)], ['Посада', employee.currentAssignment.position.name], ['Підрозділ', employee.currentAssignment.department.name], ['Категорія посади', employee.currentAssignment.category ?? 'Не зазначено']] },
+    { title: 'Кадрові відомості', fields: [['Дата прийняття', displayDate(employee.hireDate)], ['Початок поточного призначення', displayDate(employee.currentAssignment.startDate)], ['Посада', employee.currentAssignment.position.name], ['Підрозділ', employee.currentAssignment.department.name], ...(employee.currentAssignment.category ? [['Категорія посади', employee.currentAssignment.category]] : [])] },
   ]
   return <Modal title="Особова картка" size="large" className="employee-card-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={deleting} onClose={close}>
     <article className="recipient-details employee-card" ref={owner}>
@@ -89,7 +89,6 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onAssign, 
           {sections.map(section => <section className="recipient-detail-section" key={section.title}><h3>{section.title}</h3><div className="recipient-detail-grid">
             {section.fields.map(([field, value]) => <div className="recipient-detail-item" key={field}><span>{field}</span><strong>{value}</strong></div>)}
           </div></section>)}
-          {employee.note && <section className="recipient-detail-section"><h3>Примітка</h3><p className="employee-note">{employee.note}</p></section>}
           <section className="recipient-history" aria-labelledby="employee-history-title">
             <div className="recipient-history-heading"><h3 id="employee-history-title">Історія посад</h3><span>{history.length} записів</span>
               <button className="secondary-button" type="button" disabled={deleting || loading} onClick={() => onAssign(employee)}><Plus size={16} aria-hidden="true"/>Додати кадрову зміну</button></div>

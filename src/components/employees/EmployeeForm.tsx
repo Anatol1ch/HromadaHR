@@ -1,9 +1,8 @@
-import CategoryField from './CategoryField'
 import Modal from '../Modal'
 import { Check, UserRound, X } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
-import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
+import ValidatedInput from '../ValidatedInput'
 import Select from '../Select'
 import { formatDateInput } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
@@ -26,8 +25,6 @@ type Props = {
 export default function EmployeeForm({ employee, navigationGuard, onCancel, onSaved }: Props) {
   const [initial] = useState(() => employee ? valuesForEmployee(employee) : { ...emptyValues })
   const [values, setValues] = useState(initial)
-  const [noteOpen, setNoteOpen] = useState(() => !!employee?.note)
-  const noteDetails = useRef<HTMLDetailsElement>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -57,7 +54,6 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     const nextErrors = validateEmployee(values, !!employee)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors); setError('Перевірте позначені поля.')
-      if (nextErrors.note) { setNoteOpen(true); if (noteDetails.current) noteDetails.current.open = true }
       requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
@@ -108,20 +104,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
-        <details className="employee-additional employee-field-full">
-          <summary>Додаткові кадрові реквізити</summary>
-          <div className="recipient-form-grid"><CategoryField value={values.category} onChange={value => change('category', value)} disabled={busy} error={errors.category}/></div>
-          <p className="recipient-field-hint">Необов’язково. Для іншого персоналу можна залишити «Не зазначено».</p>
-        </details>
       </fieldset>}
-      <details className="employee-additional" ref={noteDetails} open={noteOpen} onToggle={event => setNoteOpen(event.currentTarget.open)}>
-        <summary>Додаткові відомості</summary>
-          <div className="recipient-field employee-field employee-field-full"><label htmlFor="employee-note">Примітка <span className="employee-hint">до 4000 символів</span></label>
-            <ValidatedTextarea id="employee-note" disabled={busy} rows={3} maxLength={4000} value={values.note} onChange={event => change('note', event.target.value)}
-              aria-invalid={!!errors.note} aria-describedby={errors.note ? 'error-note' : undefined} />
-            {errors.note && <span className="field-error" id="error-note">{errors.note}</span>}
-          </div>
-      </details>
       <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
         <button type="button" className="secondary-button" disabled={busy} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
         <button type="submit" className="primary-button" disabled={busy || (!employee && (directory.loading || !!directory.error || directory.draft))} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>

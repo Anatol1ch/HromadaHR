@@ -1,8 +1,10 @@
-# Перенесення UI HromadaAID → HromadaHR (3.4.1–3.4.2.1)
+# Перенесення UI HromadaAID → HromadaHR (3.4.1–3.4.2.2)
 
 Джерело: `Anatol1ch/HromadaAID`, commit **33eca10733caaf73b1a99e75a24ff35e706a0afb**. HEAD перевірено через read-only Git та GitHub connector 03.11.2026; він збігався з погодженим SHA. Файли прочитано за фіксованим ref, не з рухомої гілки. Локального checkout HromadaAID не було: потрібні текстові файли збережено в окремому тимчасовому каталозі без `.git` для аналізу. Джерело, його історія/налаштування та `reference/` не змінювалися.
 
 Цільова база: HromadaHR `c479d23577e1f61cf16f6c732476a64ef487b2e1`. Робоча гілка: `codex/3.4.1-aid-ui-foundation`. Це перенесення спільної основи; повна перебудова кадрових макетів/форм у модальні вікна залишається окремим завданням 3.4.2. Гілку не зливати в main до завершення й перевірки міграції та окремої вказівки.
+
+**Чинний стан 3.4.2.2:** примітки остаточно видалено міграцією 4; CategoryField та керування категоріями зі звичайних форм прибрано. Нижчі секції 3.4.2.1 описують історичний стан.
 
 **Чинна межа політики після 3.4.2.1:** AID визначає компоненти/геометрію/поведінку; HR має власну сиренево-фіолетову палітру. Зелена брендова палітра в історичному описі 3.4.1 нижче більше не є поточним рішенням.
 
@@ -160,3 +162,39 @@ AID лишається еталоном компонентів/геометрі�
 - [ ] Вкладені Modal/довідник/confirm: Escape лише верхнього, focus restore, Tab/Shift+Tab/Ctrl+Enter, dirty/busy guards, видимі футери дій і внутрішнє прокручування. Відступи й іконки не створюють зайвих порожніх блоків.
 
 3.4.3 не розпочато. Main не зливати без окремого погодження.
+
+## Етап 3.4.2.2 — реєстр за групами й остаточне спрощення
+
+База HR — 1797284d372ef6cc33192aecaeed4d16f48f6443, та сама гілка codex/3.4.1-aid-ui-foundation. Source AID — 33eca10733caaf73b1a99e75a24ff35e706a0afb, прочитаний за pinned ref без змін джерела.
+
+| Джерело | Фактична адаптація |
+| --- | --- |
+| src/RecipientRegistry.tsx | Компактне компонування реєстру, SearchField/DictionaryTable і registry-row-actions з Eye/Pencil/Trash2. EmployeeGroupTable повторно використовує DictionaryTable для двох типів, не реалізує нову таблицю. |
+| src/AidRegistry.tsx | filtersOpen, SlidersHorizontal toggle з aria-expanded/controls та count badge, Clear/FilterX, Reset/ListRestart, registry-sort-button з індикаторами ↑/↓/↕. Поля HR — тільки підрозділ/посада, sort FIO/position/department/hireDate. |
+| src/styles.css | Перенесено потрібні aid-toolbar, aid-filter-toggle/count/panel/grid, registry-sort-button; прив’язано до чинних сиреневих токенів, 2 filter columns замість 3, responsive wrap. Financial/status filters, auth та server logic не копіювалися. |
+
+Одна спільна панель працює для official/staff, розділених за employeeType. Обидва розділи мають власний заголовок/count/table/empty та незалежне сортування; типова порожня група не ховається. Колонку типу вилучено. Пошук нормалізує NFC/пробіли/український регістр, терміни ПІБ можуть бути в різному порядку. Фільтри перетинаються; badge рахує підрозділ і посаду. Загальний count та filtered result count різні. Clear очищує search/обидва filters, Reset sort — обидві таблиці, але не фільтри. Стан panel/search/filter/sort у workspaceReducer переживає всі модальні операції. Сортування не змінює масив: uk/base Collator, перевірений ISO для dates, tie ПІБ/id; inactive ↕, active aria-sort тільки відповідного стовпця.
+
+Міграція 4/remove_employee_note — тільки DROP COLUMN note з requiresBackup=true. Примітку вилучено з shared types/Zod/service/UI/актуальної БД; старі note-аргументи strict IPC відхиляє. SQL/імена/checksum 1–3 не змінено. Verified pre-v4 snapshot зберігає note перед транзакцією. Fresh та v2/v3 upgrade, відмова snapshot, rollback після DROP, restore v3 перевірені автоматично. Source backup не змінюється; restored active DB має v4 без note. Це остаточне вилучення функції, не згорнутий або прихований UI.
+
+CategoryField та categories choices видалено. Category лишається в Assignment/історії/SQLite/IPC і read-only відомостях, якщо задана. В employee create — null. У correction — точна category редагованого запису. New assignment читає history та визначає baseline за startDate: останній рядок <= дати або перший відомий рядок для найдавнішої вставки. Той самий positionId — inherit, інший — null. Це не юридична класифікація; correction не переоцінює доречність legacy category навіть при виправленні посади. Повноцінне керування — окремий майбутній модуль рангів. Main chronology/сусідні дублікати/дата прийняття/current/atomicity не змінені; тест перевіряє відмову фіктивного category-only переходу.
+
+Home EmployeeSummary рахує total/official/staff із listEmployees, не показує нулі замість помилки. Є loading/empty/error/retry. Банер/герб/footer/тема збережені. Backup presentation показує config/availability/latest-attempt success окремо; sameVolume — тільки один warning. Старий lastSuccess при новій помилці не збільшує latest success count. Дві копії не прирівнюються до незалежності дисків. Backup/recovery runtime й IPC без змін.
+
+Перевірки: pnpm typecheck; нові цільові 8/8; pnpm test 121/121 та Electron Main smoke; pnpm build; git diff --check. Понад наявні тести додано employee-registry.test.mjs та remove-notes.test.mjs; тести фіксованих migration versions адаптовано до 4, а старі checksum/protection/rollback/FK перевірки збережено. Тільки temp БД/профілі, без реальних персональних даних. GUI snapshot/click automation не створювалися. Візуальне приймання ще не виконано.
+
+### Ручне приймання 3.4.2.2 — не виконано
+
+Вікна 1600×900, 1366×768, вузьке вікно; Windows 125–200%. Міграція/restore — тільки ізольована копія тестової БД та профіль.
+
+- [ ] Обидві групи завжди видимі, зокрема одна/обидві порожні; однакові п’ять колонок, доступні дії, окремі count/empty. Пошук без результатів не приховує секції.
+- [ ] ПІБ із різним регістром/пробілами/комбінаціями; department + position filters разом впливають на дві групи, badge правильний, toggle/clear/reset доступні з клавіатури.
+- [ ] У кожній таблиці клацнути всі 4 sortable headers двічі; перевірити arrows/aria-sort і незалежність другої таблиці; Reset повертає обидві FIO asc без очищення filters.
+- [ ] Відкрити/закрити картку, дочірні форми, змінити тип official↔staff: рядок переходить до правильної групи, параметри реєстру й modal guards зберігаються.
+- [ ] Немає note чи CategoryField у жодній формі. Create — category null; correction історичного рядка не стирає category; новий same-position transfer зберігає її, different position — null. Беззмістовний перехід відхиляється.
+- [ ] На копії v3 виконати startup→v4: pre-v4 snapshot доступний, note більше немає в активній БД, решта даних/історія/довідники збережені. Restore старої копії не змінює файл-джерело й не повертає note-функцію.
+- [ ] Home counts відповідають реєстру, зокрема після зміни типу; loading/error/retry відрізняються від реального нуля. Немає фіктивних показників.
+- [ ] Same-volume warning тільки один; config/availability/latest success різні стани. Невдалий останній backup не показаний успішним через старий lastSuccess; шляхи/details/restore збережені.
+- [ ] Довгі ПІБ/назви/шляхи, toolbar wrap, row heights/іконки, видимий focus, внутрішній scroll таблиць і модалок; немає горизонтального scroll всього вікна. Вкладені cancel/Escape/dirty/busy не втратили поведінки.
+
+3.4.3 не розпочато, main не зливати без окремого погодження.

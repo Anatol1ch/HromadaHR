@@ -8,6 +8,7 @@ import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
 import SettingsPage from './components/SettingsPage'
 import HelpDialog from './components/HelpDialog'
+import EmployeeSummary from './components/EmployeeSummary'
 import RecoveryScreen from './components/RecoveryScreen'
 
 const sections = [
@@ -60,6 +61,7 @@ function HomePage({ onEmployees }: { onEmployees: () => void }) {
       <div className="workspace-primary"><div><h2 id="workspace-title">Кадрова робота</h2><p>Працівники, особові картки та історія призначень громади.</p></div>
         <button type="button" className="primary-button" onClick={onEmployees}><UsersRound size={19} aria-hidden="true"/>Відкрити реєстр працівників<ArrowUpRight size={17} aria-hidden="true"/></button>
       </div>
+      <EmployeeSummary />
       <p className="workspace-next-modules">Відпустки, стаж, ранги й документи будуть доступні на наступних етапах.</p>
     </section>
     <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>

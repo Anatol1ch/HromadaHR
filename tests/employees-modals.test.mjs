@@ -1,3 +1,4 @@
+import { initialRegistry } from '../src/employees/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCloseGuards } from '../src/employees/closeGuards.ts'
@@ -11,7 +12,7 @@ const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-22
 const employee = { id: ids[0], lastName: 'Синтетичний', firstName: 'Приклад', middleName: null }
 
 test('nested form cancellation retains the parent card and registry options; only creation opens a new card', () => {
-  const registry = { query: 'СИНТЕТИЧНИЙ', departmentId: ids[1], descending: true }
+  const registry = { ...initialRegistry(), query: 'СИНТЕТИЧНИЙ', departmentId: ids[1], positionId: ids[0], filtersOpen: true }
   let state = workspaceReducer(initialWorkspace, { type: 'registry', registry })
   state = workspaceReducer(state, { type: 'card', id: employee.id })
   const card = state
@@ -34,7 +35,7 @@ test('nested form cancellation retains the parent card and registry options; onl
   state = workspaceReducer(state, { type: 'deleted', id: employee.id })
   assert.equal(state.cardId, null)
   assert.deepEqual(state.registry, registry)
-  assert.deepEqual(initialWorkspace.registry, { query: '', departmentId: '', descending: false })
+  assert.deepEqual(initialWorkspace.registry, initialRegistry())
 })
 
 test('authoritative mutation replies replace list entries without duplicating or mutating existing rows', () => {
@@ -130,7 +131,7 @@ test('busy operations block closure and unload; a changed or disconnected stack 
 })
 
 test('modal payloads keep ISO and nullable fields, restrict personal edits, and validate manual date drafts', () => {
-  const fields = { ...emptyValues, lastName: ' Приклад ', firstName: ' Умовний ', middleName: ' ', note: ' ', birthDate: '', startDate: parseDateInput('29.02.2024'), positionId: ids[0], departmentId: ids[1], category: ' ' }
+  const fields = { ...emptyValues, lastName: ' Приклад ', firstName: ' Умовний ', middleName: ' ', birthDate: '', startDate: parseDateInput('29.02.2024'), positionId: ids[0], departmentId: ids[1] }
   assert.deepEqual(validateEmployee(fields, false), {})
   assert.equal(createEmployee.safeParse(creationInput(fields)).success, true)
   assert.equal(creationInput(fields).middleName, null)
@@ -139,7 +140,7 @@ test('modal payloads keep ISO and nullable fields, restrict personal edits, and 
   const personal = personalDetails(fields)
   assert.equal(employeeDetails.safeParse(personal).success, true)
   for (const key of ['departmentId', 'positionId', 'startDate', 'category']) assert.equal(key in personal, false)
-  const input = assignmentInput({ ...fields, category: ' Текст категорії ' })
+  const input = assignmentInput(fields, 'Текст категорії')
   assert.deepEqual(Object.keys(input).sort(), ['category', 'departmentId', 'positionId', 'startDate'])
   assert.equal(assignmentSchema.safeParse(input).success, true)
   assert.equal(input.category, 'Текст категорії')

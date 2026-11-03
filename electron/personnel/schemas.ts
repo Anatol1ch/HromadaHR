@@ -9,7 +9,6 @@ export const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value
 const details = {
   lastName: text, firstName: text, middleName: text.nullable(),
   birthDate: calendarDate.nullable(), employeeType: z.enum(['official', 'staff']),
-  note: z.string().trim().min(1).max(4000).nullable(),
 }
 export const employeeDetails = z.strictObject(details)
 export const createEmployee = z.strictObject({

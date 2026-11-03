@@ -2,7 +2,7 @@ import Modal from '../Modal'
 import { Check, X, BriefcaseBusiness } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
-import CategoryField from './CategoryField'
+import { categoryForAssignment } from '../../employees/assignmentPolicy.ts'
 import { formatDateInput } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useRef, useState } from 'react'
@@ -20,18 +20,31 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
 }) {
   const [initial] = useState<AssignmentValues>(() => ({
     startDate: assignment?.startDate ?? localToday(), departmentId: assignment?.departmentId ?? employee.currentAssignment.departmentId,
-    positionId: assignment?.positionId ?? employee.currentAssignment.positionId, category: (assignment ?? employee.currentAssignment).category ?? '',
+    positionId: assignment?.positionId ?? employee.currentAssignment.positionId,
   }))
   const [values, setValues] = useState(initial)
-  const [categoryOpen, setCategoryOpen] = useState(() => !!assignment?.category)
-  const categoryDetails = useRef<HTMLDetailsElement>(null)
   const [errors, setErrors] = useState<FormErrors>({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [history, setHistory] = useState<Assignment[]>([])
+  const [historyReady, setHistoryReady] = useState(!!assignment)
+  const [historyRetry, setHistoryRetry] = useState(0)
+  const [historyError, setHistoryError] = useState('')
   const [directory, setDirectory] = useState(initialDirectoryState)
   const inFlight = useRef(false), alive = useRef(true)
   const form = useRef<HTMLFormElement>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useEffect(() => {
+    if (assignment) return
+    let active = true
+    setHistoryReady(false); setHistoryError('')
+    void window.hromadaHR.personnel.getHistory(employee.id).then(result => {
+      if (!active) return
+      if (result.ok) { setHistory(result.data); setHistoryReady(true) }
+      else setHistoryError(personnelMessage(result.error.code))
+    }).catch(() => { if (active) setHistoryError('Не вдалося завантажити історію для визначення категорії. Повторіть спробу.') })
+    return () => { active = false }
+  }, [employee.id, assignment, historyRetry])
   const [dateDraftDirty, setDateDraftDirty] = useState(false)
   const requestClose = useUnsavedChanges(dateDraftDirty || JSON.stringify(values) !== JSON.stringify(initial), inFlight, navigationGuard, form)
   const close = () => requestClose(onCancel)
@@ -40,18 +53,17 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (inFlight.current || directory.loading || directory.error || directory.draft) return
+    if (!historyReady || inFlight.current || directory.loading || directory.error || directory.draft) return
     const errors = validateAssignment(values, employee.birthDate, localToday())
     if (Object.keys(errors).length) {
       setErrors(errors); setError('Перевірте позначені поля.')
-      if (errors.category) { setCategoryOpen(true); if (categoryDetails.current) categoryDetails.current.open = true }
       requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
       return
     }
     if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
-      const input = assignmentInput(values)
+      const input = assignmentInput(values, categoryForAssignment(values.positionId, values.startDate, history, assignment))
       const result = assignment ? await window.hromadaHR.personnel.updateAssignment(assignment.id, input) :
         await window.hromadaHR.personnel.createAssignment(employee.id, input)
       if (!alive.current) return
@@ -62,6 +74,8 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
   }
   return <Modal title={assignment ? 'Виправити призначення' : 'Додати кадрову зміну'} description={fullName(employee)} headerIcon={<BriefcaseBusiness size={21} aria-hidden="true"/>} size="wide" className="employee-form-modal" busy={saving || directory.pending} onClose={close}>
     {assignment && assignment.startDate > localToday() && <Alert variant="warning">У записі є майбутня дата. Її не змінено автоматично: перед збереженням потрібно явно вказати коректну дату не пізніше сьогодні.</Alert>}
+    {historyError && <Alert variant="error" action={<button type="button" onClick={() => setHistoryRetry(value => value + 1)}>Повторити</button>}>{historyError}</Alert>}
+    {!historyReady && !historyError && <p className="employee-hint" role="status">Завантаження історії…</p>}
     {error && <Alert variant="error">{error}</Alert>}
     <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={saving || directory.pending}>
       <fieldset className="recipient-fieldset" disabled={saving || directory.pending}>
@@ -73,13 +87,10 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
         </div>
-        <details className="employee-additional" ref={categoryDetails} open={categoryOpen} onToggle={event => setCategoryOpen(event.currentTarget.open)}><summary>Додаткові кадрові реквізити</summary>
-          <CategoryField value={values.category} onChange={value => change('category', value)} disabled={saving || directory.pending} error={errors.category}/>
-        </details>
       </fieldset>
       <div className="recipient-form-actions"><span>Дата прийняття та посада визначаються з історії.</span><div>
         <button className="secondary-button" type="button" disabled={saving || directory.pending} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
-        <button className="primary-button" type="submit" disabled={saving || directory.pending || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : 'Зберегти призначення'}</button>
+        <button className="primary-button" type="submit" disabled={!historyReady || saving || directory.pending || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : 'Зберегти призначення'}</button>
       </div></div>
     </form>
   </Modal>

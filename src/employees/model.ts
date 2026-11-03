@@ -9,13 +9,6 @@ export const employeeTypeLabels: Record<EmployeeType, string> = {
 export const fullName = (person: Pick<EmployeeDetails, 'lastName' | 'firstName' | 'middleName'>) =>
   [person.lastName, person.firstName, person.middleName].filter(Boolean).join(' ')
 export const normalizeText = (value: string) => value.normalize('NFC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('uk')
-const collator = new Intl.Collator('uk', { sensitivity: 'base' })
-export function selectEmployees(employees: EmployeeCard[], query: string, departmentId: string, descending: boolean) {
-  const terms = normalizeText(query).split(' ').filter(Boolean)
-  return employees.filter(employee => (!departmentId || employee.currentAssignment.departmentId === departmentId) &&
-    terms.every(term => normalizeText(fullName(employee)).includes(term)))
-    .sort((a, b) => (collator.compare(fullName(a), fullName(b)) || a.id.localeCompare(b.id)) * (descending ? -1 : 1))
-}
 export function displayDate(value: string | null) {
   return formatDate(value)
 }
@@ -32,37 +25,36 @@ export function historyRows(history: Assignment[]) {
 }
 export interface FormValues {
   lastName: string; firstName: string; middleName: string; birthDate: string
-  employeeType: EmployeeType; note: string; startDate: string
-  departmentId: string; positionId: string; category: string
+  employeeType: EmployeeType; startDate: string
+  departmentId: string; positionId: string
 }
 export const emptyValues: FormValues = {
-  lastName: '', firstName: '', middleName: '', birthDate: '', employeeType: 'official', note: '',
-  startDate: '', departmentId: '', positionId: '', category: '',
+  lastName: '', firstName: '', middleName: '', birthDate: '', employeeType: 'official',
+  startDate: '', departmentId: '', positionId: '',
 }
 export function valuesForEmployee(employee: EmployeeCard): FormValues {
   return { lastName: employee.lastName, firstName: employee.firstName, employeeType: employee.employeeType,
-    middleName: employee.middleName ?? '', birthDate: employee.birthDate ?? '', note: employee.note ?? '',
+    middleName: employee.middleName ?? '', birthDate: employee.birthDate ?? '',
     startDate: employee.hireDate, departmentId: employee.currentAssignment.departmentId,
-    positionId: employee.currentAssignment.positionId, category: employee.currentAssignment.category ?? '' }
+    positionId: employee.currentAssignment.positionId }
 }
 const optional = (value: string) => value.trim() || null
 export function personalDetails(values: FormValues): EmployeeDetails {
   return { lastName: values.lastName.trim(), firstName: values.firstName.trim(), middleName: optional(values.middleName),
-    birthDate: optional(values.birthDate), employeeType: values.employeeType, note: optional(values.note) }
+    birthDate: optional(values.birthDate), employeeType: values.employeeType }
 }
 export function creationInput(values: FormValues): CreateEmployee {
   return { ...personalDetails(values), startDate: values.startDate, departmentId: values.departmentId,
-    positionId: values.positionId, category: optional(values.category) }
+    positionId: values.positionId, category: null }
 }
 export const validDate = isIsoCalendarDate
 export type FormErrors = Partial<Record<keyof FormValues, string>>
 export function validateEmployee(values: FormValues, editing: boolean): FormErrors {
   const errors: FormErrors = {}
   for (const key of ['lastName', 'firstName'] as const) if (!values[key].trim()) errors[key] = 'Заповніть це поле.'
-  for (const key of ['lastName', 'firstName', 'middleName', 'category'] as const) {
-    if ((!editing || key !== 'category') && values[key].trim().length > 200) errors[key] = 'Не більше 200 символів.'
+  for (const key of ['lastName', 'firstName', 'middleName'] as const) {
+    if (values[key].trim().length > 200) errors[key] = 'Не більше 200 символів.'
   }
-  if (values.note.trim().length > 4000) errors.note = 'Не більше 4000 символів.'
   if (!['official', 'staff'].includes(values.employeeType)) errors.employeeType = 'Виберіть тип працівника.'
   if (values.birthDate && !validDate(values.birthDate)) errors.birthDate = 'Введіть коректну календарну дату.'
   if (!editing) {
@@ -92,9 +84,9 @@ export function personnelMessage(code: IpcErrorCode): string {
   }
 }
 
-export type AssignmentValues = Omit<AssignmentInput, 'category'> & { category: string }
-export function assignmentInput(values: AssignmentValues): AssignmentInput {
-  return { startDate: values.startDate, departmentId: values.departmentId, positionId: values.positionId, category: optional(values.category) }
+export type AssignmentValues = Omit<AssignmentInput, 'category'>
+export function assignmentInput(values: AssignmentValues, category: string | null = null): AssignmentInput {
+  return { startDate: values.startDate, departmentId: values.departmentId, positionId: values.positionId, category }
 }
 export const localToday = todayIsoDate
 export function validateAssignment(values: AssignmentValues, birthDate: string | null, today: string): FormErrors {
@@ -104,6 +96,5 @@ export function validateAssignment(values: AssignmentValues, birthDate: string |
   else if (birthDate && values.startDate < birthDate) errors.startDate = 'Дата не може бути ранішою за дату народження.'
   if (!values.departmentId) errors.departmentId = 'Виберіть підрозділ.'
   if (!values.positionId) errors.positionId = 'Виберіть посаду.'
-  if (values.category.trim().length > 200) errors.category = 'Не більше 200 символів.'
   return errors
 }

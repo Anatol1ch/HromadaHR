@@ -29,7 +29,7 @@ async function fixture(t, legacy = false) {
   const department = service.createDepartment({ name: 'Відділ' })
   const position = service.createPosition({ name: 'Спеціаліст' })
   const input = { lastName: 'Тестовий', firstName: 'Тест', middleName: null, birthDate: '2000-02-29',
-    startDate: '2026-01-01', employeeType: 'official', note: null, category: null, departmentId: department.id, positionId: position.id }
+    startDate: '2026-01-01', employeeType: 'official', category: null, departmentId: department.id, positionId: position.id }
   return { root, file, db: connection.database, service, input, previousLedger, setBusy: value => { busy = value } }
 }
 const code = expected => error => error.code === expected
@@ -46,16 +46,17 @@ test('migration 1–2 names and checksums remain the original published values',
   assert.equal(migrations[2].requiresBackup, true)
 })
 
-test('new and v2 databases upgrade with a verified pre-v3 snapshot and preserve previous ledger/config', async t => {
+test('new and v2 databases upgrade to v4 with verified pre-v3/pre-v4 snapshots and preserve ledger/config', async t => {
   for (const legacy of [false, true]) {
     const f = await fixture(t, legacy)
-    assert.equal(f.db.pragma('user_version', { simple: true }), 3)
+    assert.equal(f.db.pragma('user_version', { simple: true }), 4)
     assert.deepEqual(f.db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(r => r.name),
       ['backup_config', 'backup_state', 'departments', 'employee_positions', 'employees', 'positions', 'schema_migrations'])
     const protection = join(f.root, 'data', 'protection')
     const copies = readdirSync(protection)
-    assert.equal(copies.length, 1)
-    assert.equal(inspectDatabase(join(protection, copies[0])), 2)
+    assert.equal(copies.length, 2)
+    assert.deepEqual(copies.map(name => inspectDatabase(join(protection, name))).sort(), [2, 3])
+    assert.equal(inspectDatabase(join(protection, copies.find(name => inspectDatabase(join(protection, name)) === 2))), 2)
     const snapshot = new Database(join(protection, copies[0]), { readonly: true })
     try { assert.equal(snapshot.prepare("SELECT name FROM sqlite_schema WHERE name='employees'").get(), undefined) }
     finally { snapshot.close() }
@@ -92,7 +93,7 @@ test('create/list/card/update derive first date and latest assignment solely fro
   assert.deepEqual(service.listEmployees(), [employee])
   const before = service.getHistory(employee.id)
   assert.equal(before.length, 1)
-  assert.equal(service.updateEmployee(employee.id, { ...details(input), middleName: 'Тестович', note: 'Оновлено', employeeType: 'staff' }).employeeType, 'staff')
+  assert.equal(service.updateEmployee(employee.id, { ...details(input), middleName: 'Тестович', employeeType: 'staff' }).employeeType, 'staff')
   assert.deepEqual(service.getHistory(employee.id), before)
   const position = service.createPosition({ name: 'Інша посада' })
   const insert = db.prepare('INSERT INTO employee_positions(id, employee_id, department_id, position_id, category, start_date) VALUES (?, ?, ?, ?, ?, ?)')

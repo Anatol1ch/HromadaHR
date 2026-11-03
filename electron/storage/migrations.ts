@@ -47,6 +47,11 @@ export const migrations: readonly Migration[] = [{
   name: 'personnel_foundation',
   requiresBackup: true,
   sql: personnelSql,
+}, {
+  version: 4,
+  name: 'remove_employee_note',
+  requiresBackup: true,
+  sql: 'ALTER TABLE employees DROP COLUMN note',
 }]
 
 function checksum(migration: Migration) {
