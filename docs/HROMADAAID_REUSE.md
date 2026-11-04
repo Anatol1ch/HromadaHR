@@ -80,3 +80,6 @@ S1: повторно цільово звірено src/SettingsPage.tsx (cards/h
 
 
 3.4.3.6: S1 server-manager/src/BackupManagement.tsx та server-manager/electron/main.ts (manager:backup-open-folder) повторно прочитано read-only. Адаптовано принцип server-owned saved directory + shell.openPath до двох HR слотів, strict typed IPC і повторної directory-перевірки; серверні gates/auth/довільний path API не переносилися. Повна ширина, контекстні Save/Cancel й selectable path links лишаються в чинній дизайн-системі. BackupHistory/restore/backend policy збережені. Реалізовано, програмна перевірка нового IPC пройшла з mock OS opener; ручне відкриття/компонування очікує замовника.
+
+
+3.4.3.7: S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb) server-manager/src/BackupManagement.tsx повторно прочитано read-only: адаптовано таблицю архівів/ID-дiю/розділення доступності та перевірки, через HR DictionaryTable і спільний Modal. Серверні архіви/auth/API/шифрування не переносилися; власний HR restore lifecycle збережено. Новий Main каталог — лише namespace поточної SQLite-lineage у двох активних теках з обмеженням і identity guards. Стан: реалізовано й цільово перевірено програмно, GUI-приймання очікується.

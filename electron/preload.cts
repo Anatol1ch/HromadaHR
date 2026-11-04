@@ -25,6 +25,8 @@ const api: HromadaHRApi = {
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
   },
   backup: {
+    listCopies: () => call(ipcChannels.backupListCopies),
+    selectCopy: id => call(ipcChannels.backupSelectCopy, id),
     openBackupFolder: slot => call(ipcChannels.backupOpenFolder, slot),
     getHistory: () => call(ipcChannels.backupGetHistory),
     getStatus: () => call(ipcChannels.backupGetStatus),

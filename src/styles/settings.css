@@ -85,17 +85,11 @@
 .backup-history-heading h3 svg { color:var(--accent); flex:none; }
 .backup-history .dictionary-table td { height:44px; padding-block:8px; }
 .backup-history .dictionary-table th { padding-block:9px; }
-.backup-recovery-entry { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding-top:16px; border-top:1px solid var(--border-surface); }
-.backup-recovery-entry > svg { color:var(--feedback-warning-text); flex:none; }
-.backup-recovery-entry > div { flex:1; min-width:180px; }
-.backup-recovery-entry p { margin:4px 0 0; font-size:12px; color:var(--color-text-secondary); line-height:1.5; }
-.backup-recovery-entry > button { height:auto; min-height:var(--control-height); padding-block:10px; white-space:normal; }
 .backup-restore-modal .backup-restore-warning { font-weight:600; color:var(--feedback-warning-text); }
 .backup-restore-modal p { font-size:13px; line-height:1.6; }
 .backup-restore-modal .recipient-form-actions { justify-content:flex-end; }
 @container backup-settings (max-width:640px) {
   .backup-target-grid { grid-template-columns:minmax(0,1fr); }
-  .backup-recovery-entry > button { margin-left:33px; }
 }
 @media (max-width: 1100px) {
   .sidebar-bottom .help-card { justify-content: center; padding: 10px 0; margin-inline: 0; width: 100%; }
@@ -140,3 +134,6 @@
 .backup-unsaved > div:first-child { flex:1 1 260px; min-width:0; }
 .backup-unsaved strong { color:var(--accent-hover); font-size:13px; }
 .backup-unsaved p, .backup-setup-hint { margin:4px 0 0; color:var(--color-text-secondary); font-size:12px; line-height:1.5; }
+
+.backup-copies-panel { display:grid; gap:12px; min-width:0; }
+.backup-copies-panel .backup-history > .backup-history-empty { margin-bottom:12px; }

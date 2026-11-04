@@ -1,9 +1,10 @@
+import { BackupCatalog } from './catalog.js'
 import Database from 'better-sqlite3'
 import { BackupHistoryStore } from './history.js'
 import type { BackupEvent } from '../../shared/backupHistory.js'
 import { randomUUID } from 'node:crypto'
 import { basename, dirname, join } from 'node:path'
-import { constants, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
+import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, rmdirSync, unlinkSync } from 'node:fs'
 import type { BackupSlot, BackupStatus, BackupTarget, FolderSelection, RestoreSelection } from '../../shared/backup.js'
 import type { Storage } from '../storage/index.js'
 import { inspectDatabase } from '../storage/validation.js'
@@ -23,6 +24,7 @@ export function localDay(now: Date) {
 }
 
 export class BackupService {
+  private catalog = new BackupCatalog()
   private busy = false
   private timer: ReturnType<typeof setInterval> | undefined
   private lastRestore: BackupStatus['lastRestore'] = null
@@ -192,6 +194,26 @@ export class BackupService {
       try { unlinkSync(this.restoreSelection.staged) } catch { /* App-owned staging only; never remove a source. */ }
     }
     this.restoreSelection = undefined
+  }
+
+  listCopies = () => this.exclusive(() => this.catalog.list(this.config()))
+  selectCopy = async (id: string): Promise<RestoreSelection> => {
+    let temporary: string | undefined, source: string | undefined
+    try {
+      const selection = await this.chooseRestore(async () => {
+        const config = this.config()
+        const staging = join(dirname(this.storage.getFile()), 'staging')
+        mkdirSync(staging, { recursive: true })
+        temporary = mkdtempSync(join(staging, 'catalog-'))
+        this.catalog.capture(id, config, name => { source = join(temporary!, name); return source })
+        return source!
+      })
+      if (!selection) throw new BackupError('INVALID_SELECTION')
+      return selection
+    } finally {
+      if (source) try { unlinkSync(source) } catch {}
+      if (temporary) try { rmdirSync(temporary) } catch {}
+    }
   }
 
   async chooseRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {

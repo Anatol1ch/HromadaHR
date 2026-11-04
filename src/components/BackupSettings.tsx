@@ -1,4 +1,4 @@
-import BackupHistory from './BackupHistory'
+import BackupCopies from './BackupCopies'
 import { DatabaseBackup, FolderOpen, HardDrive, Save, ShieldAlert, RefreshCw, ArrowUpRight } from 'lucide-react'
 import { backupOverview } from '../backup/presentation.ts'
 import { formatDateTime } from '../lib/dates'
@@ -26,6 +26,7 @@ const message = (code: IpcErrorCode) => messages[code] ?? 'Операція не
 const time = (value: string | null) => value ? formatDateTime(value) : 'Ще немає'
 
 export default function BackupSettings() {
+  const [copiesRevision, setCopiesRevision] = useState(0)
   const [status, setStatus] = useState<BackupStatus | null>(null)
   const [statusError, setStatusError] = useState('')
   const [choices, setChoices] = useState<[FolderSelection | null, FolderSelection | null]>([null, null])
@@ -86,7 +87,7 @@ export default function BackupSettings() {
   const overview = backupOverview(status)
   const stateTone = busy ? 'info' : statusError || overview.errors ? 'error' : configured ? 'success' : 'info'
   const stateLabel = busy ? 'Виконується операція' : statusError || overview.errors ? 'Є помилка' : !status ? 'Завантаження…' : configured ? 'Активне' : 'Потребує налаштування'
-  function acceptStatus(data: BackupStatus) { setStatus(data); setStatusError('') }
+  function acceptStatus(data: BackupStatus) { setStatus(data); setStatusError(''); setCopiesRevision(value => value + 1) }
   function closeRestore() {
     if (actionInFlight.current || busy) return
     setRestore(null); setRestoreError(null); setRestoreConsumed(false)
@@ -102,6 +103,14 @@ export default function BackupSettings() {
     }, code => {
       if (restore) setRestoreError({ code, operation: 'choose' })
       else setFeedback({ error: true, text: message(code) })
+    })
+  }
+  function selectCopy(id: string) {
+    void act(() => window.hromadaHR.backup.selectCopy(id), selection => {
+      setRestore(selection); setRestoreError(null); setRestoreConsumed(false)
+    }, code => {
+      setFeedback({ error: true, text: message(code) })
+      setCopiesRevision(value => value + 1)
     })
   }
   function confirmRestore() {
@@ -177,12 +186,7 @@ export default function BackupSettings() {
         }) }}><RefreshCw size={17} aria-hidden="true"/>Створити резервну копію</button>
     </div> : <p className="backup-setup-hint">Виберіть дві теки для збереження резервних копій.</p>}
 
-    <BackupHistory />
-
-    <section className="backup-recovery-entry" aria-labelledby="backup-restore-title">
-      <ShieldAlert size={21} aria-hidden="true"/><div><h3 id="backup-restore-title">Відновлення даних</h3><p>Замінити поточні дані вмістом резервної копії</p></div>
-      <button type="button" className="secondary-button" disabled={busy || !status} onClick={chooseRestore}>Відновити з копії</button>
-    </section>
+    <BackupCopies busy={busy || !status} revision={copiesRevision} onSelect={selectCopy} onChoose={chooseRestore} />
 
     {restore && <Modal title="Відновлення з резервної копії" headerIcon={<ShieldAlert size={21} aria-hidden="true"/>}
       className="backup-restore-modal" onClose={closeRestore} busy={busy}>

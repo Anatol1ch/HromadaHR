@@ -41,7 +41,7 @@ export function registerIpcHandlers(
   allowedUrl: string,
   getInfo: () => SystemInfo,
   getStorageStatus: () => StorageStatus,
-  backup: Pick<BackupController, 'openBackupFolder' | 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
+  backup: Pick<BackupController, 'listCopies' | 'selectCopy' | 'openBackupFolder' | 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
   personnel: PersonnelService,
   openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
@@ -62,6 +62,13 @@ export function registerIpcHandlers(
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
   register(ipcChannels.storageRetry, z.tuple([]), storageStatus, backup.retryStorage)
   register(ipcChannels.systemQuit, z.tuple([]), z.null(), () => { quit(); return null })
+  register(ipcChannels.backupListCopies, z.tuple([]), z.strictObject({
+    copies: z.array(z.strictObject({ id: token, time: z.iso.datetime(), kind: z.enum(['auto', 'manual']),
+      slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean() })).max(200),
+    targets: z.array(z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean() })).length(2), limited: z.boolean(),
+  }), () => backup.listCopies())
+  register(ipcChannels.backupSelectCopy, z.tuple([token]),
+    z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }), ([id]) => backup.selectCopy(id))
   register(ipcChannels.backupOpenFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]), z.null(), ([slot]) => backup.openBackupFolder(slot))
   register(ipcChannels.backupGetStatus, z.tuple([]), backupStatus, backup.getStatus)
   register(ipcChannels.backupChooseFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]),

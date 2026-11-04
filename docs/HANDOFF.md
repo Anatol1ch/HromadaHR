@@ -360,3 +360,27 @@ Main не зливати. Наступні кадрові модулі без о
 - [ ] Історія/фільтри та чинний restore без регресій; відновлення — РУЙНІВНЕ, лише в ізольованому тестовому профілі.
 
 Один коміт/push у робочу гілку, без merge main; 3.4.3.7 не починати без завдання.
+
+
+## 3.4.3.7 — відновлення конкретної копії
+
+База 468d189555d6ede277b41fce296e4753f57a11ca; codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Read-only AID S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb): цільово повторно прочитано server-manager/src/BackupManagement.tsx — архівна таблиця, дія за ID, окремі стани доступності та повної перевірки. Серверний архівний алгоритм/auth/HTTP не перенесено.
+
+- Одна панель: «Наявні копії» за замовчуванням та «Операції». Наявний BackupHistory/його фільтри/5 або всі/формат JSON незмінні; компонент залишається змонтованим при перемиканні. Нижню секцію відновлення прибрано. «Вибрати файл…» у заголовку запускає попередній picker/Modal/confirmRestore без зміни RecoveryScreen.
+- Нові явні backup.listCopies() і backup.selectCopy(id): strict Zod args/results, UUID ID без path, чинні sender/mainFrame/URL guards. Список не походить із backup-history.json. Main BackupCatalog перелічує лише прямі файли двох активних тек: точна назва hromadahr-INSTANCE-(auto|manual)-TIMESTAMP-UUID.db, реальна ISO-дата, standalone SQLite header та збіг backup_config.instance_id. Partial/protect/staging/previous/rejected/інша lineage/невідомі файли не включаються.
+- Межі: не більше 4096 назв переглядається на теку; до 100 найновіших кандидатів серед переглянутих назв перевіряється на теку, до 200 рядків/ID загалом. При обрізанні є повідомлення; довільний старий архів доступний через picker. Немає integrity_check у list чи опитування списку кожні 5 секунд: завантаження, явне оновлення та оновлення після ручної копії/зміни тек/невдалого вибору. Нові автоматичні копії видно після «Оновити». Журнал продовжує власне чинне polling. StrictMode повтор ефекту використовує ту саму Promise.
+- ID прив'язано до lineage, slot, активного canonical каталогу та його dev/ino/birthtime, файла dev/ino/birthtime/ctime/mtime/size. Зміна конфігурації, видалення/перезапис/підміна або symlink/junction відхиляються; hardlinks також не включаються. Після refresh ID зберігається тільки для незмінного файла. Це метадані походження, не криптографічний підпис і не гарантія цілісності SQLite.
+- selectCopy під чинним exclusive: повторна перевірка каталогу/файла, чинний Win32 preservation handle із забороною стороннього читання/запису/видалення, повторна перевірка після захоплення, копіювання саме з handle у приватний staging/catalog-* і повтор lineage. Приватна копія передається в наявний chooseRestore → повний inspectDatabase → staged snapshot → одноразовий 5-хвилинний token. Тимчасове захоплення прибирається у finally. Розділяти source та staged потрібно, щоб зовнішня підміна не змінила вибрану копію. Додатковий I/O лише при виборі, не при list.
+- confirmRestore/native dialog (Cancel default)/protective snapshot/checkpoint/recovery journal/rollback/reopen/migration/integrity/reload не переписані. Події restore проходять через наявний журнал і переживають restore. Міграції 1–4, персонал, auto/14/two-folder policy, Win32 helpers та RecoveryScreen незмінні.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; tests/backup-catalog.test.mjs — 1 інтеграційна перевірка реального Electron Main/SQLite/Win32 із temp profile (дозволені/сторонні/видалені/перезаписані/замінені файли, junction/каталог, зміна конфігурації, фізично пошкоджена SQLite, strict IPC без path, sender/frame/URL, native-confirm callback із Cancel default, одноразовий token, immutable staging, protection/reload/history persistence та ін'єкція reopen failure з реальним rollback/integrity/FK). Дві наявні профільні IPC-перевірки — allowlist та built preload — пройшли. Нативне вікно підтвердження замінено mock у тесті; реальних вікон/продукційних копій не відкривали. Перший варіант corruption fixture не відтворював пошкодження при readonly перевірці; fixture замінено на фізично пошкоджену B-tree сторінку, backend integrity не послаблювався. Повної регресії/GUI-тестів немає.
+
+Ручне GUI-приймання НЕ ВИКОНАНО:
+- [ ] Наявні копії з обох тек: час ДД.ММ.РРРР ГГ:ХХ, auto/manual, slot, доступність; Refresh після auto/видалення; offline/порожній/обмежений перелік.
+- [ ] Перемикання «Операції» зберігає фільтр/5 або всі; журнал не видається за перелік файлів.
+- [ ] «Відновити» → правильна назва/schema в чинному Modal, Cancel без заміни; старий ID після зовнішньої зміни дає помилку, а не іншу копію.
+- [ ] «Вибрати файл…» → системний picker, cancel без помилки, архів з іншого носія; nested focus/busy/повторне натискання.
+- [ ] РУЙНІВНЕ, ЛИШЕ ІЗОЛЬОВАНИЙ ТЕСТОВИЙ ПРОФІЛЬ: підтверджений restore через обов'язковий native dialog, protection/reload, журнал після перезапуску. На продукційній БД не виконувати.
+- [ ] Вузьке вікно/1366×768/масштаб 125–200%: scroll лише таблиці, дії/Modal footer доступні.
+
+Один коміт/push у робочу гілку; main не зливати, наступні модулі не починати.

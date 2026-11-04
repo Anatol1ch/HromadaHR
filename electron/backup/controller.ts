@@ -11,6 +11,8 @@ export class BackupController {
     private openPath: (path: string) => Promise<string> = path => shell.openPath(path)) {}
   invalidate() { this.generation++; this.service.invalidateSelections() }
   getStatus = () => this.service.getStatus()
+  listCopies = () => this.service.listCopies()
+  selectCopy = (id: string) => this.service.selectCopy(id)
   getHistory = () => this.service.getHistory()
   runManual = () => this.service.runManual()
   retryStorage = () => this.service.retryStorage()
