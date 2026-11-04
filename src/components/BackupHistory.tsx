@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { BackupHistory as History } from '../../shared/backupHistory'
+import { History } from 'lucide-react'
+import type { BackupHistory as HistoryData } from '../../shared/backupHistory'
 import { formatDateTime } from '../lib/dates'
 import Alert from './Alert'
 import DictionaryTable from './DictionaryTable'
@@ -7,7 +8,7 @@ import Select from './Select'
 
 const operations = { auto: 'Автоматична копія', manual: 'Ручна копія', config: 'Зміна тек', restore: 'Відновлення' }
 export default function BackupHistory() {
-  const [history, setHistory] = useState<History | null>(null)
+  const [history, setHistory] = useState<HistoryData | null>(null)
   const [filter, setFilter] = useState('all')
   const [expanded, setExpanded] = useState(false)
   useEffect(() => {
@@ -28,20 +29,22 @@ export default function BackupHistory() {
   const rows = history?.events.filter(event => filter === 'all' || event.result === filter) ?? []
   const visible = expanded ? rows : rows.slice(0, 5)
   return <section className="dashboard-panel backup-history" aria-labelledby="backup-history-title">
-    <div className="backup-history-heading"><h3 id="backup-history-title">Історія операцій</h3>
+    <div className="backup-history-heading"><h3 id="backup-history-title"><History size={18} aria-hidden="true"/>Історія операцій</h3>
       <Select label="Фільтр історії резервування" value={filter} onChange={setFilter} advanceOnSelect={false}
         options={[{ value: 'all', label: 'Усі' }, { value: 'success', label: 'Успішні' }, { value: 'error', label: 'Помилки' }]}/>
     </div>
-    {history && !history.available && <Alert variant="warning">Історія недоступна або не збережена повністю. Це не змінює результат резервування.</Alert>}
-    <DictionaryTable label="Історія операцій резервування" className="backup-history-table"
-      columns={[{ label: 'Дата й час' }, { label: 'Операція' }, { label: 'Місце' }, { label: 'Результат' }]}
-      empty={!history ? 'Завантаження…' : !visible.length ? !history.available ? 'Історія недоступна' : history.events.length ? 'Немає записів за цим фільтром' : 'Історія операцій почне накопичуватися після оновлення' : undefined}>
+    {!history && <p className="backup-history-empty" role="status">Завантаження історії…</p>}
+    {history && !history.available && <Alert variant="error">Історія недоступна або не збережена повністю. Це не змінює результат резервування.</Alert>}
+    {history?.available && !history.events.length && <p className="backup-history-empty">Історія операцій почне накопичуватися після оновлення</p>}
+    {history && history.events.length > 0 && !rows.length && <p className="backup-history-empty">Немає записів за цим фільтром</p>}
+    {visible.length > 0 && <DictionaryTable label="Історія операцій резервування" className="backup-history-table"
+      columns={[{ label: 'Дата й час', width: '24%' }, { label: 'Операція', width: '34%' }, { label: 'Місце', width: '17%' }, { label: 'Результат', width: '25%' }]}>
       {visible.map((event, index) => <tr key={`${event.time}-${event.operation}-${event.slot}-${index}`}>
         <td><time dateTime={event.time}>{formatDateTime(event.time)}</time></td><td>{operations[event.operation]}</td>
         <td>{event.slot ? `Тека ${event.slot}` : '—'}</td>
-        <td><span className={`backup-event-result ${event.result}`}>{event.result === 'success' ? 'Успішно' : event.result === 'cancelled' ? 'Скасовано' : 'Помилка'}</span>{event.code && <small className="backup-event-code">{event.code}</small>}</td>
+        <td><span title={event.code ?? undefined} className={`backup-event-result ${event.result}`}>{event.result === 'success' ? 'Успішно' : event.result === 'cancelled' ? 'Скасовано' : 'Помилка'}</span></td>
       </tr>)}
-    </DictionaryTable>
+    </DictionaryTable>}
     {rows.length > 5 && <button type="button" className="secondary-button" aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? 'Згорнути' : `Показати всі (${rows.length})`}</button>}
   </section>
 }

@@ -1,5 +1,5 @@
 import BackupHistory from './BackupHistory'
-import { DatabaseBackup, FolderOpen, HardDrive, History, Save, ShieldAlert, RefreshCw } from 'lucide-react'
+import { DatabaseBackup, FolderOpen, HardDrive, Save, ShieldAlert, RefreshCw } from 'lucide-react'
 import { backupOverview } from '../backup/presentation.ts'
 import { formatDate, formatDateTime } from '../lib/dates'
 import { notifySystemToast } from './SystemToastHost'
@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BackupStatus, FolderSelection, RestoreSelection } from '../../shared/backup'
 import type { IpcErrorCode, IpcResult } from '../../shared/ipc'
 import Alert from './Alert'
+import Modal from './Modal'
 
 const messages: Partial<Record<IpcErrorCode, string>> = {
   BUSY: 'Інша операція ще виконується. Спробуйте пізніше.',
@@ -26,8 +27,12 @@ const time = (value: string | null) => value ? formatDateTime(value) : 'Ще н�
 
 export default function BackupSettings() {
   const [status, setStatus] = useState<BackupStatus | null>(null)
+  const [statusError, setStatusError] = useState('')
   const [choices, setChoices] = useState<[FolderSelection | null, FolderSelection | null]>([null, null])
   const [restore, setRestore] = useState<RestoreSelection | null>(null)
+  const [restoreError, setRestoreError] = useState<{ code: IpcErrorCode; operation: 'choose' | 'confirm' } | null>(null)
+  const [restoreConsumed, setRestoreConsumed] = useState(false)
+  const [reloadPending, setReloadPending] = useState(false)
   const [running, setRunning] = useState(false)
   const [feedback, setFeedback] = useState<{ error: boolean; text: string } | null>(null)
   const mounted = useRef(false)
@@ -35,35 +40,36 @@ export default function BackupSettings() {
   const actionInFlight = useRef(false)
   useEffect(() => {
     mounted.current = true
-    let polling = false
+    let active = true, polling = false
     const refresh = async () => {
       if (polling) return
       polling = true
       try {
         const result = await window.hromadaHR.backup.getStatus()
-        if (mounted.current) {
-          if (result.ok) setStatus(result.data)
-          else if (!actionInFlight.current) setFeedback({ error: true, text: message(result.error.code) })
+        if (active && !actionInFlight.current) {
+          if (result.ok) { setStatus(result.data); setStatusError('') }
+          else setStatusError(message(result.error.code))
         }
-      } catch { if (mounted.current) setFeedback({ error: true, text: message('UNAVAILABLE') }) }
+      } catch { if (active && !actionInFlight.current) setStatusError(message('UNAVAILABLE')) }
       finally { polling = false }
     }
     void refresh()
     const timer = setInterval(() => { void refresh() }, 5000)
-    return () => { mounted.current = false; clearInterval(timer) }
+    return () => { active = false; mounted.current = false; clearInterval(timer) }
   }, [])
 
-  async function act<T>(operation: () => Promise<IpcResult<T>>, done: (data: T) => void) {
-    if (actionInFlight.current) return
+  async function act<T>(operation: () => Promise<IpcResult<T>>, done: (data: T) => void,
+    failed: (code: IpcErrorCode) => void = code => setFeedback({ error: true, text: message(code) })) {
+    if (actionInFlight.current || status?.busy || reloadPending) return
     actionInFlight.current = true
     setRunning(true); setFeedback(null)
     try {
       const result = await operation()
       if (mounted.current) {
         if (result.ok) done(result.data)
-        else setFeedback({ error: true, text: message(result.error.code) })
+        else failed(result.error.code)
       }
-    } catch { if (mounted.current) setFeedback({ error: true, text: message('UNAVAILABLE') }) }
+    } catch { if (mounted.current) failed('UNAVAILABLE') }
     finally { actionInFlight.current = false; if (mounted.current) setRunning(false) }
   }
   useEffect(() => { if (feedback && !feedback.error) notifySystemToast('success', 'Готово', feedback.text) }, [feedback])
@@ -73,86 +79,119 @@ export default function BackupSettings() {
       notifySystemToast('success', 'Дані відновлено', 'Відновлення з резервної копії завершено.')
     }
   }, [status?.lastRestore])
-  const busy = running || status?.busy === true
+  const busy = running || status?.busy === true || reloadPending
   const configured = status?.targets.every(target => target.path !== null) === true
+  const dirty = choices.some(Boolean)
+  const canSave = dirty && ([0, 1] as const).every(index => choices[index] || status?.targets[index].path)
   const overview = backupOverview(status)
+  const stateTone = busy ? 'info' : statusError || overview.errors ? 'error' : configured ? 'success' : 'info'
+  const stateLabel = busy ? 'Виконується операція' : statusError || overview.errors ? 'Є помилка' : !status ? 'Завантаження…' : configured ? 'Активне' : 'Потребує налаштування'
+  function acceptStatus(data: BackupStatus) { setStatus(data); setStatusError('') }
+  function closeRestore() {
+    if (actionInFlight.current || busy) return
+    setRestore(null); setRestoreError(null); setRestoreConsumed(false)
+  }
+  function chooseRestore() {
+    void act(() => {
+      // Main invalidates the prior selection even when the new picker cancels.
+      if (restore) setRestoreConsumed(true)
+      setRestoreError(null)
+      return window.hromadaHR.backup.chooseRestore()
+    }, selection => {
+      setRestore(selection); setRestoreError(null); setRestoreConsumed(false)
+    }, code => {
+      if (restore) setRestoreError({ code, operation: 'choose' })
+      else setFeedback({ error: true, text: message(code) })
+    })
+  }
+  function confirmRestore() {
+    if (!restore || restoreConsumed) return
+    void act(() => {
+      setRestoreConsumed(true)
+      return window.hromadaHR.backup.confirmRestore(restore.token)
+    }, result => {
+      if (result.restored) setReloadPending(true)
+      else { setRestore(null); setRestoreError(null); setRestoreConsumed(false) }
+    }, code => setRestoreError({ code, operation: 'confirm' }))
+  }
   return <section className="backup-settings" aria-labelledby="backup-title" aria-busy={busy}>
-    <section className="dashboard-panel backup-overview">
-      <div className="settings-card-heading"><span className="settings-icon"><DatabaseBackup size={21} aria-hidden="true"/></span><div><h2 id="backup-title">Резервне копіювання</h2></div></div>
-      <div className="backup-overview-status" role="status">
-        <strong>{busy ? 'Виконується операція…' : overview.label}</strong>
-        {status && <span>Остання успішна копія: {time(overview.lastSuccess)}</span>}
-      </div>
-      {status?.sameVolume && <Alert variant="warning">Обидві теки на одному томі. Це не захищає від відмови цього диска. Виберіть другу теку на іншому носії.</Alert>}
-      {choices.some(Boolean) && <Alert variant="info">Вибір тек ще не збережено. Автоматичні копії використовують попередню конфігурацію.</Alert>}
+    <header className="backup-summary">
+      <div className="backup-summary-heading"><DatabaseBackup size={22} aria-hidden="true"/><h2 id="backup-title">Резервне копіювання</h2>
+        <span className="backup-state" data-tone={stateTone} role="status">{stateLabel}</span></div>
+      <p>Остання успішна копія: <strong>{status ? time(overview.lastSuccess) : statusError ? 'Немає підтверджених даних' : 'Перевірка…'}</strong></p>
+      {status?.sameVolume && <Alert variant="warning">Теки на одному томі. Відмова диска може призвести до втрати обох копій.</Alert>}
+      {statusError && <Alert variant="error">{statusError}{status && ' Показано останні відомі дані.'}</Alert>}
       {feedback?.error && <Alert variant="error">{feedback.text}</Alert>}
       {status?.lastRestore === 'rolled-back' && <Alert variant="warning">Відновлення не вдалося. Попередню справну базу повернуто.</Alert>}
-      <details className="backup-technical"><summary>Як працює резервування</summary><p className="backup-policy">Поки застосунок відкрито — одна автоматична копія на добу в кожній теці. Зберігаються 14 останніх автоматичних копій; ручні залишаються. Повторні спроби — через 15 хвилин, до чотирьох на теку за добу.</p></details>
-    </section>
+    </header>
+
     <div className="backup-target-grid">
       {([0, 1] as const).map(index => {
-        const target = status?.targets[index]
-        const choice = choices[index]
+        const target = status?.targets[index], choice = choices[index]
         const path = choice?.path ?? target?.path
-        return <section className="dashboard-panel backup-target-card" key={index} aria-labelledby={`backup-slot-${index}`}>
-          <div className="backup-target-heading"><span className="settings-icon"><HardDrive size={20} aria-hidden="true"/></span><div><h3 id={`backup-slot-${index}`}>Тека {index + 1}</h3></div></div>
+        return <section className="dashboard-panel backup-target-card" key={index} aria-labelledby={'backup-slot-' + index}>
+          <div className="backup-target-heading"><HardDrive size={19} aria-hidden="true"/><h3 id={'backup-slot-' + index}>Тека {index + 1}</h3>
+            <span className="backup-state" data-tone={choice ? 'info' : !target?.path ? 'info' : target.available ? 'success' : 'error'}>
+              {choice ? 'Не збережено' : !target ? 'Перевірка…' : !target.path ? 'Не налаштовано' : target.available ? 'Доступна' : 'Недоступна'}
+            </span></div>
           <p className="backup-path" title={path ?? undefined}>{path ?? 'Теку ще не вибрано'}</p>
-          <span className={`backup-target-state${target?.error || (target?.path && !target.available) ? ' has-error' : ''}`}>
-            {choice ? 'Очікує збереження' : !target ? 'Завантаження…' : target.path ? target.available ? 'Тека доступна' : 'Тека недоступна' : 'Не налаштовано'}
-          </span>
-          <dl className="backup-target-facts"><div><dt>{choice ? 'Остання копія у попередній теці' : 'Остання успішна копія'}</dt><dd>{time(target?.lastSuccess ?? null)}</dd></div></dl>
-          {target?.error && <Alert variant="error">{message(target.error)}</Alert>}
-          {target?.path && !target.available && !target.error && <Alert variant="warning">Тека недоступна. Перевірте підключення носія та доступ до неї.</Alert>}
+          <dl className="backup-target-facts"><div><dt>{choice ? 'Остання копія в активній конфігурації' : 'Остання успішна копія'}</dt><dd>{target ? time(target.lastSuccess) : 'Немає підтверджених даних'}</dd></div></dl>
+          {target?.error && <Alert variant="error">{choice && 'Активна тека: '}{message(target.error)}</Alert>}
+          {target?.path && !target.available && !target.error && <Alert variant="warning">Активна тека недоступна. Перевірте носій і доступ.</Alert>}
           <button type="button" className="secondary-button" disabled={busy} onClick={() => {
             void act(() => window.hromadaHR.backup.chooseFolder(index === 0 ? 1 : 2), value => {
               if (value) setChoices(previous => index === 0 ? [value, previous[1]] : [previous[0], value])
             })
-          }}><FolderOpen size={17} aria-hidden="true"/>{path ? 'Змінити теку' : 'Вибрати теку'}</button>
-          <details className="backup-technical"><summary>Технічні відомості</summary>
-            <dl><div><dt>Остання спроба</dt><dd>{time(target?.lastAttempt ?? null)}</dd></div>
-              {target?.error && <div><dt>Код помилки</dt><dd>{target.error}</dd></div>}
-              <div><dt>День автоматичної копії</dt><dd>{target?.autoDay ? formatDate(target.autoDay) : 'Ще немає'}</dd></div>
-              <div><dt>Файл останньої копії</dt><dd>{target?.fileName ?? 'Ще немає'}</dd></div>
-              {choice && target?.path && <div><dt>Збережена тека</dt><dd>{target.path}</dd></div>}
-            </dl>
-          </details>
+          }}><FolderOpen size={16} aria-hidden="true"/>{path ? 'Змінити теку' : 'Вибрати теку'}</button>
         </section>
       })}
     </div>
-    <section className="dashboard-panel backup-regular-actions" aria-label="Збереження та резервування">
-      <h3>Керування копіями</h3>
-      <div className="backup-actions">
-        <button type="button" className="primary-button" disabled={busy || !choices.some(Boolean) || !([0, 1] as const).every(i => choices[i] || status?.targets[i].path)}
-          onClick={() => { void act(() => window.hromadaHR.backup.saveConfig([choices[0]?.token ?? null, choices[1]?.token ?? null]), data => {
-            setStatus(data); setChoices([null, null]); setFeedback({ error: false, text: 'Теки збережено. Автоматичне резервування активовано.' })
-          }) }}><Save size={17} aria-hidden="true"/>Зберегти зміни тек</button>
-        <button type="button" className="secondary-button" disabled={busy || !configured}
-          onClick={() => { void act(() => window.hromadaHR.backup.runManual(), data => {
-            setStatus(data)
-            const failures = data.targets.filter(target => target.error).length
-            setFeedback({ error: failures > 0, text: failures === 0 ? 'Ручні копії створено в обох теках.' : 'Резервування завершено з помилками. Перевірте результат для кожної теки.' })
-          }) }}><RefreshCw size={17} aria-hidden="true"/>Створити копії зараз</button>
-      </div>
-      {busy && <p role="status">Операція виконується. Не від’єднуйте носії.</p>}
-    </section>
-    <section className="dashboard-panel backup-restore" aria-labelledby="backup-restore-title">
-      <div className="settings-card-heading"><span className="backup-restore-icon"><ShieldAlert size={21} aria-hidden="true"/></span><div><h3 id="backup-restore-title">Відновлення даних</h3><p>Замінює поточні дані вмістом вибраної копії.</p></div></div>
-      <button type="button" className="secondary-button" disabled={busy || !status}
-        onClick={() => { void act(() => window.hromadaHR.backup.chooseRestore(), setRestore) }}><History size={17} aria-hidden="true"/>Вибрати копію для відновлення</button>
-      {restore && <Alert variant="warning">
-        <strong>Відновлення замінить поточні дані.</strong><span>Перед заміною буде збережено захисну копію; далі з’явиться системне підтвердження.</span>
-        <details className="backup-technical"><summary>Відомості про вибрану копію</summary><p className="backup-path">{restore.fileName}</p><p>Версія схеми: {restore.schemaVersion}.</p></details>
-        <div className="backup-actions">
-          <button type="button" className="danger-button" disabled={busy} onClick={() => {
-            void act(() => window.hromadaHR.backup.confirmRestore(restore.token), result => {
-              setRestore(null)
-              if (!result.restored) setFeedback({ error: false, text: 'Відновлення скасовано.' })
-            })
-          }}>Продовжити відновлення</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => setRestore(null)}>Скасувати</button>
-        </div>
-      </Alert>}
-    </section>
+
+    <div className="backup-toolbar" role="group" aria-label="Дії резервування">
+      <button type="button" className={configured ? 'primary-button' : 'secondary-button'} disabled={busy || !configured}
+        onClick={() => { void act(() => window.hromadaHR.backup.runManual(), data => {
+          acceptStatus(data)
+          const failures = data.targets.filter(target => target.error).length
+          setFeedback({ error: failures > 0, text: failures === 0 ? 'Ручні копії створено в обох теках.' : 'Резервування завершено з помилками. Перевірте результат кожної теки.' })
+        }) }}><RefreshCw size={17} aria-hidden="true"/>Створити копію зараз</button>
+      <button type="button" className={configured ? 'secondary-button' : 'primary-button'} disabled={busy || !canSave}
+        onClick={() => { void act(() => window.hromadaHR.backup.saveConfig([choices[0]?.token ?? null, choices[1]?.token ?? null]), data => {
+          acceptStatus(data); setChoices([null, null]); setFeedback({ error: false, text: 'Теки збережено. Автоматичне резервування активовано.' })
+        }) }}><Save size={17} aria-hidden="true"/>Зберегти зміни тек</button>
+      {dirty && <p className="backup-draft-note">Зміни тек не збережено. Копії поки використовують активну конфігурацію.</p>}
+    </div>
+
     <BackupHistory />
+
+    <section className="backup-recovery-entry" aria-labelledby="backup-restore-title">
+      <ShieldAlert size={21} aria-hidden="true"/><div><h3 id="backup-restore-title">Відновлення даних</h3><p>Замінити поточні дані вмістом резервної копії</p></div>
+      <button type="button" className="secondary-button" disabled={busy || !status} onClick={chooseRestore}>Відновити з копії</button>
+    </section>
+
+    <details className="backup-technical"><summary>Технічні відомості</summary>
+      <p>Поки застосунок відкрито — одна автоматична копія на добу в кожній теці. Зберігаються 14 останніх автоматичних копій; ручні залишаються. Повторні спроби — не раніше ніж через 15 хвилин, до чотирьох на теку за добу.</p>
+      <div className="backup-technical-grid">{status?.targets.map(target => <div key={target.slot}><h4>Тека {target.slot}</h4><dl>
+        <div><dt>Активний шлях</dt><dd>{target.path ?? 'Не налаштовано'}</dd></div>
+        <div><dt>Остання спроба</dt><dd>{time(target.lastAttempt)}</dd></div>
+        <div><dt>Тип останньої спроби</dt><dd>{target.lastKind === 'auto' ? 'Автоматична' : target.lastKind === 'manual' ? 'Ручна' : 'Ще немає'}</dd></div>
+        <div><dt>Код помилки</dt><dd>{target.error ?? 'Немає'}</dd></div>
+        <div><dt>День автоматичної копії</dt><dd>{target.autoDay ? formatDate(target.autoDay) : 'Ще немає'}</dd></div>
+        <div><dt>Файл останньої копії</dt><dd>{target.fileName ?? 'Ще немає'}</dd></div>
+      </dl></div>)}</div>
+    </details>
+
+    {restore && <Modal title="Відновлення з резервної копії" headerIcon={<ShieldAlert size={21} aria-hidden="true"/>}
+      className="backup-restore-modal" onClose={closeRestore} busy={busy}>
+      <dl className="backup-restore-details"><div><dt>Вибраний файл</dt><dd>{restore.fileName}</dd></div><div><dt>Версія схеми</dt><dd>{restore.schemaVersion}</dd></div></dl>
+      <p className="backup-restore-warning">Поточні дані буде замінено вмістом цієї копії.</p>
+      <p>Перед заміною буде створено захисну копію. Далі з’явиться обов’язкове системне підтвердження.</p>
+      {restoreError && <Alert variant="error">{restoreError.operation === 'confirm' && restoreError.code === 'UNAVAILABLE' ? 'Результат відновлення не підтверджено. Перевірте стан застосунку перед повторним вибором копії.' : message(restoreError.code)}</Alert>}
+      {restoreConsumed && !busy && <button type="button" className="secondary-button" onClick={chooseRestore}><FolderOpen size={17} aria-hidden="true"/>Вибрати копію повторно</button>}
+      {busy && <p role="status">{reloadPending ? 'Дані відновлено. Інтерфейс перезавантажується…' : 'Операція виконується. Не від’єднуйте носій.'}</p>}
+      <footer className="recipient-form-actions"><div>
+        <button type="button" className="secondary-button" data-modal-autofocus disabled={busy} onClick={closeRestore}>Скасувати</button>
+        <button type="button" className="danger-button" disabled={busy || restoreConsumed} aria-busy={running} onClick={confirmRestore}>Продовжити відновлення</button>
+      </div></footer>
+    </Modal>}
   </section>
 }

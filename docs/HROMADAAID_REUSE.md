@@ -69,3 +69,8 @@ Main createStartup — HR-only узгодження з наявним SQLite: в
 | src/App.tsx Help Modal | Адаптувати наявні contact cards і Modal, зберегти HR ID-only external IPC | Спільна візуальна картка/сусідні open+Copy buttons, wide/2→1 container grid, toast копіювання; без вкладених кнопок |
 
 Пакування/NSIS, чужі EXE/ярлики/зелений бренд не переносилися. Деталі Windows-обмежень, генерації та built paths — assets/README.md; невиконане ручне приймання — UI-TRANSFER 3.4.3.3.
+
+
+## 3.4.3.4 — presentation резервування
+
+S1: повторно цільово звірено src/SettingsPage.tsx (cards/heading/Modal) та server-manager/src/BackupManagement.tsx (короткі статуси/restore preview, busy/error та footer). Рішення — адаптувати наявну візуальну мову через вже перенесені HR Modal/Alert/DictionaryTable/Select/Toast: п'ять компактних зон, common technical details, модальний restore. Server auth/API/архівний backend/шифрування/демонстраційні дані не переносилися; власний надійніший HR backend збережено. Фактично змінені тільки BackupSettings/BackupHistory/settings.css, а guarantees одноразового токена/нативного підтвердження/rollback чинні. Ручне приймання передано замовнику, ще не виконане; деталі — UI-TRANSFER 3.4.3.4.
