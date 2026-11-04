@@ -53,7 +53,6 @@
 .employee-registry .aid-toolbar { flex-wrap: wrap; justify-content: flex-start; gap: 10px; }
 .employee-registry .aid-toolbar .registry-search { flex: 1 1 240px; }
 .employee-registry .aid-toolbar button { max-width: 100%; }
-.employee-registry .employee-results { margin: 0; padding: 0; }
 .employee-group-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
 .employee-group-heading h2 { margin: 0; min-width: 0; color: var(--color-text); font-size: 18px; line-height: 1.45; }
 .employee-group-heading > span { color: var(--color-text-secondary); font-size: 12px; }
@@ -70,9 +69,6 @@
 .employee-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .employee-field > label, .employee-field > span:first-child { font-size: 12px; font-weight: 600; color: var(--color-text-label); }
 .employee-field .date-field-control, .employee-field .app-select { width: 100%; min-width: 0; }
-.employee-results { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--color-text-secondary); }
-.employee-name-link { border: 0; padding: 0; background: transparent; color: var(--accent); font: inherit; text-align: left; }
-.employee-name-link:hover { text-decoration: underline; }
 .hr-employee-table { min-width: 850px; }
 .dictionary-table .registry-row-actions { justify-content: center; flex-wrap: nowrap; gap: var(--space-1); }
 .dictionary-table .danger-action:hover:not(:disabled) { background: #fcefeb; color: #a34e46; }
@@ -93,7 +89,6 @@
 .employee-card .recipient-history-heading { align-items: center; flex-wrap: wrap; }
 .employee-history-table { min-width: 740px; table-layout: auto; }
 .employee-history-table td { overflow-wrap: anywhere; }
-.employee-history-table th:last-child { width: 180px; }
 .employee-current-tag { color: var(--accent); font-weight: 650; }
 .employee-card-danger { display: flex; justify-content: flex-end; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border-surface); }
 .employee-card [role="tabpanel"]:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
@@ -111,5 +106,11 @@
 }
 @media (max-width: 600px) {
   .employee-register-panel { padding: 14px; }
-  .employee-heading .primary-button { width: 100%; }
 }
+
+.hr-employee-table .employee-actions-heading { text-align:center; }
+.hr-employee-table .registry-row-actions { justify-content:center; }
+.employee-history-table th:nth-child(1), .employee-history-table th:nth-child(2) { width:125px; }
+.employee-history-table th:last-child { width:210px; }
+
+.hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }

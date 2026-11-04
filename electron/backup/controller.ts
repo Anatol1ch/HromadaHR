@@ -9,6 +9,7 @@ export class BackupController {
   constructor(private service: BackupService, private getWindow: () => BrowserWindow | null) {}
   invalidate() { this.generation++; this.service.invalidateSelections() }
   getStatus = () => this.service.getStatus()
+  getHistory = () => this.service.getHistory()
   runManual = () => this.service.runManual()
   retryStorage = () => this.service.retryStorage()
   saveConfig = async (tokens: [string | null, string | null]) => {

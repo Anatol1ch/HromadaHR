@@ -1,3 +1,5 @@
+import type { BackupHistory } from './backupHistory.js'
+import type { ContactId } from './contacts.js'
 import type { PersonnelApi, PersonnelErrorCode, AssignmentInput, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
@@ -13,6 +15,7 @@ export const ipcChannels = {
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
   personnelCreatePosition: 'personnel:createPosition',
+  systemOpenContact: 'system:openContact', backupGetHistory: 'backup:getHistory',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
   storageRetry: 'storage:retry', systemQuit: 'system:quit',
   backupGetStatus: 'backup:getStatus', backupChooseFolder: 'backup:chooseFolder', backupSaveConfig: 'backup:saveConfig',
@@ -35,6 +38,8 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.systemOpenContact]: { args: [ContactId]; result: boolean }
+  [ipcChannels.backupGetHistory]: { args: []; result: BackupHistory }
   [ipcChannels.personnelCreateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
   [ipcChannels.personnelUpdateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
   [ipcChannels.personnelDeleteAssignment]: { args: [string]; result: EmployeeCard }
@@ -64,6 +69,7 @@ export interface HromadaHRApi {
   readonly personnel: PersonnelApi
   readonly backup: BackupApi
   readonly system: {
+    readonly openContact: (id: ContactId) => Promise<IpcResult<boolean>>
     readonly quit: () => Promise<IpcResult<null>>
     readonly getInfo: (...args: IpcOperations[typeof ipcChannels.systemGetInfo]['args']) => Promise<IpcResult<SystemInfo>>
   }

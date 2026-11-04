@@ -33,3 +33,14 @@ UI composition повторно адаптовано з S1 RecipientRegistry; fi
 Попередній CategoryField/enum choices вилучено: category read-only у картці/історії, UI payload визначає консервативна assignmentPolicy. Note видалено з усієї актуальної моделі та БД через HR migration 4 із чинною verified protection; це власна предметна зміна, не перенесення несумісної AID моделі. Source копії v3 не змінюються, їхнє відновлення мігрує active дані без note.
 
 Backup UI більше не дублює sameVolume у summary; runtime HR збережено. Стартові анімації/3.4.3, майбутні модулі, installer/updates лишаються відкладеними. Детальна provenance, тести й невиконаний ручний чекліст — UI-TRANSFER 3.4.2.2.
+
+
+## Цільове продовження 3.4.2.3
+
+| Можливість / джерело | SHA | Рішення / обґрунтування | Фактичний стан |
+| --- | --- | --- | --- |
+| Щоденна робота: src/App.tsx workspace-actions/workspace-shortcuts; src/styles.css | S1 | Адаптувати реальні JSX/геометрію/hover/responsive до 5 HR карток і сиреневих токенів; без ролей | Інтегровано; тільки employees/settings активні, старий summary вилучено |
+| Контакти: src/App.tsx help Modal tel/mailto/Telegram | S1 | Адаптувати поведінку відкриття; замість URL з renderer — 4 ID з Main allowlist; fallback copy | Інтегровано, system.openContact, без довільного openExternal |
+| Історія: server-manager/src/App.tsx EventTable; server-manager/src/BackupManagement.tsx таблиця станів | S1 | Адаптувати компактні рядки часу/операції/статусу через вже перенесений DictionaryTable. Demo events, auth, API, encryption не переносити | Реальний Main-only журнал HR, backup.getHistory; ніякої вигаданої історії |
+
+Зберігання/обмеження/невтручання діагностичного журналу — HR-only рішення, описане в ARCHITECTURE/HANDOFF. Це не перенесення серверного backup backend AID.

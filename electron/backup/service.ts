@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3'
+import { BackupHistoryStore } from './history.js'
+import type { BackupEvent } from '../../shared/backupHistory.js'
 import { randomUUID } from 'node:crypto'
 import { basename, dirname, join } from 'node:path'
 import { constants, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
@@ -27,7 +29,12 @@ export class BackupService {
   private folders = new Map<BackupSlot, FolderSelection & { expires: number }>()
   private restoreSelection: (RestoreSelection & { staged: string; expires: number }) | undefined
 
-  constructor(private storage: Storage, private now: () => Date = () => new Date()) {}
+  constructor(private storage: Storage, private now: () => Date = () => new Date(),
+    private history = new BackupHistoryStore(() => join(dirname(storage.getFile()), 'backup-history.json'))) {}
+  getHistory = () => this.history.get()
+  private record(operation: BackupEvent['operation'], result: BackupEvent['result'], slot: BackupSlot | null = null, code: BackupEvent['code'] = null) {
+    try { this.history.append({ time: this.now().toISOString(), operation, slot, result, code }) } catch { /* Diagnostics must never affect the operation. */ }
+  }
   isBusy() { return this.busy }
   emergencyAvailable() { return this.storage.canRecover() }
   private db() {
@@ -103,6 +110,7 @@ export class BackupService {
         })
       }).immediate()
       this.folders.clear()
+      this.record('config', 'success')
       return this.getStatus()
     })
   }
@@ -151,8 +159,9 @@ export class BackupService {
         }).immediate()
         if (file && kind === 'auto') {
           try { rotateAutomatic(folder, config.instance_id, this.storage.manifest) }
-          catch { db.prepare('UPDATE backup_state SET error=? WHERE slot=?').run('BACKUP_FAILED', row.slot) }
+          catch { error = 'BACKUP_FAILED'; db.prepare('UPDATE backup_state SET error=? WHERE slot=?').run(error, row.slot) }
         }
+        this.record(kind, error ? 'error' : 'success', row.slot, error)
       }
       return this.getStatus()
     })
@@ -184,6 +193,13 @@ export class BackupService {
   }
 
   async chooseRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {
+    try { return await this.prepareRestore(pick) }
+    catch (error) {
+      this.record('restore', 'error', null, error instanceof BackupError ? error.code : 'RESTORE_FAILED')
+      throw error
+    }
+  }
+  private async prepareRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {
     return this.exclusive(async () => {
       if (this.storage.getStatus().state !== 'ready' && !this.storage.canRecover()) throw new BackupError('STORAGE_UNAVAILABLE')
       this.invalidateSelections()
@@ -209,6 +225,16 @@ export class BackupService {
   }
 
   async confirmRestore(token: string, confirm: () => Promise<boolean>) {
+    try {
+      const result = await this.performRestore(token, confirm)
+      this.record('restore', result.restored ? 'success' : 'cancelled', null, result.restored ? null : 'CANCELLED')
+      return result
+    } catch (error) {
+      this.record('restore', 'error', null, error instanceof BackupError ? error.code : 'RESTORE_FAILED')
+      throw error
+    }
+  }
+  private async performRestore(token: string, confirm: () => Promise<boolean>) {
     return this.exclusive(async () => {
       const selected = this.restoreSelection
       this.restoreSelection = undefined // Consume once, including cancellation/failure.

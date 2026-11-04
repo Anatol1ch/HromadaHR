@@ -31,9 +31,9 @@ export default function EmployeeGroupTable({ title, rows, total, sort, onSort, l
             aria-label={`${title}: ${column.label}. Сортувати ${sort.key === column.key && sort.direction === 'asc' ? 'за спаданням' : 'за зростанням'}`}>
             <span className="registry-sort-label">{column.label}</span><span aria-hidden="true">{sort.key === column.key ? sort.direction === 'asc' ? '↑' : '↓' : '↕'}</span>
           </button>,
-        })), { label: 'Дії', width: '100px' }]}>
+        })), { label: 'Дії', width: '124px', className: 'employee-actions-heading' }]}>
         {rows.map(employee => <tr key={employee.id}>
-          <td><button type="button" className="employee-name-link" onClick={() => actions.onOpen(employee)}>{fullName(employee)}</button></td>
+          <td><strong className="employee-name">{fullName(employee)}</strong></td>
           <td>{employee.currentAssignment.position.name}</td><td>{employee.currentAssignment.department.name}</td>
           <td className="employee-date">{displayDate(employee.hireDate)}</td>
           <td className="dictionary-actions-cell"><div className="registry-row-actions">

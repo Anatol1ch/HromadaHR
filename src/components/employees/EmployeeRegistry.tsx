@@ -25,7 +25,6 @@ export default function EmployeeRegistry({ employees, loading, error, state, onS
     <div className="page-heading employee-heading">
       <div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
         <p className="subtitle">Реєстр працівників та особові картки громади</p></div>
-      <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true"/>Додати працівника</button>
     </div>
     <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри працівників">
       <div className="aid-toolbar">
@@ -36,6 +35,7 @@ export default function EmployeeRegistry({ employees, loading, error, state, onS
         </button>
         <button type="button" className="secondary-button aid-filter-reset" disabled={!filtered} onClick={onClear}><FilterX size={17} aria-hidden="true"/>Очистити фільтри</button>
         <button type="button" className="secondary-button aid-sort-reset" disabled={!sorted} onClick={onResetSort}><ListRestart size={17} aria-hidden="true"/>Скинути сортування</button>
+        <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true"/>Додати працівника</button>
       </div>
       <div id={panelId} className="aid-filter-panel" hidden={!state.filtersOpen}><div className="aid-filter-grid">
         <div className="employee-field"><span>Підрозділ</span><Select label="Фільтр за підрозділом" value={state.departmentId} onChange={departmentId => onState({ departmentId })}
@@ -43,8 +43,6 @@ export default function EmployeeRegistry({ employees, loading, error, state, onS
         <div className="employee-field"><span>Посада</span><Select label="Фільтр за посадою" value={state.positionId} onChange={positionId => onState({ positionId })}
           options={registryOptions(employees, 'position', state.positionId)} advanceOnSelect={false}/></div>
       </div></div>
-      <p className="employee-results" role="status">{loading ? 'Завантаження реєстру…' : error ? 'Дані реєстру недоступні' :
-        `Усього працівників: ${counts.total}. Результатів: ${groups.official.length + groups.staff.length}.`}</p>
     </section>
     {error && <Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert>}
     {(['official', 'staff'] as const).map(type => <EmployeeGroupTable key={type} title={type === 'official' ? 'Посадові особи місцевого самоврядування' : 'Інші працівники'}

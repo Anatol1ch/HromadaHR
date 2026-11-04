@@ -93,12 +93,11 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onAssign, 
             <div className="recipient-history-heading"><h3 id="employee-history-title">Історія посад</h3><span>{history.length} записів</span>
               <button className="secondary-button" type="button" disabled={deleting || loading} onClick={() => onAssign(employee)}><Plus size={16} aria-hidden="true"/>Додати кадрову зміну</button></div>
             {history.length ? <div className="recipient-history-table-wrap" tabIndex={0} role="region" aria-label="Історія призначень"><table className="recipient-history-table employee-history-table">
-              <thead><tr><th scope="col">Початок</th><th scope="col">Завершення</th><th scope="col">Посада та підрозділ</th><th scope="col">Категорія</th><th scope="col">Дії</th></tr></thead>
+              <thead><tr><th scope="col">Початок</th><th scope="col">Завершення</th><th scope="col">Посада та підрозділ</th><th scope="col">Дії</th></tr></thead>
               <tbody>{historyRows(history).map((assignment, historyIndex) => <tr key={assignment.id}>
                 <td className="employee-date">{displayDate(assignment.startDate)}{historyIndex === 0 && <small className="employee-current-tag">Поточне</small>}</td>
                 <td className="employee-date">{assignment.endDate ? displayDate(assignment.endDate) : historyIndex === 0 ? 'Триває' : '—'}</td>
                 <td>{positionNames.get(assignment.positionId) ?? 'Посаду не знайдено'}<small>{departmentNames.get(assignment.departmentId) ?? 'Підрозділ не знайдено'}</small></td>
-                <td>{assignment.category ?? 'Не зазначено'}</td>
                 <td><div className="registry-row-actions">
                   <button type="button" className="table-action" disabled={deleting || loading} title="Виправити" aria-label={`Виправити призначення від ${displayDate(assignment.startDate)}`} onClick={() => onAssign(employee, assignment)}><Pencil size={16} aria-hidden="true"/>Виправити</button>
                   <button type="button" className="table-action danger-action" disabled={deleting || loading || history.length <= 1} title={history.length <= 1 ? 'Єдиний запис історії не можна видалити' : 'Видалити'} aria-label={`Видалити призначення від ${displayDate(assignment.startDate)}`} onClick={() => askDelete(assignment)}><Trash2 size={16} aria-hidden="true"/>Видалити</button>

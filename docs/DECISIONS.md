@@ -107,3 +107,10 @@ Node fs.rename на Windows може замінити наявний файл; e
 Category залишається в Assignment/SQLite/IPC, але не керується звичайними формами: create employee — null; correction — category виправлюваного рядка; new assignment — category стану на дату лише за тієї самої посади, інакше null. До першого відомого запису перший стан є консервативною базою. Історичні значення не нормалізуються під I–VII та не перезаписуються автоматично. Правове визначення/керування категоріями — окреме майбутнє завдання рангів.
 
 Реєстр official/staff групується за employeeType. Пошук і department/position filters спільні; FIO/position/department/hireDate sort незалежний у кожній таблиці. Default FIO asc, Collator uk/base, ISO dates, deterministic FIO/id tie. Без pagination/SQL sorting/нових IPC. UI композиція — RecipientRegistry AID, filters/sort — AidRegistry, палітра — HR.
+
+
+### 3.4.2.3: економія перевірок та діагностична історія
+
+Windows GUI приймає замовник вручну. Автотести — мінімальні, тільки для нових критичних механізмів; повна регресія потребує технічного обґрунтування. Обов'язкові typecheck/build/diff, ручний чекліст; правило закріплене в AGENTS.
+
+Журнал резервування окремий від БД/restore, bounded 200/64 КіБ, без персональних даних/шляхів. Його збій не скасовує операцію й чесно показується як недоступність історії. Зовнішні контакти відкриваються лише через 4 довірені ID Main. Джерельні UI-патерни AID та адаптації — UI-TRANSFER/HROMADAAID_REUSE.

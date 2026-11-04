@@ -94,3 +94,18 @@
   .settings-about-grid, .settings-origin-grid, .support-contact-card { grid-template-columns: minmax(0, 1fr); }
   .settings-section-current { min-height: 48px; white-space: normal; }
 }
+
+.support-contact-row { display:flex; align-items:center; gap:8px; min-width:0; }
+.support-contact-row .support-contact-detail { flex:1; min-width:0; text-align:left; font:inherit; cursor:pointer; }
+.support-contact-row .support-contact-detail strong { overflow-wrap:anywhere; }
+.backup-history-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; }
+.backup-history-heading .app-select { min-width:160px; }
+.backup-history-table { min-width:560px; }
+.backup-event-result.success { color:var(--feedback-success-text); }
+.backup-event-result.error { color:var(--feedback-error-text); }
+.backup-event-result.cancelled { color:var(--color-text-secondary); }
+.backup-event-code { display:block; font-size:11px; color:var(--color-text-secondary); }
+.backup-history > .secondary-button { margin-top:12px; }
+@media(max-width:600px) { .support-contact-row { flex-wrap:wrap; } .backup-history-heading { align-items:stretch; flex-direction:column; } }
+
+.support-contact-card .support-contact-detail:hover:not(:disabled) { background:var(--accent-soft); border-color:var(--border-accent); }

@@ -25,6 +25,7 @@ const api: HromadaHRApi = {
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
   },
   backup: {
+    getHistory: () => call(ipcChannels.backupGetHistory),
     getStatus: () => call(ipcChannels.backupGetStatus),
     chooseFolder: slot => call(ipcChannels.backupChooseFolder, slot),
     saveConfig: tokens => call(ipcChannels.backupSaveConfig, tokens),
@@ -33,6 +34,7 @@ const api: HromadaHRApi = {
     confirmRestore: token => call(ipcChannels.backupConfirmRestore, token),
   },
   system: {
+    openContact: id => call(ipcChannels.systemOpenContact, id),
     quit: () => call(ipcChannels.systemQuit),
     getInfo: async () => {
       try {

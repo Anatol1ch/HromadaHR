@@ -1,3 +1,4 @@
+import { backupHistory } from '../shared/backupHistory.js'
 import { PersonnelError } from './personnel/service.js'
 import type { PersonnelService } from './personnel/service.js'
 import * as personnelSchemas from './personnel/schemas.js'
@@ -41,7 +42,11 @@ export function registerIpcHandlers(
   backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
   personnel: PersonnelService,
+  openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
+  getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
 ) {
+  register(ipcChannels.systemOpenContact, z.tuple([z.enum(['phone', 'workEmail', 'personalEmail', 'telegram'])]), z.boolean(), ([id]) => openContact(id))
+  register(ipcChannels.backupGetHistory, z.tuple([]), backupHistory, getBackupHistory)
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
   register(ipcChannels.storageRetry, z.tuple([]), storageStatus, backup.retryStorage)

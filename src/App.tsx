@@ -8,7 +8,6 @@ import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
 import SettingsPage from './components/SettingsPage'
 import HelpDialog from './components/HelpDialog'
-import EmployeeSummary from './components/EmployeeSummary'
 import RecoveryScreen from './components/RecoveryScreen'
 
 const sections = [
@@ -46,7 +45,7 @@ function NavigationItem({ section, active, onNavigate }: {
   </button>
 }
 
-function HomePage({ onEmployees }: { onEmployees: () => void }) {
+function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
   return <div className="workspace-page page-transition">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
       <div className="workspace-coat-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
@@ -58,11 +57,18 @@ function HomePage({ onEmployees }: { onEmployees: () => void }) {
       </div>
     </section>
     <section className="dashboard-panel workspace-actions" aria-labelledby="workspace-title">
-      <div className="workspace-primary"><div><h2 id="workspace-title">Кадрова робота</h2><p>Працівники, особові картки та історія призначень громади.</p></div>
-        <button type="button" className="primary-button" onClick={onEmployees}><UsersRound size={19} aria-hidden="true"/>Відкрити реєстр працівників<ArrowUpRight size={17} aria-hidden="true"/></button>
-      </div>
-      <EmployeeSummary />
-      <p className="workspace-next-modules">Відпустки, стаж, ранги й документи будуть доступні на наступних етапах.</p>
+      <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
+      <div className="workspace-shortcuts">{([
+        { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
+        { id: 'leave', title: 'Відпустки', text: 'Облік відпусток', icon: CalendarDays, available: false },
+        { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: false },
+        { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
+        { id: 'settings', title: 'Налаштування', text: 'Резервування та відомості про програму', icon: Settings, available: true },
+      ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
+        className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}
+        aria-label={available ? title : title + '. У розробці'} onClick={() => { if (available) onNavigate(id) }}>
+        <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}{!available && <span className="workspace-planned-label">У розробці</span>}</small></span><ArrowUpRight size={18} aria-hidden="true"/>
+      </button>)}</div>
     </section>
     <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>
       <p className="home-footer-credit"><Code2 size={17} strokeWidth={1.7} aria-hidden="true"/><span>Developed by <strong>Anatolii Myronenko</strong></span></p>
@@ -174,7 +180,7 @@ export default function App() {
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
-        {active === 'home' ? <HomePage onEmployees={() => navigate('employees')} /> : active === 'employees' ?
+        {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">
