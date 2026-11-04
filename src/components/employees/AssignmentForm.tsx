@@ -81,11 +81,13 @@ export default function AssignmentForm({ employee, assignment, navigationGuard, 
       <fieldset className="recipient-fieldset" disabled={saving || directory.pending}>
         <legend>{assignment ? 'Відомості призначення' : 'Кадрова зміна'}</legend>
         <div className="recipient-form-grid">
-          <div className="recipient-field employee-field"><label htmlFor="assignment-date">Дата початку *</label>
-            <DateField id="assignment-date" required min="0001-01-01" max={localToday()} value={values.startDate} disabled={saving || directory.pending}
-              onChange={value => change('startDate', value)} onDraftChange={display => setDateDraftDirty(display !== formatDateInput(initial.startDate))} error={errors.startDate} /></div>
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={saving || directory.pending} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
+          <div className="employee-field-full employee-date-row">
+            <div className="recipient-field employee-field"><label htmlFor="assignment-date">Дата початку *</label>
+              <DateField id="assignment-date" required min="0001-01-01" max={localToday()} value={values.startDate} disabled={saving || directory.pending}
+                onChange={value => change('startDate', value)} onDraftChange={display => setDateDraftDirty(display !== formatDateInput(initial.startDate))} error={errors.startDate} /></div>
+          </div>
         </div>
       </fieldset>
       <div className="recipient-form-actions"><span>Дата прийняття та посада визначаються з історії.</span><div>

@@ -278,3 +278,28 @@ Merge main, автооновлення, installer і наступні предм
 - [ ] Help над системним блоком, settings унизу; вузький sidebar/коротке вікно: focus/click/внутрішній scroll доступні.
 
 Історичні описи 3.4.3 вище з 2000 мс не переписуються; актуальна тривалість — 3500 мс. Main не зливати; 3.4.3.2 не починати без завдання.
+
+
+## Етап 3.4.3.2 — кадрові форми, реєстр і картка
+
+База b3b8758729b20dc891e058f42784b3559d7f31d4, гілка codex/3.4.1-aid-ui-foundation; початкове дерево чисте. Цільово звірено read-only AID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: src/components/Select.tsx, src/RecipientRegistry.tsx і відповідні src/styles.css (Select search, recipient history/footer, icon actions). Чинні компоненти повторно використано; нової UI-системи немає.
+
+- EmployeeGroupTable: ПІБ → підрозділ → посада → дата прийняття → дії; sort keys department/position та клітинки відповідають назвам, ширини 28/24/26% і чинні фіксовані дата/дії. Фільтри, official/staff та логіка сортування незмінні.
+- EmployeeForm/AssignmentForm: спочатку два селектори, дата нижче у повноширинному рядку з компактним полем до 260 px. DOM-порядок відповідає візуальному, без ручних tabIndex. Payload/DateField validity/drafts незмінні. DirectoryFields використовує спільні secondary-button з Plus (44×44), title/aria-label і попередні disabled/pending/створення/повернення фокусу.
+- Select: причина подвійного фокусу — наявний зовнішній app-select-search:focus-within плюс загальні input:focus-visible та data-keyboard-active shadow. Локальне правило лише для focused input усередині app-select-popup/app-select-search прибирає внутрішні outline/shadow/border/background; зовнішня focus-within рамка з shadow залишається. Select JSX, keyboard attributes/навігація та інші поля не змінені.
+- Картка: історія має 5 колонок початок/завершення/підрозділ/посада/дії, назви з чинних dictionary ID maps. Ширини 16/16/25/27/16%, fixed layout, min-width 760 px, прокручування wrapper. Pencil/Trash2 — кнопки 40×40 з hover/focus, aria-label/title та збереженим confirm/забороною видалення єдиного запису. Прибрано технічне пояснення.
+- Видалення працівника перенесено поруч із редагуванням, без нижнього дубля; використовує той самий EmployeeActionDialog/ConfirmDialog з актуальними ПІБ/кількістю/попередженням/блокуванням. Нижній стандартний recipient-form-actions footer має «Скасувати» й той самий guarded close, що хрестик (також при loading/error). Parent/modal stack не змінено.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check. Нових тестів немає, чисті функції не змінювалися, повну регресію/GUI-тести не запускали. SQLite/міграції/PersonnelService/IPC/category/history/delete policy/backup/restore незмінні.
+
+Ручне приймання — НЕ ВИКОНАНО:
+
+- [ ] Обидві таблиці: підрозділ перед посадою, заголовок сортує саме свій стовпець; пошук/фільтри/дії збережені.
+- [ ] Створення й кадрова зміна: селектори вгорі, компактна дата окремо, Tab/Enter/Ctrl+Enter, дати/validation/payload без втрати даних.
+- [ ] Обидва Plus: tooltip/назва, вкладена форма збереження/CONFLICT/повернення фокусу; поточна форма не втрачає даних.
+- [ ] Пошуковий Select мишею й клавіатурою: одна видима рамка без внутрішнього зсуву; ввід/стрілки/Tab/Escape працюють.
+- [ ] Історія: 5 колонок, довгі назви переносяться; Дії відцентровані, Pencil/Trash2 доступні, єдиний запис не видаляється.
+- [ ] Верхнє видалення працівника — тільки синтетичний запис, із підтвердженням. «Скасувати»/хрестик закривають ту саму картку; вкладені модалки/dirty guard/pending не обходяться. Видалення — РУЙНІВНЕ, лише тестові дані.
+- [ ] Вузьке вікно/Windows 125–200%: scroll лише таблиці, не всього modal; footer та дії доступні.
+
+Main не зливати; 3.4.3.3 не починати без окремого завдання.

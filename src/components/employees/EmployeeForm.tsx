@@ -100,9 +100,9 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       {employee ? <p className="employee-hint">Кадрові призначення змінюються окремо в історії особової картки.</p> : <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Початкове призначення</legend>
         <div className="recipient-form-grid">
-          {textField('startDate', 'Дата прийняття', true)}
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
+          <div className="employee-field-full employee-date-row">{textField('startDate', 'Дата прийняття', true)}</div>
         </div>
       </fieldset>}
       <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>

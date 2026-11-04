@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { notifySystemToast } from '../SystemToastHost'
 import Select from '../Select'
 import DirectoryForm from './DirectoryForm'
@@ -70,8 +71,8 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
               disabled={disabled || loading || !!error || pending} error={errors[key]}
               options={(kind === 'department' ? departments : positions).map(entry => ({ value: entry.id, label: entry.name }))}
               onChange={id => { if (kind === 'department') onDepartment(id); else onPosition(id) }} />
-            <button className="secondary-button" type="button" disabled={disabled || loading || !!error || hasDraft || pending}
-              aria-label={`Додати ${kind === 'department' ? 'підрозділ' : 'посаду'}`} onClick={() => { setDraft(kind) }}>Додати</button>
+            <button className="secondary-button employee-directory-add" type="button" disabled={disabled || loading || !!error || hasDraft || pending}
+              title={`Додати ${kind === 'department' ? 'підрозділ' : 'посаду'}`} aria-label={`Додати ${kind === 'department' ? 'підрозділ' : 'посаду'}`} onClick={() => { setDraft(kind) }}><Plus size={18} aria-hidden="true"/></button>
           </div>
         </div>
       })}

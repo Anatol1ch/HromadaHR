@@ -15,8 +15,8 @@ export default function EmployeeGroupTable({ title, rows, total, sort, onSort, l
   loading: boolean; error: string; filtered: boolean
 }) {
   const columns: { key: SortKey; label: string; width: string }[] = [
-    { key: 'fullName', label: 'ПІБ', width: '28%' }, { key: 'position', label: 'Посада', width: '25%' },
-    { key: 'department', label: 'Підрозділ', width: '25%' }, { key: 'hireDate', label: 'Дата прийняття', width: '130px' },
+    { key: 'fullName', label: 'ПІБ', width: '28%' }, { key: 'department', label: 'Підрозділ', width: '24%' },
+    { key: 'position', label: 'Посада', width: '26%' }, { key: 'hireDate', label: 'Дата прийняття', width: '130px' },
   ]
   return <section className="dashboard-panel employee-register-panel">
     <header className="employee-group-heading"><h2>{title}</h2><span aria-live="polite">
@@ -34,7 +34,7 @@ export default function EmployeeGroupTable({ title, rows, total, sort, onSort, l
         })), { label: 'Дії', width: '124px', className: 'employee-actions-heading' }]}>
         {rows.map(employee => <tr key={employee.id}>
           <td><strong className="employee-name">{fullName(employee)}</strong></td>
-          <td>{employee.currentAssignment.position.name}</td><td>{employee.currentAssignment.department.name}</td>
+          <td>{employee.currentAssignment.department.name}</td><td>{employee.currentAssignment.position.name}</td>
           <td className="employee-date">{displayDate(employee.hireDate)}</td>
           <td className="dictionary-actions-cell"><div className="registry-row-actions">
             <button type="button" className="table-action" title="Переглянути" aria-label={`Переглянути: ${fullName(employee)}`} onClick={() => actions.onOpen(employee)}><Eye size={17} aria-hidden="true"/></button>
