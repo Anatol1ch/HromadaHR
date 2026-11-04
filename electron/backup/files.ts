@@ -1,3 +1,4 @@
+import { backupName } from './names.js'
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
 import { accessSync, closeSync, constants, fsyncSync, lstatSync, mkdirSync, openSync,
@@ -94,10 +95,11 @@ export async function protectMigration(db: Database.Database, activeFile: string
 
 export function rotateAutomatic(folder: string, instanceId: string, manifest: readonly Migration[] = migrations) {
   // Namespace belongs to this database lineage, never another profile/app.
-  const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
-  if (!new RegExp(`^${uuid}$`).test(instanceId)) throw new BackupError('BACKUP_FAILED')
-  const owned = new RegExp(`^hromadahr-${instanceId}-auto-\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}-\\d{3}Z-${uuid}\\.db$`)
-  const valid = readdirSync(folder).filter(name => owned.test(name)).sort().reverse().filter(name => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(instanceId)) throw new BackupError('BACKUP_FAILED')
+  const valid = readdirSync(folder).filter(name => {
+    const parsed = backupName(name)
+    return parsed?.instance === instanceId && parsed.kind === 'auto'
+  }).sort().reverse().filter(name => {
     const path = join(folder, name)
     try {
       if (!lstatSync(path).isFile()) return false

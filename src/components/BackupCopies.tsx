@@ -53,9 +53,8 @@ export default function BackupCopies({ busy, revision, onSelect, onChoose }: {
         {data?.limited && <Alert variant="info">Перелік обмежено: до 100 копій із кожної теки. Іншу копію можна вибрати через «Вибрати файл…».</Alert>}
         {data && !data.copies.length && !loading && !error && <p className="backup-history-empty">Наявних копій у доступних активних теках немає.</p>}
         {!!data?.copies.length && <DictionaryTable label="Наявні резервні копії" className="backup-history-table"
-          columns={[{ label: 'Дата й час', width: '26%' }, { label: 'Тип', width: '19%' }, { label: 'Місце', width: '15%' }, { label: 'Стан', width: '18%' }, { label: 'Дії', width: '22%' }]}>
-          {data.copies.map(copy => <tr key={copy.id}><td><time dateTime={copy.time}>{formatDateTime(copy.time)}</time></td><td>{copy.kind === 'auto' ? 'Автоматична' : 'Ручна'}</td><td>Тека {copy.slot}</td>
-            <td>{copy.available ? 'Доступна' : 'Недоступна'}</td><td><button type="button" className="secondary-button" disabled={busy || loading || !copy.available} onClick={() => onSelect(copy.id)}><RotateCcw size={16} aria-hidden="true"/>Відновити</button></td></tr>)}
+          columns={[{ label: 'Дата й час', width: '30%' }, { label: 'Тип', width: '22%' }, { label: 'Зберігання', width: '25%' }, { label: 'Дії', width: '23%' }]}>
+          {data.copies.map(copy => <tr key={copy.id}><td><time dateTime={copy.time}>{formatDateTime(copy.time)}</time></td><td>{copy.kind === 'auto' ? 'Автоматична' : 'Ручна'}</td><td>{copy.available ? `${copy.locations.length} із 2` : 'Недоступна'}</td><td><button type="button" className="secondary-button" disabled={busy || loading || !copy.available} onClick={() => onSelect(copy.id)}><RotateCcw size={16} aria-hidden="true"/>Відновити</button></td></tr>)}
         </DictionaryTable>}
       </section>
     </div>

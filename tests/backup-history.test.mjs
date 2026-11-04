@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, sep } from 'node:path'
 import { BackupHistoryStore } from '../dist-electron/electron/backup/history.js'
@@ -75,12 +75,12 @@ test('real backup results, skipped cycles, restore outcomes and persistence stay
     await service.saveConfig(tokens)
     assert.equal(service.getHistory().events[0].operation, 'config')
     await service.runAutomatic()
-    assert.equal(service.getHistory().events.filter(e => e.operation === 'auto' && e.result === 'success').length, 2)
+    assert.equal(service.getHistory().events.filter(e => e.operation === 'auto' && e.result === 'success').length, 1)
     const before = service.getHistory().events.length
     service.getStatus(); await service.runAutomatic()
     assert.equal(service.getHistory().events.length, before)
     const status = await service.runManual()
-    assert.equal(service.getHistory().events.filter(e => e.operation === 'manual').length, 2)
+    assert.equal(service.getHistory().events.filter(e => e.operation === 'manual').length, 1)
     const source = join(folders[0], status.targets[0].fileName)
     let selection = await service.chooseRestore(async () => source)
     assert.deepEqual(await service.confirmRestore(selection.token, async () => false), { restored: false })
@@ -91,11 +91,13 @@ test('real backup results, skipped cycles, restore outcomes and persistence stay
     assert.ok(new BackupService(storage).getHistory().events.some(e => e.operation === 'config'))
     await assert.rejects(service.chooseRestore(async () => join(root, 'missing.db')))
     assert.equal(service.getHistory().events[0].code, 'INVALID_BACKUP')
-    rmSync(folders[1], { recursive: true })
+    renameSync(folders[1], folders[1] + '-offline')
     await service.runManual()
-    const latest = service.getHistory().events.slice(0, 2)
-    assert.equal(latest.find(e => e.slot === 1).result, 'success')
-    assert.equal(latest.find(e => e.slot === 2).result, 'error')
+    const latest = service.getHistory().events[0]
+    assert.equal(latest.result, 'partial')
+    assert.equal(latest.slot, null)
+    assert.equal(latest.locations.find(e => e.slot === 1).result, 'success')
+    assert.equal(latest.locations.find(e => e.slot === 2).result, 'error')
     assert.equal(storage.getDatabase().pragma('integrity_check', { simple: true }), 'ok')
   } finally { service.invalidateSelections(); service.stop(); storage.close() }
 }))
@@ -115,6 +117,7 @@ test('history write failure cannot cancel successful backup or restore', () => t
     await service.saveConfig(tokens)
     const status = await service.runManual()
     assert.ok(status.targets.every(target => target.error === null && target.lastSuccess))
+    assert.equal(status.lastBackup.result, 'success'); assert.equal(status.lastBackup.copies, 2)
     assert.equal(service.getHistory().available, false)
     const selected = await service.chooseRestore(async () => join(status.targets[0].path, status.targets[0].fileName))
     assert.deepEqual(await service.confirmRestore(selected.token, async () => true), { restored: true })

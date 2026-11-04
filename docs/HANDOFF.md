@@ -384,3 +384,24 @@ Main не зливати. Наступні кадрові модулі без о
 - [ ] Вузьке вікно/1366×768/масштаб 125–200%: scroll лише таблиці, дії/Modal footer доступні.
 
 Один коміт/push у робочу гілку; main не зливати, наступні модулі не починати.
+
+
+## 3.4.3.8 — фінальне резервування та налаштування
+
+База f5356f8d339d16a2b899bfc7c33b2ce03826760d, codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Read-only AID 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово звірено server-manager/src/BackupManagement.tsx (summary/cards/архівна таблиця); HR використовує свої перенесені компоненти, без серверного/auth/архівного алгоритму.
+
+Реалізовано: один online snapshot → два незалежні verified/fsynced/no-replace файли, спільний SHA-256 ID у суфіксі назви; повторне дублювання exact образу після partial/restart, включно з manual між auto та retry. Якщо джерела немає — новий ID. Ліміти повторів і 14 auto збережено. Нові logical copy rows (1/2 із 2), fallback тільки всередині тієї самої групи, один logical event із locations/partial/duplicate; старі копії й події сумісні. Бounded журнал до 200/64 КіБ. Подробиці/межі — ARCHITECTURE 3.4.3.8. Міграції/кадри/recovery lifecycle незмінні.
+
+Settings: видимий zoom і його state/polling/CSS вилучено; Main zoom/клавіші/persistence та IPC збережено. Summary-card має ліворуч title/status/lastSuccess/inline same-volume warning, праворуч єдину primary-копію (до збереження двох місць не пропонується). Read-only address + квадратний Open + Change одного control-height; нові назви основного/додаткового місць, lastSuccess одним рядком, draft Save/Cancel лишилися. Dirty вимикає ручну дію до Save/Cancel. UI показує partial warning, не toast повного успіху.
+
+Перевірки: typecheck/build/diff-check; нова tests/paired-backup.test.mjs у справжньому Electron Main/temp профілі перевіряє один виклик backup, тотожність/SQLite-validity обох файлів, partial, repair після restart та manual без нового backup, нову ідентичність без source, grouped list/fallback/чинний native-confirm callback/одноразовий token/protection/restore/history, старі UUID copies/події та journal bounds. Наявна backup-catalog security/rollback перевірка з legacy fixture збережена; цільові mutex/retry/publication/rotation і journal result/failure перевірки пройшли. Перші прогони виявили довгі тимчасові Windows/SQLite paths: скорочено .partial і приватний source.db; фінальне нове ім'я використовує SHA-256 замість UUID, без їх дублювання. Нових UI-тестів/повної регресії немає; продукційні дані не використовувалися.
+
+Ручне GUI-приймання НЕ ВИКОНАНО:
+- [ ] Settings без zoom-selector; Ctrl +/−/0/NumPad та restart зберігають масштаб dev/built.
+- [ ] Summary на підложці: єдина кнопка, inline one-volume warning, lastSuccess, busy/partial/error; старий успіх не видається за новий.
+- [ ] Два місця 50%/одна колонка, довгі selectable адреси/Ctrl+C, Open/Change однакової висоти, draft без Open, Save/Cancel, About і назад.
+- [ ] Нова копія — один рядок 2 із 2; недоступне місце — 1 із 2/partial, auto повтор → точний дублікат. Операції: один запис/фільтр Помилки включає partial; старі події доступні.
+- [ ] ЛИШЕ ІЗОЛЬОВАНИЙ ПРОФІЛЬ, РУЙНІВНЕ: restore з єдиного доступного дубліката/ручний picker → native cancel/confirm → reload/protection/журнал. На продукційній БД не виконувати.
+- [ ] Full HD/1366×768/вузьке вікно/125–200%: без загального overflow, читабельні адреси та дії.
+
+Один тематичний коміт/push; main не зливати, наступний етап не починати.

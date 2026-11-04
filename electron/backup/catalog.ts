@@ -1,6 +1,10 @@
+import { backupName } from './names.js'
+import { fileDigest } from './images.js'
+import { inspectDatabase } from '../storage/validation.js'
+import type { Migration } from '../storage/migrations.js'
 import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
-import { lstatSync, realpathSync, openSync, readSync, closeSync } from 'node:fs'
+import { lstatSync, realpathSync, openSync, readSync, closeSync, unlinkSync } from 'node:fs'
 import { opendir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import type { AvailableBackups, BackupSlot } from '../../shared/backup.js'
@@ -9,8 +13,6 @@ import { openPreservationHandle } from './windows-files.js'
 
 type Config = { instance_id: string; folder1: string | null; folder2: string | null }
 type Entry = { id: string; slot: BackupSlot; folder: string; name: string; instance: string; identity: string; directory: string }
-const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
-const namespace = new RegExp(`^hromadahr-(${uuid})-(auto|manual)-(\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}-\\d{3}Z)-${uuid}\\.db$`)
 function metadata(folder: string, name: string) {
   const root = lstatSync(folder, { bigint: true }), path = join(folder, name)
   if (!root.isDirectory() || root.isSymbolicLink() || pathKey(realpathSync.native(folder)) !== pathKey(folder)) throw new BackupError('INVALID_SELECTION')
@@ -33,8 +35,9 @@ function belongs(path: string, instance: string) {
 }
 export class BackupCatalog {
   private entries = new Map<string, Entry>()
+  private groups = new Map<string, Entry[]>()
   async list(config: Config): Promise<AvailableBackups> {
-    const next = new Map<string, Entry>(), copies: AvailableBackups['copies'] = [], targets: AvailableBackups['targets'] = []
+    const next = new Map<string, Entry>(), groups = new Map<string, Entry[]>(), keys = new Map<string, string>(), copies: AvailableBackups['copies'] = [], targets: AvailableBackups['targets'] = []
     let limited = false
     for (const slot of [1, 2] as const) {
       const folder = slot === 1 ? config.folder1 : config.folder2
@@ -46,11 +49,9 @@ export class BackupCatalog {
         let scanned = 0
         for await (const item of await opendir(folder)) {
           if (++scanned > 4096) { limited = true; break }
-          const match = namespace.exec(item.name)
-          if (!item.isFile() || !match || match[1] !== config.instance_id) continue
-          const time = match[3].replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, 'T$1:$2:$3.$4Z')
-          if (!Number.isFinite(Date.parse(time)) || new Date(time).toISOString() !== time) continue
-          candidates.push({ name: item.name, kind: match[2] as 'auto' | 'manual', time })
+          const parsed = backupName(item.name)
+          if (!item.isFile() || !parsed || parsed.instance !== config.instance_id) continue
+          candidates.push({ name: item.name, kind: parsed.kind, time: parsed.time })
         }
         candidates.sort((a, b) => b.time.localeCompare(a.time) || a.name.localeCompare(b.name))
         if (candidates.length > 100) limited = true
@@ -58,24 +59,55 @@ export class BackupCatalog {
           try {
             const stamp = metadata(folder, candidate.name)
             if (!belongs(join(folder, candidate.name), config.instance_id)) continue
+            const digest = backupName(candidate.name)!.digest
+            if (digest && fileDigest(join(folder, candidate.name)) !== digest) continue
             const after = metadata(folder, candidate.name)
             if (stamp.identity !== after.identity || stamp.directory !== after.directory) continue
             const previous = [...this.entries.values()].find(item => item.slot === slot && item.folder === folder && item.name === candidate.name && item.instance === config.instance_id && item.identity === stamp.identity && item.directory === stamp.directory)
             const entry: Entry = { ...stamp, id: previous?.id ?? randomUUID(), slot, folder, name: candidate.name, instance: config.instance_id }
             next.set(entry.id, entry)
-            copies.push({ id: entry.id, slot, kind: candidate.kind, time: candidate.time, available: true })
+            // Only new content-addressed names establish a logical pair.
+            // Legacy snapshots are never merged by time, name or lineage alone.
+            const key = digest ? candidate.name : entry.id
+            const groupId = keys.get(key)
+            if (groupId) {
+              groups.get(groupId)!.push(entry)
+              copies.find(copy => copy.id === groupId)!.locations.push(slot)
+            } else {
+              keys.set(key, entry.id); groups.set(entry.id, [entry])
+              copies.push({ id: entry.id, slot, kind: candidate.kind, time: candidate.time, available: true, locations: [slot] })
+            }
           } catch { /* Unknown, inaccessible or changing files are not selectable. */ }
         }
         targets.push({ slot, available: true })
       } catch { targets.push({ slot, available: false }) }
     }
-    this.entries = next
+    this.entries = next; this.groups = groups
     copies.sort((a, b) => b.time.localeCompare(a.time) || a.slot - b.slot || a.id.localeCompare(b.id))
     return { copies, targets, limited }
   }
-  capture(id: string, config: Config, destination: (name: string) => string) {
-    const entry = this.entries.get(id)
-    if (!entry || entry.instance !== config.instance_id || entry.folder !== (entry.slot === 1 ? config.folder1 : config.folder2)) throw new BackupError('INVALID_SELECTION')
+  capture(id: string, config: Config, destination: (name: string) => string, manifest: readonly Migration[]) {
+    const entries = this.groups.get(id)
+    if (!entries?.length) throw new BackupError('INVALID_SELECTION')
+    let failure: unknown
+    for (const entry of entries) {
+      let captured: string | undefined
+      try {
+        this.captureEntry(entry, config, name => { captured = destination(name); return captured })
+        // Full validation belongs to selection. A bad first copy may fall back
+        // only to another recorded member of this exact logical snapshot.
+        inspectDatabase(captured!, manifest)
+        return entry.name
+      } catch (error) {
+        failure = error
+        if (captured) try { unlinkSync(captured) } catch {}
+      }
+    }
+    if (failure && typeof failure === 'object' && 'code' in failure && failure.code === 'UNSUPPORTED_SCHEMA') throw new BackupError('UNSUPPORTED_SCHEMA')
+    throw failure instanceof BackupError ? failure : new BackupError('INVALID_BACKUP')
+  }
+  private captureEntry(entry: Entry, config: Config, destination: (name: string) => string) {
+    if (entry.instance !== config.instance_id || entry.folder !== (entry.slot === 1 ? config.folder1 : config.folder2)) throw new BackupError('INVALID_SELECTION')
     const verify = () => {
       const stamp = metadata(entry.folder, entry.name)
       if (stamp.identity !== entry.identity || stamp.directory !== entry.directory) throw new BackupError('INVALID_SELECTION')
@@ -87,6 +119,8 @@ export class BackupCatalog {
       const handle = openPreservationHandle(join(entry.folder, entry.name))
       let captured: string
       try { verify(); captured = destination(entry.name); handle.copyTo(captured) } finally { handle.close() }
+      const digest = backupName(entry.name)!.digest
+      if (digest && fileDigest(captured) !== digest) throw new BackupError('INVALID_BACKUP')
       if (!belongs(captured, config.instance_id)) throw new BackupError('INVALID_BACKUP')
     } catch (error) { throw error instanceof BackupError ? error : new BackupError('INVALID_SELECTION') }
   }

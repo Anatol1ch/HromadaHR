@@ -46,6 +46,13 @@ if (!process.versions.electron) {
       await service.saveConfig(picks.map(pick => pick.token))
       storage.getDatabase().exec("CREATE TABLE test_value(v); INSERT INTO test_value VALUES ('snapshot')")
       await service.runManual(); await service.runAutomatic()
+      // Keep this security fixture in the legacy format: independent snapshots
+      // must remain separate even when their timestamps happen to coincide.
+      for (const folder of folders) for (const original of readdirSync(folder)) {
+        if (!original.endsWith('.db')) continue
+        const legacy = original.replace(/-[0-9a-f]{64}\.db$/, '-' + randomUUID() + '.db').replace(/-[0-9a-f-]{36}\.db$/, '-' + randomUUID() + '.db')
+        renameSync(join(folder, original), join(folder, legacy))
+      }
       const initial = await service.listCopies()
       assert.equal(initial.copies.length, 4)
       assert.ok(initial.copies.every(item => !('path' in item) && item.available))

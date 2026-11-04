@@ -83,3 +83,6 @@ S1: повторно цільово звірено src/SettingsPage.tsx (cards/h
 
 
 3.4.3.7: S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb) server-manager/src/BackupManagement.tsx повторно прочитано read-only: адаптовано таблицю архівів/ID-дiю/розділення доступності та перевірки, через HR DictionaryTable і спільний Modal. Серверні архіви/auth/API/шифрування не переносилися; власний HR restore lifecycle збережено. Новий Main каталог — лише namespace поточної SQLite-lineage у двох активних теках з обмеженням і identity guards. Стан: реалізовано й цільово перевірено програмно, GUI-приймання очікується.
+
+
+3.4.3.8: source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupManagement.tsx (summary/cards/table) повторно цільово перевірено. Адаптовано композицію чинними HR card/controls, із сиреневою палітрою, inline warning, однією primary та logical rows. Власний SQLite backup розширено до одного образу/двох публікацій, без копіювання серверного AID алгоритму/auth. Реалізовано; цільова перевірка/Windows GUI-приймання — HANDOFF 3.4.3.8.

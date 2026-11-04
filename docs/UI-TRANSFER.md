@@ -408,3 +408,10 @@ BackupCopies — одна панель «Наявні копії» (default) / �
 Main listCopies/selectCopy не приймають path; UUID вибору прив'язано до namespace/lineage/config/file identity, із захопленням точного source через чинний Win32 handle та подальшим старим staged restore. Ліміти й автоматичне оновлення — HANDOFF/ARCHITECTURE 3.4.3.7. Read-only журнал операцій не став каталогом копій.
 
 Реалізовано; typecheck/build/diff-check та цільові backend/IPC перевірки пройшли. GUI вручну НЕ перевірено. Чекліст: обидві теки/offline/Refresh; сегменти й фільтри; конкретний файл/застарілий ID; picker cancel/інший носій; Modal/busy/native Cancel; restore/reload/історія тільки на ізольованому тестовому профілі; вузьке вікно й масштаб.
+
+
+## 3.4.3.8 — summary та два місця одного знімка
+
+AID source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupManagement.tsx повторно звірено read-only для summary/card/table патернів. У HR адаптовано чинні dashboard-panel/semantic tokens/controls: цілісний верхній card із title+badge, lastSuccess та м'яким inline same-volume warning ліворуч і єдиною primary-дією праворуч; responsive перенос. Шляхи — read-only controls з окремими квадратними Open та secondary Change, назви — основне/додаткове місце, остання копія одним рядком. Видимий zoom/polling/CSS вилучено; Main zoom незмінний.
+
+Нові copy rows відображають один SHA-256-знімок і 2/1 із 2, legacy не групуються за часом. Operations — один новий запис циклу з результатами двох місць; partial попадає до чинного фільтра Помилки, repair позначено доповненням дубліката. Старі події читаються, 5/усі збережено. Slot-based folder IPC, opaque copy ID, picker/Modal/native confirmation/protection/rollback збережені. Серверний AID backend/auth не переносилися. GUI-чекліст і фактичні програмні перевірки — HANDOFF 3.4.3.8, вручну ще не прийнято.

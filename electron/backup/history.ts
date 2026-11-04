@@ -28,7 +28,8 @@ export class BackupHistoryStore {
       const events = [...this.read(), backupEvent.parse(event)].slice(-200)
       const file = this.file()
       mkdirSync(dirname(file), { recursive: true })
-      const data = JSON.stringify(events)
+      let data = JSON.stringify(events)
+      while (Buffer.byteLength(data) > 64 * 1024 && events.length > 1) { events.shift(); data = JSON.stringify(events) }
       if (Buffer.byteLength(data) > 64 * 1024) throw new Error('History size limit')
       temporary = file + '.tmp'
       writeFileSync(temporary, data, { mode: 0o600 })

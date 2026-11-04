@@ -18,10 +18,11 @@ export interface BackupStatus {
   sameVolume: boolean
   busy: boolean
   lastRestore: 'success' | 'rolled-back' | null
+  lastBackup?: { time: string; result: 'success' | 'partial' | 'error'; copies: number } | null
 }
 export interface FolderSelection { token: string; path: string }
 export interface RestoreSelection { token: string; fileName: string; schemaVersion: number }
-export interface AvailableBackup { id: string; time: string; kind: 'auto' | 'manual'; slot: BackupSlot; available: boolean }
+export interface AvailableBackup { id: string; time: string; kind: 'auto' | 'manual'; slot: BackupSlot; available: boolean; locations: BackupSlot[] }
 export interface AvailableBackups { copies: AvailableBackup[]; targets: { slot: BackupSlot; available: boolean }[]; limited: boolean }
 export interface BackupApi {
   listCopies(): Promise<import('./ipc.js').IpcResult<AvailableBackups>>

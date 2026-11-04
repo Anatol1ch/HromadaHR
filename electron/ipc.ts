@@ -32,7 +32,8 @@ const backupTarget = z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]
   autoDay: z.string().nullable(), lastAttempt: z.string().nullable(), lastSuccess: z.string().nullable(),
   lastKind: z.enum(['auto', 'manual']).nullable(), error: backupError.nullable(), fileName: z.string().nullable() })
 const backupStatus = z.strictObject({ targets: z.tuple([backupTarget, backupTarget]), sameVolume: z.boolean(), busy: z.boolean(),
-  lastRestore: z.enum(['success', 'rolled-back']).nullable() })
+  lastRestore: z.enum(['success', 'rolled-back']).nullable(),
+  lastBackup: z.strictObject({ time: z.iso.datetime(), result: z.enum(['success', 'partial', 'error']), copies: z.number().int().min(0).max(2) }).nullable().optional() })
 const token = z.string().uuid()
 
 export function registerIpcHandlers(
@@ -64,7 +65,7 @@ export function registerIpcHandlers(
   register(ipcChannels.systemQuit, z.tuple([]), z.null(), () => { quit(); return null })
   register(ipcChannels.backupListCopies, z.tuple([]), z.strictObject({
     copies: z.array(z.strictObject({ id: token, time: z.iso.datetime(), kind: z.enum(['auto', 'manual']),
-      slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean() })).max(200),
+      slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean(), locations: z.array(z.union([z.literal(1), z.literal(2)])).min(1).max(2) })).max(200),
     targets: z.array(z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean() })).length(2), limited: z.boolean(),
   }), () => backup.listCopies())
   register(ipcChannels.backupSelectCopy, z.tuple([token]),
