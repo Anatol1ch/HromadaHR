@@ -1,7 +1,7 @@
 // Adapted from HromadaAID 33eca10733caaf73b1a99e75a24ff35e706a0afb src/SettingsPage.tsx.
 import { Code2, HardDrive, Info, MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import communityCoat from '../../assets/community-coat.png'
+import hromadaHRLogo from '../../assets/hromadahr.svg'
 import BackupSettings from './BackupSettings'
 
 export default function SettingsPage() {
@@ -23,7 +23,7 @@ export default function SettingsPage() {
     <div hidden={activeSection !== 'backup'}><BackupSettings /></div>
     {activeSection === 'about' && <div className="settings-about-page">
       <section className="dashboard-panel settings-about-identity" aria-label="Про HromadaHR">
-        <img src={communityCoat} alt="" width="64" height="64" />
+        <img src={hromadaHRLogo} alt="" width="64" height="64" />
         <div className="settings-about-brand">HromadaHR</div>
         <p>Автоматизована система кадрового обліку</p>
         <span className="settings-about-version">Версія {appVersion ?? '—'}</span>

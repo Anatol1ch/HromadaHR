@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.preload.json",
     "build": "pnpm typecheck && pnpm build:electron && vite build",
     "start:built": "electron .",
-    "build:electron": "tsc -p tsconfig.electron.json && vite build --config vite.preload.config.ts",
+    "build:electron": "tsc -p tsconfig.electron.json && vite build --config vite.preload.config.ts && node electron/copy-assets.mjs",
     "test": "pnpm build:electron && node --test tests/*.test.mjs && node tests/run-electron-storage.mjs"
   },
   "dependencies": {

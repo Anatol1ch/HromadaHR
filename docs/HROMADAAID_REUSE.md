@@ -54,3 +54,18 @@ Main createStartup — HR-only узгодження з наявним SQLite: в
 
 
 3.4.3.2: за S1 цільово повторно звірено src/components/Select.tsx, src/RecipientRegistry.tsx і src/styles.css. Збережено перенесені Select/Modal/recipient-form-actions/history/icon-action патерни; HR-адаптації — порядок кадрових полів/колонок, 44px Plus, 40px history icons і спільний footer картки. Локально виправлено конфлікт search focus-within із загальними keyboard/input focus стилями, без переписування Select або keyboard logic. Деталі/невиконаний GUI-чекліст — UI-TRANSFER, секція 3.4.3.2.
+
+
+## 3.4.3.3 — іконки, продуктовий About і компактні контакти
+
+Джерело S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb), цільово перевірене read-only:
+
+| Джерело AID | Рішення | Фактичний стан HR |
+| --- | --- | --- |
+| assets/hromadaaid.svg/png/ico; assets/README.md | Адаптувати підхід SVG як джерела та багаторозмірного ICO, не бренд AID | Власні hromadahr.svg/png/ico: UsersRound, #6F5AA5, rx=12; PNG 512, ICO 16–256 |
+| scripts/generate-manager-icons.mjs | Адаптувати наявний Electron offscreen renderer без нових залежностей | scripts/generate-icons.mjs, ізольовані temp profile/session/logs/crashes, контроль шляху очищення; генерація лише під час розробки |
+| electron/copy-assets.mjs; electron/main.ts | Перенести тільки копіювання іконок і BrowserWindow.icon; зайві server/financial/reference копії не переносити | Build копіює три готові ресурси в dist-electron/electron/assets, dev/built ICO; packaged resources/assets потребує окремого майбутнього пакування |
+| src/SettingsPage.tsx hromadaAidLogo | Перенести принцип продуктового логотипа About | About показує власний SVG, головна лишається з гербом |
+| src/App.tsx Help Modal | Адаптувати наявні contact cards і Modal, зберегти HR ID-only external IPC | Спільна візуальна картка/сусідні open+Copy buttons, wide/2→1 container grid, toast копіювання; без вкладених кнопок |
+
+Пакування/NSIS, чужі EXE/ярлики/зелений бренд не переносилися. Деталі Windows-обмежень, генерації та built paths — assets/README.md; невиконане ручне приймання — UI-TRANSFER 3.4.3.3.

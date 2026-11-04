@@ -18,6 +18,7 @@ const isDev = !app.isPackaged && process.argv.includes('--dev')
 const directory = dirname(fileURLToPath(import.meta.url))
 const devUrl = 'http://127.0.0.1:5176/'
 const builtFile = join(directory, '../../dist/index.html')
+const iconDirectory = app.isPackaged ? join(process.resourcesPath, 'assets') : join(directory, 'assets')
 app.setPath('userData', join(app.getPath('appData'), isDev ? 'HromadaHR-dev' : 'HromadaHR'))
 // Select userData before the lock: development and built profiles are independent.
 const hasLock = app.requestSingleInstanceLock()
@@ -40,6 +41,7 @@ async function createWindow() {
     width: 1000,
     height: 700,
     title: identity,
+    icon: join(iconDirectory, process.platform === 'win32' ? 'hromadahr.ico' : 'hromadahr.png'),
     backgroundColor: '#f7f6fa',
     show: false,
     webPreferences: {

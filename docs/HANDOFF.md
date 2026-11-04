@@ -266,3 +266,28 @@ SQLite/міграції/кадровий backend/13 IPC/WAL/backup/recovery/prel
 - [ ] Вузьке вікно/Windows 125–200%: scroll лише таблиці, не всього modal; footer та дії доступні.
 
 Main не зливати; 3.4.3.3 не починати без окремого завдання.
+
+
+## Етап 3.4.3.3 — бренд, About і підтримка
+
+База 0d46bb28dd46d2b2962adbae4f1a5e0f5863b953, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Джерело AID read-only SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово прочитано assets/hromadaaid.svg/png/ico, assets/README.md, electron/copy-assets.mjs, electron/main.ts, src/SettingsPage.tsx, App Help Modal і scripts/generate-manager-icons.mjs.
+
+- Власний комплект assets/hromadahr.svg/png/ico: знак чинного UsersRound із встановленого lucide-react, 22×22 у квадраті 42×42, rx=12, stroke 2.1, білий на #6F5AA5. SVG — джерело, PNG 512×512, ICO 16/24/32/48/64/128/256 із PNG-кадрами. Ліцензія геометрії — assets/LUCIDE-LICENSE.txt. Герб community-coat.png незмінний.
+- Генератор scripts/generate-icons.mjs адаптовано з AID: тільки наявний Electron offscreen, перевірений mkdtemp profile/session/log/crash, без продукційної БД і нових залежностей. Команда розробника node scripts/generate-icons.mjs; готові PNG/ICO в Git. Build і запуск не генерують зображення.
+- electron/copy-assets.mjs копіює готові три ресурси до dist-electron/electron/assets через build:electron. BrowserWindow.icon — ICO у Windows, PNG поза Windows; однаковий шлях для dev/built без Vite, бо обидва запускають скомпільований Main. Packaged lookup, за AID, очікує resources/assets поза ASAR; фактичний packager/extraResources має бути налаштований в окремому етапі. NSIS/EXE/реліз не створюються. App ID/AppUserModelID/назва/профілі/startup coordinator незмінні.
+- SettingsPage About тепер імпортує продуктовий SVG, як AID hromadaAidLogo; версія з IPC, технічні дані, розробник/громада збережені. Головна лишається з гербом.
+- Help: wide Modal; одна візуальна картка контакту з двома сусідніми button (open і Copy), без вкладених button/великих написів «Скопіювати». Container width >=600 px — дві колонки, нижче одна, довгі адреси переносяться. Copy має aria-label/title, hover/focus і success SystemToast; чинні помилки й Ctrl+C fallback збережені. Чотири ID та Main external IPC незмінні. Нижня примітка тільки про версію.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; SVG розібраний XML-парсером, PNG IHDR=512×512, ICO directory/межі/сім PNG frame sizes перевірені одноразово, ICO також відкрився Windows System.Drawing decoder (32×32). Всі три built-ресурси побайтово збігаються з вихідними. PNG переглянуто як окремий ресурс; GUI/панель завдань/About/контакти вручну не приймалися. Нових UI-тестів/системи перевірки іконок/повної регресії немає.
+
+Межа Windows: незапакований electron . може показувати іконку executable Electron у taskbar/Explorer/старому закріпленні. BrowserWindow.icon налаштований; фірмові EXE/ярлик/інсталятор потребують майбутнього пакування, конфігурації ICO й extraResources. Кеш Windows і персональні ярлики не змінюємо.
+
+Ручне приймання — НЕ ВИКОНАНО:
+
+- [ ] Dev і built без Vite: іконка вікна/Alt+Tab; окремо зафіксувати можливу стандартну taskbar-іконку незапакованого Electron, не плутати з майбутнім EXE.
+- [ ] About: продуктовий логотип/реальна версія/відомості; на головній лишився герб громади.
+- [ ] Контакти: дві/одна колонки, цілісні картки, адреси без неприродного перенесення; open і Copy виконують різні дії.
+- [ ] Copy: tooltip/Tab/Enter, один success toast або зрозуміла помилка; tel/mailto/Telegram та fallback Ctrl+C працюють.
+- [ ] Вузьке вікно/масштаб Windows 125–200%: немає горизонтального overflow чи надмірно вузького тексту.
+
+Main не зливати, 3.4.3.4 не починати без окремого завдання.

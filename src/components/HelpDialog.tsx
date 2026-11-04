@@ -1,6 +1,7 @@
 // Adapted from HromadaAID 33eca10733caaf73b1a99e75a24ff35e706a0afb src/App.tsx.
-import { CircleHelp, Mail, Phone, Send } from 'lucide-react'
+import { CircleHelp, Copy, Mail, Phone, Send } from 'lucide-react'
 import Modal from './Modal'
+import { notifySystemToast } from './SystemToastHost'
 import { useRef, useState } from 'react'
 import Alert from './Alert'
 import type { ContactId } from '../../shared/contacts'
@@ -19,10 +20,13 @@ export default function HelpDialog({ onClose }: { onClose: () => void }) {
     finally { inFlight.current = false; setBusy(false) }
   }
   async function copy(value: string) {
-    try { await navigator.clipboard.writeText(value); setError('') }
+    try {
+      await navigator.clipboard.writeText(value); setError('')
+      notifySystemToast('success', 'Скопійовано', 'Контакт скопійовано до буфера обміну.')
+    }
     catch { setError('Не вдалося скопіювати автоматично. Виділіть текст контакту та натисніть Ctrl+C.') }
   }
-  return <Modal title="Допомога та підтримка" description="З питань роботи системи, технічних несправностей та налаштування звертайтеся до розробника й адміністратора HromadaHR."
+  return <Modal title="Допомога та підтримка" size="wide" className="support-modal" description="Зверніться до розробника та адміністратора HromadaHR."
     onClose={onClose} headerIcon={<CircleHelp size={19} aria-hidden="true"/>}>
     {error && <Alert variant="error">{error}</Alert>}
     <div className="support-contact-card">
@@ -36,9 +40,9 @@ export default function HelpDialog({ onClose }: { onClose: () => void }) {
         <button type="button" className="support-contact-detail" disabled={busy} aria-label={`Відкрити: ${label}`} onClick={() => void open(id as ContactId)}>
           <Icon size={16} aria-hidden="true"/><span><small>{label}</small><strong>{value}</strong></span>
         </button>
-        <button type="button" className="secondary-button" aria-label={`Скопіювати: ${label}`} onClick={() => void copy(id === 'telegram' ? 'https://t.me/antlmrnnk' : value)}>Скопіювати</button>
+        <button type="button" className="icon-button support-contact-copy" title={`Скопіювати: ${label}`} aria-label={`Скопіювати: ${label}`} onClick={() => void copy(id === 'telegram' ? 'https://t.me/antlmrnnk' : value)}><Copy size={18} aria-hidden="true"/></button>
       </div>)}
     </div>
-    <p className="support-contact-note">Контакти можна виділити й скопіювати. Під час звернення вкажіть версію HromadaHR із розділу «Про програму».</p>
+    <p className="support-contact-note">Під час звернення вкажіть версію HromadaHR.</p>
   </Modal>
 }
