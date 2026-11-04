@@ -15,12 +15,12 @@ const deferred = () => {
   return { promise, resolve }
 }
 
-test('successful startup waits only the remaining two-second minimum', async () => {
+test('successful startup waits only the remaining configured minimum', async () => {
   const waits = []
   const ready = { state: 'ready' }
   const result = await waitForStartupGate(100, STARTUP_MINIMUM_MS, async () => ready, () => 600, async ms => { waits.push(ms) })
   assert.equal(result, ready)
-  assert.deepEqual(waits, [1500])
+  assert.deepEqual(waits, [STARTUP_MINIMUM_MS - 500])
 })
 
 test('slow initialization remains pending, then opens without an extra minimum delay', async () => {

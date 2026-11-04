@@ -51,7 +51,12 @@ async function createWindow() {
   })
   const painted = new Promise<boolean>(resolve => {
     window.once('ready-to-show', () => {
-      if (!window.isDestroyed()) { window.show(); resolve(true) }
+      if (!window.isDestroyed()) {
+        // AID: maximize before showing; Windows handles work area and DPI.
+        window.maximize()
+        window.show()
+        resolve(true)
+      }
     })
     window.once('closed', () => resolve(false))
   })

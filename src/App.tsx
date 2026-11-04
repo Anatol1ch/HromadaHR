@@ -65,7 +65,6 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
         { id: 'leave', title: 'Відпустки', text: 'Облік відпусток', icon: CalendarDays, available: false },
         { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: false },
         { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
-        { id: 'settings', title: 'Налаштування', text: 'Резервування та відомості про програму', icon: Settings, available: true },
       ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
         className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}
         aria-label={available ? title : title + '. У розробці'} onClick={() => { if (available) onNavigate(id) }}>
@@ -174,11 +173,11 @@ export default function App() {
           <NavigationItem key={section.id} section={section} active={active} onNavigate={navigate} />)}
       </nav>
       <div className="sidebar-bottom">
+        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
         <div className="nav-label">СИСТЕМА</div>
         <nav aria-label="Система">
           <NavigationItem section={sections[6]} active={active} onNavigate={navigate} />
         </nav>
-        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
       </div>
     </aside>
     <div className="main-area">

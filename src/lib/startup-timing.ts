@@ -1,5 +1,5 @@
 // Adapted from HromadaAID 33eca107 src/lib/startup-timing.ts.
-export const STARTUP_MINIMUM_MS = 2_000
+export const STARTUP_MINIMUM_MS = 3_500
 const wait = (milliseconds: number) => new Promise<void>(resolve => window.setTimeout(resolve, milliseconds))
 
 export async function waitForMinimumDisplay(startedAt: number, minimumMs: number, now = Date.now, sleep = wait): Promise<void> {
