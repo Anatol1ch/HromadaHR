@@ -20,6 +20,7 @@ export const ipcChannels = {
   systemOpenContact: 'system:openContact', backupGetHistory: 'backup:getHistory',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
   storageRetry: 'storage:retry', systemQuit: 'system:quit',
+  backupOpenFolder: 'backup:openBackupFolder',
   backupGetStatus: 'backup:getStatus', backupChooseFolder: 'backup:chooseFolder', backupSaveConfig: 'backup:saveConfig',
   backupRunManual: 'backup:runManual', backupChooseRestore: 'backup:chooseRestore', backupConfirmRestore: 'backup:confirmRestore',
 } as const
@@ -40,6 +41,7 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.backupOpenFolder]: { args: [BackupSlot]; result: null }
   [ipcChannels.systemGetZoom]: { args: []; result: ZoomStatus }
   [ipcChannels.systemSetZoom]: { args: [ZoomPercent]; result: ZoomStatus }
   [ipcChannels.systemOpenContact]: { args: [ContactId]; result: boolean }

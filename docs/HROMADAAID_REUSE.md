@@ -77,3 +77,6 @@ S1: повторно цільово звірено src/SettingsPage.tsx (cards/h
 
 
 3.4.3.5: S1 electron/main.ts і src/SettingsPage.tsx цільово перевірено — zoom-аналога у цих файлах немає (це не повний аудит інших модулів). Рішення: власний мінімальний Main ZoomController, вузький get/set IPC, наявний Select у settings heading; native setZoomFactor і окремі Electron-profile preferences. Чинна сітка форми адаптована subgrid без нового компонента; продуктовий SVG збережений, Vite inline вимкнено для сумісності з незмінною CSP. Стан — реалізовано, ручне приймання очікується.
+
+
+3.4.3.6: S1 server-manager/src/BackupManagement.tsx та server-manager/electron/main.ts (manager:backup-open-folder) повторно прочитано read-only. Адаптовано принцип server-owned saved directory + shell.openPath до двох HR слотів, strict typed IPC і повторної directory-перевірки; серверні gates/auth/довільний path API не переносилися. Повна ширина, контекстні Save/Cancel й selectable path links лишаються в чинній дизайн-системі. BackupHistory/restore/backend policy збережені. Реалізовано, програмна перевірка нового IPC пройшла з mock OS opener; ручне відкриття/компонування очікує замовника.

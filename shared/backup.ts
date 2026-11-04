@@ -22,6 +22,7 @@ export interface BackupStatus {
 export interface FolderSelection { token: string; path: string }
 export interface RestoreSelection { token: string; fileName: string; schemaVersion: number }
 export interface BackupApi {
+  openBackupFolder(slot: BackupSlot): Promise<import('./ipc.js').IpcResult<null>>
   getHistory(): Promise<import('./ipc.js').IpcResult<import('./backupHistory.js').BackupHistory>>
   getStatus(): Promise<import('./ipc.js').IpcResult<BackupStatus>>
   chooseFolder(slot: BackupSlot): Promise<import('./ipc.js').IpcResult<FolderSelection | null>>

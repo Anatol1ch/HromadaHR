@@ -337,3 +337,26 @@ Main не зливати. Наступні кадрові модулі без о
 Перевірки: pnpm typecheck, pnpm build, git diff --check; одна tests/zoom.test.mjs перевірка — allowed IPC/sender/URL, клавіші без перехоплення Ctrl+Enter, фактичний виклик ZoomFactor через double, persistence/профілі/некоректні значення/помилка запису, лише mkdtemp. Наявне preload allowlist очікування підтримано для get/set; повний набір/GUI/snapshots не запускали. Фактичне Windows GUI-приймання не виконано.
 
 Ручний чекліст: Ctrl +/Shift+=/−/0 і NumPad у формі; відсоток у Settings, шість варіантів, restart і незалежні dev/built; Ctrl+Enter форм збережений; дата за сіткою/вузьке вікно; About логотип у dev та built/file://. При збої збереження zoom — видиме повідомлення. Main не зливати, наступний підетап без завдання не починати.
+
+
+## 3.4.3.6 — остаточне компонування резервування
+
+База a03bcaac776a6db81b446e30fdd480540ec93422, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. AID S1 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово повторно звірено server-manager/src/BackupManagement.tsx та server-manager/electron/main.ts — патерн відкриття збереженого резервного каталогу.
+
+- Прибрано max-width 1100px: root та історія заповнюють доступний .content, дві рівні колонки лишаються responsive 2→1 за шириною container. BackupHistory і фільтри не змінені.
+- Збережена конфігурація без draft: лише «Створити резервну копію». З draft: компактна панель «Зберегти зміни / Скасувати зміни» з нагадуванням про старі auto-шляхи; cancel відкидає тільки локальний вибір, не змінює активний backend. Початкове налаштування пропонує дві теки, Save доступний після двох виборів; ручної копії до збереження немає. Busy/ref, toast, явні часткові помилки збережені.
+- Активний доступний шлях — selectable текстова button-link із ArrowUpRight, title/aria-label/focus. Мишаче виділення не відкриває каталог, Ctrl+C зберігається; Enter активує дію. Draft/недоступний шлях — лише текст без open.
+- Новий єдиний Main operation backup.openBackupFolder(slot): strict tuple 1|2, чинні sender/mainFrame/URL та result=null Zod. Controller читає збережений path через BackupService.getStatus, відхиляє busy/відсутність/недоступність, повторно виконує directory (absolute/directory/realpath/access) та shell.openPath; shell errors нормалізуються FOLDER_UNAVAILABLE, без технічних деталей. Renderer не передає path. У тесті OS opener ін'єктується лише в Main-конструктор; production використовує Electron shell. BackupService не змінено.
+- Технічний details і його CSS повністю вилучені з BackupSettings. Поля BackupStatus/БД/журналу, 14 auto/два місця/retry policy збережені. Restore picker/Modal/token/native confirm/algorithm, RecoveryScreen та історія не змінені.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; одна цільова tests/open-backup-folder.test.mjs перевірка в Electron Main із mock shell.openPath та temp профілем — пройшла (slot allowlist, extra/path args, sender/frame/URL, повторна перевірка missing/unavailable/not-configured, shell error без витоку, busy). Перший запуск test harness мав timeout через top-level await app.whenReady в ESM; виправлено лише тестовий запуск на whenReady().then, повторний запуск успішний. Провідник реально не відкривався, продукційні дані не використовувалися. Нових GUI-тестів/повної регресії немає. Наявне preload allowlist очікування оновлено для одного нового методу.
+
+Ручне GUI-приймання — НЕ ВИКОНАНО:
+
+- [ ] Full HD/1366×768/вузький container/zoom: дві рівні картки та історія на всю доступну ширину, 2→1 без overflow сторінки.
+- [ ] Active path: клік/Enter відкриває саме відповідну теку; виділення + Ctrl+C не відкриває її. Недоступний і draft шляхи без дії; OS-відмова дає зрозумілу помилку.
+- [ ] Після збереження — одна ручна дія; зміна теки показує Save/Cancel, старі auto-шляхи лишаються активними. Cancel повертає активні шляхи, Save явний; перемикання About не губить draft.
+- [ ] З нуля: вибір однієї/двох тек, Save disabled/available, ручної копії до Save немає. Ручний partial failure й same-volume warning видимі; технічної секції немає.
+- [ ] Історія/фільтри та чинний restore без регресій; відновлення — РУЙНІВНЕ, лише в ізольованому тестовому профілі.
+
+Один коміт/push у робочу гілку, без merge main; 3.4.3.7 не починати без завдання.

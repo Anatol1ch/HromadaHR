@@ -41,7 +41,7 @@ export function registerIpcHandlers(
   allowedUrl: string,
   getInfo: () => SystemInfo,
   getStorageStatus: () => StorageStatus,
-  backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
+  backup: Pick<BackupController, 'openBackupFolder' | 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
   personnel: PersonnelService,
   openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
@@ -62,6 +62,7 @@ export function registerIpcHandlers(
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
   register(ipcChannels.storageRetry, z.tuple([]), storageStatus, backup.retryStorage)
   register(ipcChannels.systemQuit, z.tuple([]), z.null(), () => { quit(); return null })
+  register(ipcChannels.backupOpenFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]), z.null(), ([slot]) => backup.openBackupFolder(slot))
   register(ipcChannels.backupGetStatus, z.tuple([]), backupStatus, backup.getStatus)
   register(ipcChannels.backupChooseFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]),
     z.strictObject({ token, path: z.string() }).nullable(), ([slot]) => backup.chooseFolder(slot))

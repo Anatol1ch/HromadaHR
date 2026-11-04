@@ -1,18 +1,32 @@
-import { dialog } from 'electron'
+import { dialog, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { BackupSlot } from '../../shared/backup.js'
 import type { BackupService } from './service.js'
-import { BackupError } from './files.js'
+import { BackupError, directory } from './files.js'
 
 export class BackupController {
   private generation = 0
   constructor(private service: BackupService, private getWindow: () => BrowserWindow | null,
-    private onRestored: () => void = () => {}) {}
+    private onRestored: () => void = () => {},
+    private openPath: (path: string) => Promise<string> = path => shell.openPath(path)) {}
   invalidate() { this.generation++; this.service.invalidateSelections() }
   getStatus = () => this.service.getStatus()
   getHistory = () => this.service.getHistory()
   runManual = () => this.service.runManual()
   retryStorage = () => this.service.retryStorage()
+  openBackupFolder = async (slot: BackupSlot): Promise<null> => {
+    if (slot !== 1 && slot !== 2) throw new BackupError('INVALID_SELECTION')
+    const status = this.service.getStatus()
+    if (status.busy) throw new BackupError('BUSY')
+    const target = status.targets.find(value => value.slot === slot)
+    if (!target?.path) throw new BackupError('NOT_CONFIGURED')
+    if (!target.available) throw new BackupError('FOLDER_UNAVAILABLE')
+    try {
+      const path = directory(target.path)
+      if (await this.openPath(path)) throw new Error('Open failed')
+      return null
+    } catch { throw new BackupError('FOLDER_UNAVAILABLE') }
+  }
   saveConfig = async (tokens: [string | null, string | null]) => {
     const status = await this.service.saveConfig(tokens)
     setImmediate(() => { void this.service.runAutomatic().catch(() => {}) })

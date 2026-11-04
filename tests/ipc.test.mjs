@@ -140,7 +140,7 @@ test('built preload exposes only the typed method and invokes the real handler',
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
   assert.deepEqual(Object.keys(api).sort(), ['backup', 'personnel', 'storage', 'system'])
-  assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getHistory', 'getStatus', 'runManual', 'saveConfig'])
+  assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getHistory', 'getStatus', 'openBackupFolder', 'runManual', 'saveConfig'])
   assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'getZoom', 'openContact', 'quit', 'setZoom'])
   assert.deepEqual(Object.keys(api.storage).sort(), ['getStatus', 'retry'])
   assert.deepEqual(await api.system.getInfo(), { ok: true, data: info })
