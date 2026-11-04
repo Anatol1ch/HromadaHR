@@ -17,20 +17,29 @@ app.whenReady().then(async () => {
   const { openStorageSafely, Storage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
   const { PersonnelService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/personnel/service.js')).href)
   const { BackupService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/service.js')).href)
+  const { BackupController } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/controller.js')).href)
   const { snapshot } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/files.js')).href)
   assert.ok(process.versions.electron)
+  // Resume the startup scheduler only after a confirmed successful recovery.
+  let resumed = 0, restored = false
+  const controller = new BackupController({ confirmRestore: async () => ({ restored }) }, () => null, () => { resumed++ })
+  await controller.confirmRestore('smoke')
+  assert.equal(resumed, 0)
+  restored = true
+  await controller.confirmRestore('smoke')
+  assert.equal(resumed, 1)
   const file = join(root, 'data', 'smoke.db')
   const first = await openStorageSafely(file)
   let source, employeeId, assignmentInput
   try {
-    assert.equal(first.schemaVersion, 3)
+    assert.equal(first.schemaVersion, 4)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false, () => '2026-11-02')
     const department = personnel.createDepartment({ name: 'Тестовий відділ' })
     const position = personnel.createPosition({ name: 'Тестова посада' })
     assignmentInput = { departmentId: department.id, positionId: position.id, category: 'Інша', startDate: '2026-02-01' }
-    employeeId = personnel.createEmployee({ ...assignmentInput, category: null, startDate: '2026-01-01', lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, note: null, employeeType: 'staff' }).id
+    employeeId = personnel.createEmployee({ ...assignmentInput, category: null, startDate: '2026-01-01', lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, employeeType: 'staff' }).id
     personnel.createAssignment(employeeId, assignmentInput)
     const copies = join(root, 'backups')
     mkdirSync(copies)

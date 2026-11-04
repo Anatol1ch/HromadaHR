@@ -7,7 +7,7 @@ import * as schemas from './schemas.js'
 export class PersonnelError extends Error {
   constructor(readonly code: PersonnelErrorCode | 'BUSY' | 'INVALID_ARGUMENTS') { super(code) }
 }
-const employeeColumns = 'id, last_name AS lastName, first_name AS firstName, middle_name AS middleName, birth_date AS birthDate, employee_type AS employeeType, note'
+const employeeColumns = 'id, last_name AS lastName, first_name AS firstName, middle_name AS middleName, birth_date AS birthDate, employee_type AS employeeType'
 const assignmentColumns = 'id, employee_id AS employeeId, position_id AS positionId, department_id AS departmentId, category, start_date AS startDate'
 
 // Main-only. Resolve the current connection on every operation, including after restore.
@@ -59,8 +59,8 @@ export class PersonnelService {
       if (!db.prepare('SELECT id FROM positions WHERE id=?').get(value.positionId) ||
         !db.prepare('SELECT id FROM departments WHERE id=?').get(value.departmentId)) throw new PersonnelError('NOT_FOUND')
       const id = randomUUID()
-      db.prepare('INSERT INTO employees (id, last_name, first_name, middle_name, birth_date, employee_type, note) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(id, value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType, value.note)
+      db.prepare('INSERT INTO employees (id, last_name, first_name, middle_name, birth_date, employee_type) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(id, value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType)
       db.prepare('INSERT INTO employee_positions (id, employee_id, department_id, position_id, category, start_date) VALUES (?, ?, ?, ?, ?, ?)')
         .run(randomUUID(), id, value.departmentId, value.positionId, value.category, value.startDate)
       return this.card(db, id)
@@ -72,8 +72,8 @@ export class PersonnelService {
     return this.run(db => db.transaction(() => {
       const previous = this.card(db, id)
       if (value.birthDate !== null && value.birthDate > previous.hireDate) throw new PersonnelError('INVALID_ARGUMENTS')
-      db.prepare('UPDATE employees SET last_name=?, first_name=?, middle_name=?, birth_date=?, employee_type=?, note=? WHERE id=?')
-        .run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType, value.note, id)
+      db.prepare('UPDATE employees SET last_name=?, first_name=?, middle_name=?, birth_date=?, employee_type=? WHERE id=?')
+        .run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType, id)
       return this.card(db, id)
     }).immediate())
   }

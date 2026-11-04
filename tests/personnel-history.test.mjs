@@ -21,7 +21,7 @@ async function fixture(t) {
   const otherDepartment = service.createDepartment({ name: 'Інший тестовий відділ' })
   const position = service.createPosition({ name: 'Тестова посада' })
   const otherPosition = service.createPosition({ name: 'Інша тестова посада' })
-  const input = { lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: '2000-01-01', employeeType: 'official', note: null,
+  const input = { lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: '2000-01-01', employeeType: 'official',
     positionId: position.id, departmentId: department.id, category: null, startDate: '2026-01-01' }
   const employee = service.createEmployee(input)
   const first = service.getHistory(employee.id)[0]

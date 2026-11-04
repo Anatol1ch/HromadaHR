@@ -140,8 +140,8 @@ test('built preload exposes only the typed method and invokes the real handler',
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
   assert.deepEqual(Object.keys(api).sort(), ['backup', 'personnel', 'storage', 'system'])
-  assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getStatus', 'runManual', 'saveConfig'])
-  assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'quit'])
+  assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getHistory', 'getStatus', 'listCopies', 'openBackupFolder', 'runManual', 'saveConfig', 'selectCopy'])
+  assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'getZoom', 'openContact', 'quit', 'setZoom'])
   assert.deepEqual(Object.keys(api.storage).sort(), ['getStatus', 'retry'])
   assert.deepEqual(await api.system.getInfo(), { ok: true, data: info })
   // JS callers cannot smuggle a channel/arguments through the public method.
@@ -209,7 +209,7 @@ test('every personnel channel enforces sender/frame/URL and strict argument sche
   const fixture = setup(() => info, url, personnel)
   const id = '11111111-1111-4111-8111-111111111111'
   const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
-    employeeType: 'official', note: null }
+    employeeType: 'official' }
   const assignmentInput = { departmentId: id, positionId: id, category: null, startDate: '2026-02-01' }
   const operations = {
     createAssignment: [id, assignmentInput], updateAssignment: [id, assignmentInput], deleteAssignment: [id], deleteEmployee: [id],
@@ -275,13 +275,16 @@ test('built preload → IPC → personnel → isolated SQLite supports personal 
   const department = (await api.createDepartment({ name: 'Відділ' })).data
   const position = (await api.createPosition({ name: 'Посада' })).data
   const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
-    employeeType: 'official', note: null }
+    employeeType: 'official' }
   const result = await api.createEmployee({ ...details, positionId: position.id, departmentId: department.id, category: null, startDate: '2026-01-01' })
   assert.equal(result.ok, true)
   const employee = result.data
+  assert.equal('note' in employee, false)
+  assert.equal((await api.updateEmployee(employee.id, { ...details, note: 'removed' })).error.code, 'INVALID_ARGUMENTS')
+  assert.equal((await api.createEmployee({ ...details, note: null, positionId: position.id, departmentId: department.id, category: null, startDate: '2026-01-01' })).error.code, 'INVALID_ARGUMENTS')
   assert.equal((await api.getHistory(employee.id)).data.length, 1)
   assert.equal((await api.listEmployees()).data[0].id, employee.id)
-  assert.equal((await api.updateEmployee(employee.id, { ...details, note: 'Оновлено' })).data.note, 'Оновлено')
+  assert.equal((await api.updateEmployee(employee.id, { ...details, middleName: 'Оновлено' })).data.middleName, 'Оновлено')
   assert.equal((await api.getEmployee(employee.id)).data.currentAssignment.position.id, position.id)
   assert.equal((await api.getEmployee(employee.id)).data.hireDate, '2026-01-01')
   const assignment = { positionId: position.id, departmentId: department.id, category: 'Інша', startDate: '2026-02-01' }

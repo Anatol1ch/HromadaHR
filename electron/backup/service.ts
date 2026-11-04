@@ -1,11 +1,17 @@
+import { opendir } from 'node:fs/promises'
+import { backupName } from './names.js'
+import { fileDigest, publishImage } from './images.js'
+import { BackupCatalog } from './catalog.js'
 import Database from 'better-sqlite3'
+import { BackupHistoryStore } from './history.js'
+import type { BackupEvent } from '../../shared/backupHistory.js'
 import { randomUUID } from 'node:crypto'
 import { basename, dirname, join } from 'node:path'
-import { constants, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'node:fs'
+import { constants, copyFileSync, existsSync, mkdirSync, mkdtempSync, rmdirSync, unlinkSync } from 'node:fs'
 import type { BackupSlot, BackupStatus, BackupTarget, FolderSelection, RestoreSelection } from '../../shared/backup.js'
 import type { Storage } from '../storage/index.js'
 import { inspectDatabase } from '../storage/validation.js'
-import { BackupError, directory, rotateAutomatic, sameFile, snapshot, syncFile, validateDestination, validateFolders } from './files.js'
+import { BackupError, directory, pathKey, rotateAutomatic, sameFile, snapshot, syncFile, validateDestination, validateFolders } from './files.js'
 import { beginEmergencyReplacement, beginReplacement, preserveDamagedSet, recoverInterruptedRestore, restoreFiles } from './recovery.js'
 import { storageErrorCode } from '../storage/errors.js'
 
@@ -21,13 +27,20 @@ export function localDay(now: Date) {
 }
 
 export class BackupService {
+  private catalog = new BackupCatalog()
   private busy = false
   private timer: ReturnType<typeof setInterval> | undefined
   private lastRestore: BackupStatus['lastRestore'] = null
+  private lastBackup: BackupStatus['lastBackup'] = null
   private folders = new Map<BackupSlot, FolderSelection & { expires: number }>()
   private restoreSelection: (RestoreSelection & { staged: string; expires: number }) | undefined
 
-  constructor(private storage: Storage, private now: () => Date = () => new Date()) {}
+  constructor(private storage: Storage, private now: () => Date = () => new Date(),
+    private history = new BackupHistoryStore(() => join(dirname(storage.getFile()), 'backup-history.json'))) {}
+  getHistory = () => this.history.get()
+  private record(operation: BackupEvent['operation'], result: BackupEvent['result'], slot: BackupSlot | null = null, code: BackupEvent['code'] = null, detail: Pick<BackupEvent, 'locations' | 'snapshotId' | 'duplicate'> = {}) {
+    try { this.history.append({ time: this.now().toISOString(), operation, slot, result, code, ...detail }) } catch { /* Diagnostics must never affect the operation. */ }
+  }
   isBusy() { return this.busy }
   emergencyAvailable() { return this.storage.canRecover() }
   private db() {
@@ -57,7 +70,10 @@ export class BackupService {
     try {
       if (config.folder1 && config.folder2) sameVolume = validateFolders([config.folder1, config.folder2], this.storage.getFile(), false).sameVolume
     } catch { /* Individual target states remain visible. */ }
-    return { targets, sameVolume, busy: this.busy, lastRestore: this.lastRestore }
+    const event = this.getHistory().events.find(event => (event.operation === 'auto' || event.operation === 'manual') && event.locations)
+    const lastBackup = this.lastBackup ?? (event && event.result !== 'cancelled' ? { time: event.time, result: event.result,
+      copies: event.locations!.filter(location => location.result === 'success').length } : null)
+    return { targets, sameVolume, busy: this.busy, lastRestore: this.lastRestore, lastBackup }
   }
 
   private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
@@ -103,6 +119,7 @@ export class BackupService {
         })
       }).immediate()
       this.folders.clear()
+      this.record('config', 'success')
       return this.getStatus()
     })
   }
@@ -122,36 +139,95 @@ export class BackupService {
       const now = this.now()
       const day = localDay(now)
       const rows = db.prepare<[], TargetRow>('SELECT * FROM backup_state ORDER BY slot').all()
-      for (const row of rows) {
-        if (kind === 'auto' && (row.auto_day === day ||
-          (row.attempt_day === day && (row.attempt_count >= 4 || row.retry_after > now.getTime())))) continue
-        const folder = row.slot === 1 ? config.folder1 : config.folder2
-        let file: string | null = null
-        let error: BackupTarget['error'] = null
-        try {
-          const destination = validateDestination(folder, this.storage.getFile())
-          // Revalidate separation against the other target when it is online.
-          // An offline second target must not prevent this target succeeding.
-          const other = row.slot === 1 ? config.folder2 : config.folder1
-          let otherOnline = false
-          try { directory(other); otherOnline = true } catch {}
-          if (otherOnline) validateFolders([folder, other], this.storage.getFile(), false)
-          file = await snapshot(db, destination, `${config.instance_id}-${kind}`, this.storage.manifest, now)
-        } catch (cause) {
-          error = cause instanceof BackupError ? cause.code : 'BACKUP_FAILED'
+      const due = rows.filter(row => kind === 'manual' || (row.auto_day !== day &&
+        !(row.attempt_day === day && (row.attempt_count >= 4 || row.retry_after > now.getTime()))))
+      if (!due.length) return this.getStatus()
+      const staging = join(dirname(this.storage.getFile()), 'staging')
+      let temporary: string | undefined, source: string | undefined, name: string | undefined
+      let duplicate = false, preparationError: BackupTarget['error'] = null
+      const results = new Map<BackupSlot, { slot: BackupSlot; result: 'success' | 'error'; code: BackupTarget['error'] }>()
+      try {
+        mkdirSync(staging, { recursive: true })
+        temporary = mkdtempSync(join(staging, 'backup-cycle-'))
+        if (kind === 'auto') {
+          // Reuse the exact successful image for a missing duplicate, including
+          // after restart. No new live snapshot is labelled as an old image.
+          for (const row of rows) {
+            if (row.auto_day !== day) continue
+            const folder = row.slot === 1 ? config.folder1 : config.folder2
+            try {
+              if (pathKey(directory(folder)) !== pathKey(folder)) continue
+              const current = row.file_name ? backupName(row.file_name) : null
+              // A manual copy updates file_name but preserves auto_day. Find
+              // that day's owned auto image if the exact pointer was replaced.
+              const names: string[] = []
+              if (current?.kind === 'auto') names.push(row.file_name!)
+              else {
+                let scanned = 0
+                for await (const item of await opendir(folder)) {
+                  if (++scanned > 4096) break
+                  const parsed = backupName(item.name)
+                  if (item.isFile() && parsed?.digest && parsed.instance === config.instance_id && parsed.kind === 'auto' && localDay(new Date(parsed.time)) === day) names.push(item.name)
+                }
+                names.sort().reverse().splice(100)
+              }
+              for (const candidate of names) {
+                const parsed = backupName(candidate)
+                if (!parsed?.digest || parsed.instance !== config.instance_id || parsed.kind !== 'auto') continue
+                try {
+                  source = publishImage(join(folder, candidate), temporary, candidate, config.instance_id, this.storage.manifest, 'image.db')
+                  name = candidate; duplicate = true
+                  results.set(row.slot, { slot: row.slot, result: 'success', code: null })
+                  break
+                } catch { source = undefined }
+              }
+              if (source) break
+            } catch { source = undefined }
+          }
         }
-        db.transaction(() => {
-          db.prepare(`UPDATE backup_state SET last_attempt=?, last_success=CASE WHEN ? IS NULL THEN ? ELSE last_success END,
-            last_kind=?, error=?, file_name=COALESCE(?,file_name) WHERE slot=?`)
-            .run(now.toISOString(), error, now.toISOString(), kind, error, file ? basename(file) : null, row.slot)
-          if (kind === 'auto') db.prepare(`UPDATE backup_state SET auto_day=CASE WHEN ? IS NULL THEN ? ELSE auto_day END,
-            attempt_day=?, attempt_count=?, retry_after=? WHERE slot=?`)
-            .run(error, day, day, row.attempt_day === day ? row.attempt_count + 1 : 1,
-              error ? now.getTime() + retryInterval : 0, row.slot)
-        }).immediate()
-        if (file && kind === 'auto') {
-          try { rotateAutomatic(folder, config.instance_id, this.storage.manifest) }
-          catch { db.prepare('UPDATE backup_state SET error=? WHERE slot=?').run('BACKUP_FAILED', row.slot) }
+        if (!source) {
+          source = await snapshot(db, temporary, `${config.instance_id}-${kind}`, this.storage.manifest, now)
+          name = basename(source).replace(/-[0-9a-f-]{36}\.db$/, '-' + fileDigest(source) + '.db')
+        }
+      } catch (cause) { preparationError = cause instanceof BackupError ? cause.code : 'BACKUP_FAILED' }
+      try {
+        for (const row of due) {
+          const folder = row.slot === 1 ? config.folder1 : config.folder2
+          let file: string | null = null, error: BackupTarget['error'] = preparationError
+          try {
+            if (error || !source || !name) throw new BackupError(error ?? 'BACKUP_FAILED')
+            const destination = validateDestination(folder, this.storage.getFile())
+            const other = row.slot === 1 ? config.folder2 : config.folder1
+            let otherOnline = false
+            try { directory(other); otherOnline = true } catch {}
+            if (otherOnline) validateFolders([folder, other], this.storage.getFile(), false)
+            file = publishImage(source, destination, name, config.instance_id, this.storage.manifest)
+          } catch (cause) { error = cause instanceof BackupError ? cause.code : 'BACKUP_FAILED' }
+          db.transaction(() => {
+            db.prepare(`UPDATE backup_state SET last_attempt=?, last_success=CASE WHEN ? IS NULL THEN ? ELSE last_success END,
+              last_kind=?, error=?, file_name=COALESCE(?,file_name) WHERE slot=?`)
+              .run(now.toISOString(), error, now.toISOString(), kind, error, file ? basename(file) : null, row.slot)
+            if (kind === 'auto') db.prepare(`UPDATE backup_state SET auto_day=CASE WHEN ? IS NULL THEN ? ELSE auto_day END,
+              attempt_day=?, attempt_count=?, retry_after=? WHERE slot=?`)
+              .run(error, day, day, row.attempt_day === day ? row.attempt_count + 1 : 1,
+                error ? now.getTime() + retryInterval : 0, row.slot)
+          }).immediate()
+          if (file && kind === 'auto') {
+            try { rotateAutomatic(folder, config.instance_id, this.storage.manifest) }
+            catch { error = 'BACKUP_FAILED'; db.prepare('UPDATE backup_state SET error=? WHERE slot=?').run(error, row.slot) }
+          }
+          results.set(row.slot, { slot: row.slot, result: error ? 'error' : 'success', code: error })
+        }
+        const locations = ([1, 2] as const).map(slot => results.get(slot) ?? { slot, result: 'error' as const, code: 'BACKUP_FAILED' as const })
+        const successes = locations.filter(item => item.result === 'success').length
+        this.lastBackup = { time: now.toISOString(), result: successes === 2 ? 'success' : successes === 1 ? 'partial' : 'error', copies: successes }
+        this.record(kind, this.lastBackup.result, null,
+          locations.find(item => item.code)?.code ?? null, { locations, ...(name ? { snapshotId: backupName(name)!.id } : {}), duplicate })
+      } finally {
+        if (temporary) {
+          // Only this cycle's private scratch files; never destination backups.
+          if (source) try { unlinkSync(source) } catch {}
+          try { rmdirSync(temporary) } catch {}
         }
       }
       return this.getStatus()
@@ -166,6 +242,8 @@ export class BackupService {
   }
   stop() { if (this.timer) clearInterval(this.timer); this.timer = undefined }
   async retryStorage() {
+    // An early window may query IPC while Main owns startup initialization.
+    if (this.storage.getStatus().state === 'initializing') return this.storage.getStatus()
     return this.exclusive(async () => {
       this.invalidateSelections()
       if (this.storage.getStatus().state !== 'ready') {
@@ -183,7 +261,36 @@ export class BackupService {
     this.restoreSelection = undefined
   }
 
+  listCopies = () => this.exclusive(() => this.catalog.list(this.config()))
+  selectCopy = async (id: string): Promise<RestoreSelection> => {
+    let temporary: string | undefined, source: string | undefined, fileName: string | undefined
+    try {
+      const selection = await this.chooseRestore(async () => {
+        const config = this.config()
+        const staging = join(dirname(this.storage.getFile()), 'staging')
+        mkdirSync(staging, { recursive: true })
+        temporary = mkdtempSync(join(staging, 'catalog-'))
+        fileName = this.catalog.capture(id, config, () => { source = join(temporary!, 'source.db'); return source }, this.storage.manifest)
+        return source!
+      })
+      if (!selection || !fileName) throw new BackupError('INVALID_SELECTION')
+      selection.fileName = fileName
+      if (this.restoreSelection?.token === selection.token) this.restoreSelection.fileName = fileName
+      return selection
+    } finally {
+      if (source) try { unlinkSync(source) } catch {}
+      if (temporary) try { rmdirSync(temporary) } catch {}
+    }
+  }
+
   async chooseRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {
+    try { return await this.prepareRestore(pick) }
+    catch (error) {
+      this.record('restore', 'error', null, error instanceof BackupError ? error.code : 'RESTORE_FAILED')
+      throw error
+    }
+  }
+  private async prepareRestore(pick: () => Promise<string | null>): Promise<RestoreSelection | null> {
     return this.exclusive(async () => {
       if (this.storage.getStatus().state !== 'ready' && !this.storage.canRecover()) throw new BackupError('STORAGE_UNAVAILABLE')
       this.invalidateSelections()
@@ -209,6 +316,16 @@ export class BackupService {
   }
 
   async confirmRestore(token: string, confirm: () => Promise<boolean>) {
+    try {
+      const result = await this.performRestore(token, confirm)
+      this.record('restore', result.restored ? 'success' : 'cancelled', null, result.restored ? null : 'CANCELLED')
+      return result
+    } catch (error) {
+      this.record('restore', 'error', null, error instanceof BackupError ? error.code : 'RESTORE_FAILED')
+      throw error
+    }
+  }
+  private async performRestore(token: string, confirm: () => Promise<boolean>) {
     return this.exclusive(async () => {
       const selected = this.restoreSelection
       this.restoreSelection = undefined // Consume once, including cancellation/failure.

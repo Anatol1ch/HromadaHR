@@ -1,7 +1,10 @@
-/* Selected HromadaAID rules, adapted independently for HromadaHR. */
+/* HromadaAID UI foundation @ 33eca107; provenance: docs/UI-TRANSFER.md. */
 @import './styles/tokens.css';
 @import './styles/base.css';
 @import './styles/components.css';
 @import './styles/shell.css';
 
 @import './styles/employees.css';
+
+@import './styles/settings.css';
+@import './styles/startup.css';

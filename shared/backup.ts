@@ -18,10 +18,17 @@ export interface BackupStatus {
   sameVolume: boolean
   busy: boolean
   lastRestore: 'success' | 'rolled-back' | null
+  lastBackup?: { time: string; result: 'success' | 'partial' | 'error'; copies: number } | null
 }
 export interface FolderSelection { token: string; path: string }
 export interface RestoreSelection { token: string; fileName: string; schemaVersion: number }
+export interface AvailableBackup { id: string; time: string; kind: 'auto' | 'manual'; slot: BackupSlot; available: boolean; locations: BackupSlot[] }
+export interface AvailableBackups { copies: AvailableBackup[]; targets: { slot: BackupSlot; available: boolean }[]; limited: boolean }
 export interface BackupApi {
+  listCopies(): Promise<import('./ipc.js').IpcResult<AvailableBackups>>
+  selectCopy(id: string): Promise<import('./ipc.js').IpcResult<RestoreSelection>>
+  openBackupFolder(slot: BackupSlot): Promise<import('./ipc.js').IpcResult<null>>
+  getHistory(): Promise<import('./ipc.js').IpcResult<import('./backupHistory.js').BackupHistory>>
   getStatus(): Promise<import('./ipc.js').IpcResult<BackupStatus>>
   chooseFolder(slot: BackupSlot): Promise<import('./ipc.js').IpcResult<FolderSelection | null>>
   saveConfig(tokens: [string | null, string | null]): Promise<import('./ipc.js').IpcResult<BackupStatus>>

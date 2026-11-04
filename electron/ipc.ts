@@ -1,3 +1,6 @@
+import { zoomPercent, zoomStatus } from './zoom.js'
+import type { ZoomController } from './zoom.js'
+import { backupHistory } from '../shared/backupHistory.js'
 import { PersonnelError } from './personnel/service.js'
 import type { PersonnelService } from './personnel/service.js'
 import * as personnelSchemas from './personnel/schemas.js'
@@ -29,7 +32,8 @@ const backupTarget = z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]
   autoDay: z.string().nullable(), lastAttempt: z.string().nullable(), lastSuccess: z.string().nullable(),
   lastKind: z.enum(['auto', 'manual']).nullable(), error: backupError.nullable(), fileName: z.string().nullable() })
 const backupStatus = z.strictObject({ targets: z.tuple([backupTarget, backupTarget]), sameVolume: z.boolean(), busy: z.boolean(),
-  lastRestore: z.enum(['success', 'rolled-back']).nullable() })
+  lastRestore: z.enum(['success', 'rolled-back']).nullable(),
+  lastBackup: z.strictObject({ time: z.iso.datetime(), result: z.enum(['success', 'partial', 'error']), copies: z.number().int().min(0).max(2) }).nullable().optional() })
 const token = z.string().uuid()
 
 export function registerIpcHandlers(
@@ -38,14 +42,35 @@ export function registerIpcHandlers(
   allowedUrl: string,
   getInfo: () => SystemInfo,
   getStorageStatus: () => StorageStatus,
-  backup: Pick<BackupController, 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
+  backup: Pick<BackupController, 'listCopies' | 'selectCopy' | 'openBackupFolder' | 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
   personnel: PersonnelService,
+  openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
+  getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
+  zoom?: Pick<ZoomController, 'get' | 'set'>,
 ) {
+  register(ipcChannels.systemGetZoom, z.tuple([]), zoomStatus, () => {
+    if (!zoom) throw new Error('Zoom unavailable')
+    return zoom.get()
+  })
+  register(ipcChannels.systemSetZoom, z.tuple([zoomPercent]), zoomStatus, ([percent]) => {
+    if (!zoom) throw new Error('Zoom unavailable')
+    return zoom.set(percent)
+  })
+  register(ipcChannels.systemOpenContact, z.tuple([z.enum(['phone', 'workEmail', 'personalEmail', 'telegram'])]), z.boolean(), ([id]) => openContact(id))
+  register(ipcChannels.backupGetHistory, z.tuple([]), backupHistory, getBackupHistory)
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)
   register(ipcChannels.storageGetStatus, z.tuple([]), storageStatus, getStorageStatus)
   register(ipcChannels.storageRetry, z.tuple([]), storageStatus, backup.retryStorage)
   register(ipcChannels.systemQuit, z.tuple([]), z.null(), () => { quit(); return null })
+  register(ipcChannels.backupListCopies, z.tuple([]), z.strictObject({
+    copies: z.array(z.strictObject({ id: token, time: z.iso.datetime(), kind: z.enum(['auto', 'manual']),
+      slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean(), locations: z.array(z.union([z.literal(1), z.literal(2)])).min(1).max(2) })).max(200),
+    targets: z.array(z.strictObject({ slot: z.union([z.literal(1), z.literal(2)]), available: z.boolean() })).length(2), limited: z.boolean(),
+  }), () => backup.listCopies())
+  register(ipcChannels.backupSelectCopy, z.tuple([token]),
+    z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }), ([id]) => backup.selectCopy(id))
+  register(ipcChannels.backupOpenFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]), z.null(), ([slot]) => backup.openBackupFolder(slot))
   register(ipcChannels.backupGetStatus, z.tuple([]), backupStatus, backup.getStatus)
   register(ipcChannels.backupChooseFolder, z.tuple([z.union([z.literal(1), z.literal(2)])]),
     z.strictObject({ token, path: z.string() }).nullable(), ([slot]) => backup.chooseFolder(slot))

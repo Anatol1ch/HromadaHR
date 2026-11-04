@@ -7,7 +7,6 @@ export interface EmployeeDetails {
   middleName: string | null
   birthDate: string | null
   employeeType: EmployeeType
-  note: string | null
 }
 export interface Assignment {
   id: string

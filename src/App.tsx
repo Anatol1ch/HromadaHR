@@ -1,12 +1,15 @@
+import StartupScreen from './components/StartupScreen'
+import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
+import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
-import type { EmployeeBreadcrumb } from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Award, CalendarDays, ChevronRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
-import BackupSettings from './components/BackupSettings'
+import SettingsPage from './components/SettingsPage'
+import HelpDialog from './components/HelpDialog'
 import RecoveryScreen from './components/RecoveryScreen'
 
 const sections = [
@@ -22,12 +25,11 @@ const sections = [
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
-const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees'>, string> = {
+const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'settings'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
   leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
-  settings: 'Налаштування назви громади та герба буде додано пізніше.',
 }
 
 function NavigationItem({ section, active, onNavigate }: {
@@ -45,10 +47,10 @@ function NavigationItem({ section, active, onNavigate }: {
   </button>
 }
 
-function HomePage() {
-  return <div className="workspace-page">
+function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
+  return <div className="workspace-page page-transition">
     <section className="page-heading workspace-heading" aria-labelledby="home-title">
-      <div className="workspace-mark-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
+      <div className="workspace-coat-area"><img className="community-coat" src={communityCoat} alt="Герб Вишнівської селищної територіальної громади" /></div>
       <div className="workspace-identity-copy">
         <div className="eyebrow">РОБОЧИЙ ПРОСТІР ГРОМАДИ</div>
         <h1 id="home-title"><span>Вишнівська селищна</span>{' '}<span>територіальна громада</span></h1>
@@ -56,41 +58,23 @@ function HomePage() {
         <p className="subtitle">Автоматизована система кадрового обліку</p>
       </div>
     </section>
-    <section className="dashboard-panel" aria-labelledby="workspace-title">
-      <div className="workspace-primary">
-        <div>
-          <h2 id="workspace-title">Ваш робочий простір</h2>
-          <p>Єдине середовище для кадрового обліку громади.</p>
-        </div>
-      </div>
-      <div className="workspace-status">
-        <Alert variant="info">
-          <strong>Реєстр працівників доступний</strong>
-          <span>У розділі «Працівники» можна вести реєстр, створювати та редагувати особові картки.</span>
-        </Alert>
-        <p>Облік відпусток, стажу, рангів і кадрових документів буде додано на наступних етапах.</p>
-      </div>
+    <section className="dashboard-panel workspace-actions" aria-labelledby="workspace-title">
+      <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
+      <div className="workspace-shortcuts">{([
+        { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
+        { id: 'leave', title: 'Відпустки', text: 'Облік відпусток', icon: CalendarDays, available: false },
+        { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: false },
+        { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
+      ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
+        className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}
+        aria-label={available ? title : title + '. У розробці'} onClick={() => { if (available) onNavigate(id) }}>
+        <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}{!available && <span className="workspace-planned-label">У розробці</span>}</small></span><ArrowUpRight size={18} aria-hidden="true"/>
+      </button>)}</div>
     </section>
-    <footer className="page-footer"><p>HromadaHR · Автоматизована система кадрового обліку</p></footer>
+    <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>
+      <p className="home-footer-credit"><Code2 size={17} strokeWidth={1.7} aria-hidden="true"/><span>Developed by <strong>Anatolii Myronenko</strong></span></p>
+    </footer>
   </div>
-}
-
-function ApplicationVersion() {
-  const [version, setVersion] = useState('Завантаження версії…')
-  useEffect(() => {
-    let active = true
-    const load = async () => {
-      try {
-        const result = await window.hromadaHR.system.getInfo()
-        if (active) setVersion(result.ok ? `${result.data.name} · Версія ${result.data.version}` : 'Версія застосунку недоступна')
-      } catch {
-        if (active) setVersion('Версія застосунку недоступна')
-      }
-    }
-    void load()
-    return () => { active = false }
-  }, [])
-  return <footer className="page-footer"><p role="status">{version}</p></footer>
 }
 
 const storageErrors: Record<StorageErrorCode, string> = {
@@ -105,7 +89,7 @@ const storageErrors: Record<StorageErrorCode, string> = {
   MISSING_DATABASE: 'Файл раніше створеної бази відсутній. Нову порожню базу не створено.',
 }
 
-function StorageNotice({ showReady }: { showReady: boolean }) {
+function StorageNotice() {
   const [status, setStatus] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
     let active = true
@@ -125,9 +109,7 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
     const timer = setInterval(() => { void refresh() }, 5000)
     return () => { active = false; clearInterval(timer) }
   }, [])
-  if (status.state === 'ready') return showReady ? <Alert variant="info">
-    Локальне сховище готове. Версія схеми: {status.schemaVersion}.
-  </Alert> : null
+  if (status.state === 'ready') return null
   return <Alert variant={status.state === 'error' ? 'error' : 'info'}>
     {status.state === 'error' ? storageErrors[status.code] :
       status.state === 'closed' ? 'Локальне сховище закрито.' : 'Перевірка локального сховища…'}
@@ -136,21 +118,32 @@ function StorageNotice({ showReady }: { showReady: boolean }) {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
-  const [employeeBreadcrumb, setEmployeeBreadcrumb] = useState<EmployeeBreadcrumb | null>(null)
-  const navigationGuard = useRef<() => boolean>(() => true)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active && navigationGuard.current()) setActive(id)
+    if (id !== active) navigationGuard.current(() => setActive(id))
   }
+  const [startupReady, setStartupReady] = useState(false)
+  const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
-    let alive = true, pending = false
+    let alive = true, pending = false, settled = false
+    const accept = (status: StorageStatus) => {
+      if (!alive) return
+      setStorage(status)
+      if (!settled && status.state !== 'initializing') {
+        settled = true
+        void waitForStartupGate(startedAt.current, STARTUP_MINIMUM_MS, async () => status, Date.now, undefined, value => value.state !== 'ready')
+          .then(() => { if (alive) setStartupReady(true) })
+      }
+    }
     const refresh = async () => {
       if (pending) return
       pending = true
       try {
         const result = await window.hromadaHR.storage.getStatus()
-        if (alive) setStorage(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
-      } catch { if (alive) setStorage({ state: 'error', code: 'INITIALIZATION_FAILED' }) }
+        accept(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
+      } catch { accept({ state: 'error', code: 'INITIALIZATION_FAILED' }) }
       finally { pending = false }
     }
     void refresh()
@@ -160,6 +153,8 @@ export default function App() {
   const current = sections.find(section => section.id === active)!
   const CurrentIcon = current.icon
 
+  if (storage.state === 'error' || storage.state === 'closed') return <RecoveryScreen status={storage} />
+  if (!startupReady) return <StartupScreen />
   if (storage.state !== 'ready') return <RecoveryScreen status={storage} />
 
   return <div className="app-shell">
@@ -178,6 +173,7 @@ export default function App() {
           <NavigationItem key={section.id} section={section} active={active} onNavigate={navigate} />)}
       </nav>
       <div className="sidebar-bottom">
+        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
         <div className="nav-label">СИСТЕМА</div>
         <nav aria-label="Система">
           <NavigationItem section={sections[6]} active={active} onNavigate={navigate} />
@@ -191,29 +187,27 @@ export default function App() {
             <ol>
               <li>{active === 'home' ? <span>Робочий простір</span> :
                 <button type="button" onClick={() => navigate('home')}>Робочий простір</button>}</li>
-              <li><ChevronRight size={15} aria-hidden="true" />{active === 'employees' && employeeBreadcrumb ?
-                <button type="button" onClick={employeeBreadcrumb.onBack}>Працівники</button> : <span aria-current="page">{current.label}</span>}</li>
-              {active === 'employees' && employeeBreadcrumb && <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{employeeBreadcrumb.label}</span></li>}
+              <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>
             </ol>
           </nav>
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
-        <StorageNotice showReady={active === 'settings'} />
-        {active === 'home' ? <HomePage /> : active === 'employees' ?
-          <EmployeesWorkspace navigationGuard={navigationGuard} onBreadcrumb={setEmployeeBreadcrumb} /> :
-          <div>
+        <StorageNotice />
+        {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
+          <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
             </div>
-            {active === 'settings' ? <BackupSettings /> : <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
+            <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
               <DataState kind="planned" message="Функціональність ще не реалізована"
                 description={sectionDescriptions[active]}
                 icon={<CurrentIcon size={22} aria-hidden="true" />} />
-            </section>}
-            {active === 'settings' && <ApplicationVersion />}
+            </section>
           </div>}
       </main>
     </div>
+    {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
   </div>
 }

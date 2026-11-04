@@ -1,6 +1,9 @@
+import type { ZoomPercent, ZoomStatus } from './zoom.js'
+import type { BackupHistory } from './backupHistory.js'
+import type { ContactId } from './contacts.js'
 import type { PersonnelApi, PersonnelErrorCode, AssignmentInput, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
 // Only explicitly listed operations may cross the privilege boundary.
-import type { BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
+import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
   personnelCreateAssignment: 'personnel:createAssignment', personnelUpdateAssignment: 'personnel:updateAssignment',
   personnelDeleteAssignment: 'personnel:deleteAssignment', personnelDeleteEmployee: 'personnel:deleteEmployee',
@@ -13,8 +16,12 @@ export const ipcChannels = {
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
   personnelCreatePosition: 'personnel:createPosition',
+  systemGetZoom: 'system:getZoom', systemSetZoom: 'system:setZoom',
+  systemOpenContact: 'system:openContact', backupGetHistory: 'backup:getHistory',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
   storageRetry: 'storage:retry', systemQuit: 'system:quit',
+  backupListCopies: 'backup:listCopies', backupSelectCopy: 'backup:selectCopy',
+  backupOpenFolder: 'backup:openBackupFolder',
   backupGetStatus: 'backup:getStatus', backupChooseFolder: 'backup:chooseFolder', backupSaveConfig: 'backup:saveConfig',
   backupRunManual: 'backup:runManual', backupChooseRestore: 'backup:chooseRestore', backupConfirmRestore: 'backup:confirmRestore',
 } as const
@@ -35,6 +42,13 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.backupListCopies]: { args: []; result: AvailableBackups }
+  [ipcChannels.backupSelectCopy]: { args: [string]; result: RestoreSelection }
+  [ipcChannels.backupOpenFolder]: { args: [BackupSlot]; result: null }
+  [ipcChannels.systemGetZoom]: { args: []; result: ZoomStatus }
+  [ipcChannels.systemSetZoom]: { args: [ZoomPercent]; result: ZoomStatus }
+  [ipcChannels.systemOpenContact]: { args: [ContactId]; result: boolean }
+  [ipcChannels.backupGetHistory]: { args: []; result: BackupHistory }
   [ipcChannels.personnelCreateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
   [ipcChannels.personnelUpdateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
   [ipcChannels.personnelDeleteAssignment]: { args: [string]; result: EmployeeCard }
@@ -64,6 +78,9 @@ export interface HromadaHRApi {
   readonly personnel: PersonnelApi
   readonly backup: BackupApi
   readonly system: {
+    readonly getZoom: () => Promise<IpcResult<ZoomStatus>>
+    readonly setZoom: (percent: ZoomPercent) => Promise<IpcResult<ZoomStatus>>
+    readonly openContact: (id: ContactId) => Promise<IpcResult<boolean>>
     readonly quit: () => Promise<IpcResult<null>>
     readonly getInfo: (...args: IpcOperations[typeof ipcChannels.systemGetInfo]['args']) => Promise<IpcResult<SystemInfo>>
   }

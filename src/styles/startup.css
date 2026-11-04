@@ -1,0 +1,17 @@
+/* HromadaAID 33eca107 src/styles.css; product colors use HR tokens. */
+.app-startup, .app-start-error { display: grid; min-height: 100dvh; place-items: center; padding: var(--space-6); background: var(--surface-app); }
+.app-startup-content, .app-start-error > div { display: grid; justify-items: center; max-width: 390px; text-align: center; }
+.app-startup-content { animation: startup-enter var(--motion-duration-modal) ease-out both; }
+.app-startup-mark { display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: var(--space-4); border-radius: var(--radius-card); color: var(--accent); background: var(--accent-soft); }
+.app-startup-name { color: var(--color-text); font: 700 27px/1.2 'Segoe UI', Tahoma, sans-serif; letter-spacing: -.45px; }
+.app-startup-name span { color: var(--accent); }
+.app-startup p { margin: var(--space-2) 0 var(--space-5); color: var(--color-text-secondary); font-size: 13px; line-height: 1.5; }
+.app-startup-loader { width: 88px; height: 3px; overflow: hidden; border-radius: 99px; background: var(--border-accent); }
+.app-startup-loader::after { content: ''; display: block; width: 42%; height: 100%; border-radius: inherit; background: var(--accent); animation: startup-loader 1100ms ease-in-out infinite; }
+.app-start-error strong { color: var(--color-text); }
+.app-start-error span { margin-top: var(--space-3); color: var(--color-text-secondary); line-height: 1.5; }
+@keyframes startup-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes startup-loader { 0%, 100% { transform: translateX(-120%); opacity: .45; } 50% { transform: translateX(190%); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .app-startup-content, .app-startup-loader::after { animation: none !important; }
+}

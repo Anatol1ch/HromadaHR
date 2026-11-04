@@ -2,13 +2,35 @@
 
 ## Поточний стан
 
-Працюйте лише в `Anatol1ch/HromadaHR`. Етапи 3.1 та 3.2 реалізовано: предметна основа, реєстр, створення/редагування персональних відомостей і особові картки. Етап 3.3 реалізовано: кадрові зміни, виправлення історії та повне видалення. Етап 04 не розпочато. База змін 3.3 — `eab952a64f0effceb0751e7c09b7b7d35979051f`, `main`, дерево перед роботою чисте. База змін 3.2 — `6b07dbfbbfa3695c82b4ddf397ed44f6f776548c`, `main`, дерево перед роботою чисте. База змін 3.1 — `7bfab57c2d5af2fc0a19f4478055dde2442fe8db`, `main`, до першого запиту дерево було чистим; уточнення 3.1 застосовано поверх власних незакомічених змін цього чату. Етапи 2.1, 2.2, 2.4 та виправлення 2.4.1 реалізовано; 2.3 остаточно скасовано замовником. База змін 2.4.1 — `cfe1f404d11a3b31f0b70f3370a476cc2b7640a5`, гілка `main`, перед початком робоче дерево було чистим. Фактичний HEAD/стан завжди перевіряйте Git-командами. Версія застосунку залишається 0.1.0; до кадрової експлуатації ще не готовий.
+Етап **03 (3.1, 3.2, 3.3 та 3.4.1–3.4.3.8) завершено в реалізації**, версія **0.1.0**. Вихідна база фіналізації — ccc40d49ddcd50ac2cf487cea5655337f0408040, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте.
+
+**Інтеграція:** етап 03 завершено в реалізації та інтегровано в **main** звичайним merge зі збереженням тематичних комітів, без squash або переписування історії. Документаційний коміт — 8cbb2805025baebaff6fb036fa273310a1575518; робочу гілку codex/3.4.1-aid-ui-foundation збережено. SHA merge та збіг із GitHub перевіряються через Git; власний SHA цього merge-коміту тут не дублюється.
+
+Наступний напрям — **етап 04, облік відпусток**. Його реалізація в цьому завданні не починалася; потрібне окреме завдання. Стаж/ранги, документообіг, інсталятор, автоматичні оновлення та релізи не реалізовані.
+
+Поточна основа: SQLite v4 (міграції 1–4, захисні копії перед критичними змінами), чотири кадрові таблиці й 13 кадрових IPC. Дві групи реєстру та модальні сценарії створення/редагування/особової картки/історії/видалення працюють через Main. Приміток немає; історичні категорії збережені, звичайні форми ними не керують. Посада та дата прийняття походять з історії.
+
+UI-компоненти/геометрія/поведінка — адаптації read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, палітра — сиренева HR. Є стартова заставка 3500 мс мінімум, один Main startup, keyboard zoom із profile persistence без видимого selector. Дати UI — ДД.ММ.РРРР, timestamps UI — ДД.ММ.РРРР ГГ:ХХ, контракти — ISO.
+
+Резервування: один знімок у двох місцях, спільний SHA-256, незалежні no-replace публікації, partial/repair, 14 auto на місце. Каталог реальних файлів і bounded журнал не змішуються. Вибір конкретного образу або picker веде до чинного token/native confirmation/protection/recovery journal/rollback/reload. Деталі — [ARCHITECTURE.md](ARCHITECTURE.md), джерела — [UI-TRANSFER.md](UI-TRANSFER.md).
+
+**Приймання:** основні GUI-сценарії перевіряв користувач. Повне формальне приймання всіх сценаріїв, особливо аварійного відновлення, не підтверджено; історичні незаповнені чеклісти не перетворюються на виконані. Руйнівні сценарії — лише тестові дані й ізольований профіль. Пакування/ARM64/фізичні носії поза перевіреним обсягом залишаються відкритими.
+
+Фіналізація є документаційною: код/версію не змінено, нових тестів, повторного build чи повної регресії не виконували. Перевіряються посилання документації, diff і Git; результати програмних перевірок попередніх підетапів залишені в журналі нижче.
+
+## Історія реалізації та приймання
+
+Нижче збережено технічну хронологію. Статуси, числа тестів і заборони переходів/merge стосуються моменту відповідного підетапу, а не поточного дозволу на фіналізацію. Поточний стан і межі приймання наведені вище.
+
+### Вихідний контекст до фіналізації
+
+Репозиторій: `Anatol1ch/HromadaHR`. Етапи 3.4.1, 3.4.2 та виправлення 3.4.2.1–3.4.2.3 реалізовано в гілці `codex/3.4.1-aid-ui-foundation` від `c479d23577e1f61cf16f6c732476a64ef487b2e1` (початкове дерево чисте); на момент цих записів у main ще не зливався. HromadaAID — основний UI-еталон, source SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Актуальна схема БД — 4: примітки вилучені, категорії збережені в моделі/історії без звичайного UI-редагування. База 3.4.2.2 — 1797284d372ef6cc33192aecaeed4d16f48f6443, дерево перед роботою чисте. База 3.4.2 — `85548b1218455d3679ec0d66009c4b1507ce769f`, дерево перед роботою чисте. 3.4.3 реалізовано; фінальне ручне GUI-приймання очікується. Етапи 3.1 та 3.2 реалізовано: предметна основа, реєстр, створення/редагування персональних відомостей і особові картки. Етап 3.3 реалізовано: кадрові зміни, виправлення історії та повне видалення. Етап 04 не розпочато. База змін 3.3 — `eab952a64f0effceb0751e7c09b7b7d35979051f`, `main`, дерево перед роботою чисте. База змін 3.2 — `6b07dbfbbfa3695c82b4ddf397ed44f6f776548c`, `main`, дерево перед роботою чисте. База змін 3.1 — `7bfab57c2d5af2fc0a19f4478055dde2442fe8db`, `main`, до першого запиту дерево було чистим; уточнення 3.1 застосовано поверх власних незакомічених змін цього чату. Етапи 2.1, 2.2, 2.4 та виправлення 2.4.1 реалізовано; 2.3 остаточно скасовано замовником. База змін 2.4.1 — `cfe1f404d11a3b31f0b70f3370a476cc2b7640a5`, гілка `main`, перед початком робоче дерево було чистим. Фактичний HEAD/стан завжди перевіряйте Git-командами. Версія застосунку залишається 0.1.0; до кадрової експлуатації ще не готовий.
 
 Авторизація, реєстрація, логіни/паролі, акаунти, сеанси, ролі/RBAC, розмежування функцій, відновлення пароля, шифрування SQLite/копій та спеціальні NTFS ACL не реалізуються й не плануються. Усі функції доступні після запуску без входу; стандартні дозволи Windows програмно не змінюються. Технічні IPC-перевірки залишаються обов'язковими.
 
 ## Реалізовано
 
-- Незалежний Electron 44.7.1 / React / TypeScript / Vite / pnpm, сім українських розділів і власна бузково-фіолетова дизайн-система. HromadaAID не змінювався. `reference/` — локальні матеріали, не змінювати й не додавати в Git; ресурс герба — `assets/community-coat.png`.
+- Незалежний Electron 44.7.1 / React / TypeScript / Vite / pnpm, сім українських розділів і дизайн-система HromadaAID з власною сиренево-фіолетовою палітрою HR (остаточне уточнення 3.4.2.1; зелений бренд 3.4.1 скасовано). HromadaAID не змінювався. `reference/` — локальні матеріали, не змінювати й не додавати в Git; ресурс герба — `assets/community-coat.png`.
 - Main: `contextIsolation=true`, `nodeIntegration=false`, `sandbox=true`, заборона навігації/redirect/webview/сторонніх вікон та дозволів. Обмежений contextBridge, sender/WebContents/mainFrame/URL, Zod для аргументів/відповідей і контрольовані коди помилок.
 - SQLite better-sqlite3 13.0.3 (Node-API prebuild), Zod 4.6.7; на 2.4.1 додано лише koffi 3.3.6 для фіксованих Win32-викликів (Node-API optional prebuild; build script вимкнено). Windows x64 native load та online backup перевірено в справжньому Electron Main. ARM64/пакування не перевірялися.
 - БД built: `%LOCALAPPDATA%\HromadaHR\data\hromadahr.db`; dev: `%LOCALAPPDATA%\HromadaHR-dev\data\hromadahr.db`. Корінь — системний LOCALAPPDATA, режим — чинний `!app.isPackaged && --dev`, без NODE_ENV. Незалежні Electron-профілі залишаються в `%APPDATA%`. `start:built` використовує продукційну БД, тому не є командою руйнівних тестів.
@@ -84,6 +106,19 @@
 
 Етап 04, наступні предметні модулі, інсталятор і реліз не розпочато.
 
+## Етап 3.4.1 — UI-основа HromadaAID
+
+- Нове рішення: HromadaAID — основний еталон компонентів, модалок, клавіатури, таблиць, календарів, toast і палітри. Постійне правило перевірки/максимального повторного використання source додано в AGENTS.md. Повна provenance-таблиця оригінальних файлів, адаптацій, виключень і ручного чекліста: [UI-TRANSFER.md](UI-TRANSFER.md).
+- Source HEAD read-only перевірено: 33eca10733caaf73b1a99e75a24ff35e706a0afb. Читалися pinned текстові файли через GitHub connector; потрібний snapshot у temp без .git. HromadaAID repo/config/history/profiles, reference/ не змінені; немає fork/subtree/submodule/monorepo.
+- Реально перенесено Modal, ConfirmDialog/UnsavedChangesConfirmation/closeConfirmation, SystemToast/Host, DatePicker/DateField, Select/SearchField, DictionaryTable/Toolbar/Search, Skeleton, KeyboardNavigation, ValidatedInput/Textarea, dates/calendar/keyboardNavigation/tabNavigation. Alert уже збігався з source; DataState зберігає HR planned. Auth access-denied/password/address-specific keyboard hook вилучені; source предметні сервіси не переносилися.
+- Root монтує keyboard boundary та один комплект hosts. Внутрішні cancel/breadcrumbs/sidebar переходи callback-based через source confirmation. Кадровий DeleteConfirmation — adapter спільного ConfirmDialog з Promise, busy/error й предметним попередженням; паралельний native-dialog прибрано. OS beforeunload поки native/sync: React-діалог не можна очікувати без зміни Electron close lifecycle, яке не змінювалося.
+- Кадрові дати — перенесений DateField, решта полів/довідників — Select/ValidatedInput. DatePicker підтримує ручний текст/clipboard/calendar/min/max/keyboard. ISO onChange тільки коректний; onDraftChange включає невалідний видимий текст у dirty. Форми перевіряють checkValidity/reportValidity перед IPC, щоб не записати старе ISO замість помилкового draft. Реєстр використовує source SearchField/DictionaryTable/TableSkeleton, картка — source tab navigation.
+- Усі видимі дати тільки ДД.ММ.РРРР, потрібний час — ДД.ММ.РРРР ГГ:ХХ, через src/lib/dates.ts. Виправлено backup autoDay/timestamps. Native date input у src немає. ISO SQL/IPC, технічні timestamps/імена файлів незмінні; model helpers делегують єдиній бібліотеці.
+- CSS вибрано за залежностями, не скопійовано монолітом: tokens/base/shell/контроли/модалки/таблиці/feedback/keyboard/animations/responsive з джерела. Green #286343, --accent* тільки aliases source токенів. Financial/report/auth/print rules виключено. HR бренд, сім розділів і assets/community-coat.png збережені. Повноекранні кадрові layout тимчасові до 3.4.2; не розвивати їх як другу систему.
+- Короткі кадрові/довідникові успіхи та feedback резервування — source toast queue success/error/warning/info із source durations/close/ARIA. Контекстні form/SQLite/restore Alert збережені. Source App/RecipientRegistry/AidRegistry та Bank/Decision/Delete modals проаналізовано лише в UI-частині; їхні фінансові repositories/сервер/auth не перенесено.
+- Перевірки: pnpm typecheck; pnpm test 104/104 + реальний Electron Main smoke; pnpm build; git diff --check. Вісім нових тестів дат/календаря/ISO payload/store підтверджень; наявна кадрова/SQLite/backup регресія успішна. Тільки temp БД/профілі. GUI snapshots/елементарні кліки не автоматизувалися; візуальне й клавіатурне ручне приймання не виконано (чекліст у UI-TRANSFER). App noEmit дозволяє .ts imports для чистих Node-тестів без залежностей.
+- Для 3.4.2: лишатися в цій гілці; компонувати EmployeeForm/AssignmentForm через source Modal, quick dictionaries — вкладені модалки; уніфікувати картку/toolbar/дії й прибрати зайві legacy selectors. Зберегти предметні обмеження 3.3, пройти ручне приймання. Main не зливати до завершення/перевірки міграції та окремої вказівки. До 3.4.2 не переходили.
+
 ## Аварійне відновлення 2.4.1
 
 - До ready App показує екран із причиною/кодом, вибором копії (лише CORRUPT/UNSUPPORTED_SCHEMA/MISSING_DATABASE), повторною перевіркою й закриттям. BUSY/FILESYSTEM не трактуються як пошкодження; довільних шляхів через IPC немає. Сім розділів залишаються недоступними до готовності SQLite.
@@ -112,7 +147,7 @@ IPC: system.getInfo/system.quit, storage.getStatus/storage.retry та backup.{ge
 ## Ручне приймання (не позначати виконаним без перевірки)
 
 - [ ] Dev і built запускаються/закриваються/повторно відкриваються, мають незалежні профілі й конфігурацію. Не підміняйте справжню built-БД для тестів.
-- [ ] Сім розділів, breadcrumbs, герб, бузково-фіолетовий дизайн, Tab/Enter/видимий фокус, вузьке вікно й масштаби Windows збережені.
+- [ ] Сім розділів, breadcrumbs, герб, дизайн HromadaAID, Tab/Enter/видимий фокус, вузьке вікно й масштаби Windows збережені.
 - [ ] Дві теки: системний picker/cancel, зміна/збереження/перезапуск, шляхи/доступність. Однакові/вкладені/data-теки відхиляються; один том дає попередження.
 - [ ] Після налаштування створено auto-копії в обох теках. Від'єднання одного тестового носія дає часткову помилку без блокування; пізніше повторюється лише невдала тека в межах ліміту.
 - [ ] Ручне резервування: виконання/блокування повторного кліку, результати окремо для обох тек, auto-день не змінено. Ручні копії не ротуються.
@@ -127,3 +162,268 @@ IPC: system.getInfo/system.quit, storage.getStatus/storage.retry та backup.{ge
 - [ ] Помилка доступу/диска/зайнятий файл не видається за пошкодження. Пошкоджена/новіша копія відхиляється, заміна без збереження оригіналу не відбувається.
 
 Автоматично перевірено: no-replace колізія, відсутність hardlink-викликів, частковий запис ENOSPC (ін'єкція), відсутня тека, WAL/ротація/штатний restore, пошкодження/заголовок/новіша схема/відомий відсутній файл, відмова доступу (ін'єкція), cancel, конфлікт handles другого процесу, неможливість зберегти оригінал, rollback невдалого reopen, завершення окремого процесу на трьох критичних етапах, повторний startup і перевірка raw-хешів. Фізичне заповнення/від'єднання носія, exFAT і GUI не перевірялися. Міграції/checksum, локальні шляхи, WAL і політика 14 auto/двох тек не змінені. Великі raw-файли наразі синхронно читаються для перевірки хешів; обсяг пам'яті/затримки потребуватимуть вимірювання.
+
+### Уточнення 3.4.1: глобальна політика
+
+Політика AID тепер діє для всієї подальшої розробки, включно з технічними можливостями. Закріплено в AGENTS/DECISIONS/ARCHITECTURE; створено HROMADAAID_REUSE.md із трьома групами: зараз, наступні підетапи, окремі майбутні етапи. UI-основа коміту 81fea1b уже перенесена; продовження поточного підетапу — компонування налаштувань, about та help. Кадрова перебудова 3.4.2 і стартовий сценарій ще не розпочаті. Чинний SQLite backup/recovery зберігається, його технічний аналог AID ще не оцінювався.
+
+Продовження 3.4.1 за глобальною політикою: інтегровано SettingsPage з джерельною секційною навігацією та about-картками; чинний BackupSettings залишається змонтованим при перемиканні секцій. HelpDialog і help-card адаптовано з App AID; контакти можна скопіювати, новий external IPC не додавався. Додано тільки потрібні settings/help CSS. Source SHA незмінний. Глобальна політика закомічена окремо (939e22e), runtime-доповнення — наступним невеликим комітом у тій самій гілці. SQLite/IPC/backup/security незмінні. 104/104 тестів та Electron Main smoke проходять; GUI-чекліст у UI-TRANSFER ще не виконано. До 3.4.2 не переходили.
+
+## Етап 3.4.2 — постійний реєстр і модальні кадрові сценарії
+
+База 85548b1218455d3679ec0d66009c4b1507ce769f, гілка codex/3.4.1-aid-ui-foundation; початкове дерево чисте. Main не змінюється й не зливається. Source AID — незмінний pinned SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb; повторно цільово звірено RecipientRegistry/AidRegistry та DecisionFormModal. RecipientFormModal є експортом RecipientRegistry.tsx, а не окремим файлом.
+
+- EmployeesWorkspace завжди монтує EmployeeRegistry; незалежні cardId/form/action дозволяють тримати картку під дочірньою формою. Пошук, підрозділ і напрям сортування належать reducer; відкриття/закриття вікон їх не скидає. Реєстр повторно не завантажується від самого відкриття/закриття модалки; DOM і scroll зберігаються, наскільки дозволяє зміна кількості рядків. Крихти — лише розділ «Працівники».
+- EmployeeForm/AssignmentForm використовують Modal, recipient-fieldset/form-grid/form-actions; DirectoryForm — компактна вкладена модалка, parent form залишається змонтованою. Після створення довідника запис додається/вибирається, при CONFLICT перелік оновлюється, фокус повертається до Select. Довідники зберігаються одразу.
+- EmployeeCard — large Modal із власним scroll, джерельними recipient-detail секціями/таблицею історії та dictionary-tabs. Вибрана вкладка зберігається під час дочірніх операцій. Після мутації використовується відповідь Main і повторно читаються картка/історія/довідники; hire/current не обчислюються незалежно в React. Майбутні вкладки — заглушки.
+- У реєстрі Eye/Pencil/Trash2 з назвами й title. EmployeeActionDialog читає актуальні getEmployee/getHistory перед прямим редагуванням/підтвердженням видалення; confirm недоступний до успішного читання. Помилка видалення залишає діалог. Видалення працівника прибирає рядок і закриває картку, довідники незмінні.
+- useUnsavedChanges отримує явний ref власника. Один контролер на workspace перевіряє вкладені форми зверху вниз; pending source confirmation не дублюється. Busy блокує закриття й навігацію. Cancel/хрестик/Escape/backdrop і sidebar використовують однакові callbacks. Один beforeunload лишається синхронним із window.confirm; Electron lifecycle не змінювався.
+- Прибрано повноекранні кадрові представлення, DeleteConfirmation adapter та legacy CSS форм/вкладок/таймлайна. Незмінні Modal/ConfirmDialog/KeyboardNavigation/DateField/Select/Toast повторно не переносилися.
+- Перевірки: pnpm typecheck; цільові UI-тести 22/22; pnpm test 110/110 та ELECTRON_STORAGE_OK (Windows x64, Electron 44.7.1); pnpm build; git diff --check. Нові шість тестів охоплюють reducer, авторитетні відповіді, явних власників/вкладені підтвердження, busy/зміну стеку, ISO/null payload і невалідні дати. БД/профілі — тільки temp у чинних тестах. GUI-взаємодію не автоматизували й ручне приймання не виконували.
+
+SQLite/міграції/PersonnelService/13 IPC/preload/security/backup незмінні. Стартовий сценарій, налаштування та about не перебудовувалися. Відомі обмеження: GUI/focus/inert/піксельна відповідність ще потребують ручної перевірки; createEmployee сумісно з 3.3 дозволяє майбутнє початкове прийняття, нові кадрові зміни — ні. Реєстр зберігає параметри всередині розділу, без localStorage чи збереження між перезапусками. Деталі та наскрізний чекліст — UI-TRANSFER.md, секція 3.4.2. До 3.4.3 не переходити без окремого завдання.
+
+## Етап 3.4.2.1 — візуальне доопрацювання
+
+База `63e48527ea450d958be597688945651fcb481ef4`, та сама гілка `codex/3.4.1-aid-ui-foundation`, початкове дерево чисте. Main не змінено. AID source SHA 33eca107 незмінний; цільово перечитано App/SettingsPage/styles за pinned ref. AID не змінювався.
+
+- Палітра HR: accent #6F5AA5, hover #594681, soft #EFEAF7, app #F7F6FA, panel border #E4DFEC; secondary #61687C трохи темніший від орієнтиру для AA на світлих поверхнях. Green імен/aliases немає; brand/controls/calendar/tabs/settings/help переведено на один комплект семантичних токенів. Success/error/warning лишилися окремими кольоровими станами. Автотест перевіряє звичайні текстові пари ≥4,5:1 і focus ≥3:1; це не сертифікація всього GUI.
+- Головна: реальний workspace-coat-area із центруванням і object-fit contain для чинного герба, компактний перехід до працівників, AID footer із роком/радою/роздільником/Code2/автором. Topbar sticky, sidebar fixed; стартову послідовність 3.4.3 не реалізовували.
+- BackupSettings: огляд persisted стану, попередження sameVolume поруч, дві адаптивні картки зі шляхом/доступністю/успіхом/помилкою, технічні відомості в details, окремі звичайні дії й зона restore. Draft вибору явно не є збереженою конфігурацією; час попередньої копії не видається за успіх у новій теці. Успіх — toast; помилки й небезпечні стани — persistent Alert. Службове повідомлення «сховище готове, схема…» більше не займає верх налаштувань, помилки StorageNotice залишені.
+- Примітка: згорнута в новій формі, відкрита для редагування наявного тексту, note/null payload без змін; порожню секцію картки прибрано. Категорія: спільний CategoryField на Select I–VII/не зазначено в додаткових реквізитах; невідоме збережене значення лишається доступним без заміни. Нове значення не встановлюється автоматично. Великі readonly кадрові дані в персональній формі замінено короткою підказкою; вони лишаються в картці.
+- Non-confirm іконки заголовків вирівняно з текстом; компактніші відступи форм. Початкове червоне оформлення не залежить від browser :user-invalid: ValidatedInput/DateField/Select керують aria-invalid після взаємодії/submit. Явні перевірки та focus-first-invalid лишилися. Стек Modal/guards не змінено.
+- Перевірки: typecheck, цільові UI-тести 26/26, pnpm test 114/114 + Electron Main smoke, pnpm build, git diff --check. Лише temp БД/профілі; реальні копії/продукційна база не відкривалися. Нові тести: nullable/category/note roundtrips, persisted backup overview/partial errors/sameVolume/busy, контраст токенів. Ручні GUI-сценарії не виконувалися; чекліст 1600×900, 1366×768, вузьке вікно, Windows 125–200% у UI-TRANSFER.
+
+SQLite/міграції/кадровий backend/13 IPC/WAL/backup/recovery/preload/security незмінні; жодних нових залежностей. До 3.4.3 не переходити без окремого завдання.
+
+## Етап 3.4.2.2 — дві таблиці та спрощення моделі
+
+База 1797284d372ef6cc33192aecaeed4d16f48f6443, гілка codex/3.4.1-aid-ui-foundation; початкове дерево чисте. Main не зливався; 3.4.3 не розпочато. HromadaAID source SHA 33eca107 незмінний, цільово прочитано RecipientRegistry/AidRegistry/styles; джерело не змінювалося.
+
+- Реєстр: постійні секції official/staff з власними DictionaryTable/заголовком/лічильником/empty state. EmployeeGroupTable — мала обгортка готового DictionaryTable. Тип визначається employeeType; personal edit переносить рядок між групами. Колонку типу вилучено.
+- Спільна панель SearchField/Filters/Select department+position/Clear/Reset sort наслідує RecipientRegistry composition та AidRegistry toolbar/filter/sort. Пошук — NFC, пробіли, український регістр, поєднання частин ПІБ. Фільтри перетинаються для обох груп, badge рахує підрозділ/посаду; clear прибирає також пошук. Sort official/staff незалежний: fullName/position/department/hireDate, новий ключ asc, повтор desc, default FIO asc; uk/base Collator, ISO, tie ПІБ/id, без мутації масиву. FiltersOpen/query/filter/sorts у workspaceReducer зберігаються під час модальних операцій.
+- Міграція 4/remove_employee_note: тільки ALTER TABLE employees DROP COLUMN note, requiresBackup=true; чинний verified snapshot/transaction/FK/integrity механізм. Міграції 1–3/імена/SQL/checksum незмінні. Note немає в active DB, shared EmployeeDetails, Zod, service SQL, формах чи картці. Старий note-параметр відхиляється strict IPC, не ігнорується.
+- Старі примітки лишаються в незмінених v3 джерелах/копіях і protect-migration-v4 snapshot до SQL. Відновлення старої копії в цій версії мігрує staged дані до v4, тому note знову немає в активній БД; вихідна копія не переписується. Помилка захисної копії блокує DROP; SQL-помилка відкатує схему/ledger/user_version. Старий клієнт без migration 4 не підтримує v4.
+- CategoryField/categories choices вилучено; category залишається string|null у employee_positions/Assignment/IPC. Create employee передає null. Correction завжди передає category виправлюваного запису, навіть при зміні посади/дати. New assignment спочатку читає getHistory; до успіху submit заблокований, є retry. На вибрану дату береться останній стан <= дати; до першого — перший відомий стан. Same positionId — inherit category, different position — null; підрозділ сам категорію не скидає. Main chronology незмінна, беззмістовні дублікати відхиляються. Read-only category є в історії й поточних відомостях, якщо наявна. Юридична доречність legacy category при correction не визначається; окреме керування — майбутній модуль рангів.
+- Home: реальні total/official/staff через listEmployees/employeeCounts; loading/error/retry, не fake zero на помилці. Банер/герб/тема/footer/перехід збережені.
+- Backup UI: sameVolume тільки один warning, без дубля в summary. Config, availability, latest-attempt success відокремлено; старий lastSuccess при новій помилці не рахується успішною останньою спробою. Дві успішні копії не означають незалежності носіїв. Backup/recovery runtime, IPC/14 auto/захист незмінні.
+- Перевірки: typecheck, нові цільові тести 8/8 (registry/policy/migration), pnpm test 121/121 + реальний Electron Main smoke, pnpm build, git diff --check. Окремо пройшли 21 backup/migration і 31 registry/UI/IPC тест. Fresh, v2/v3→v4, rollback/protection failure, restore v1/v3 перевірені; тільки temp БД/профілі. GUI snapshots/кліки не автоматизувалися, ручне приймання ще не виконано.
+
+Без нових залежностей, IPC-методів, SQL sorting, pagination, auth/roles/шифрування чи наступних модулів. Source adaptations та ручний чекліст — UI-TRANSFER, секція 3.4.2.2. Не зливати main й не починати 3.4.3 без окремого завдання.
+
+
+## Етап 3.4.2.3 — завершальні UX-правки та журнал резервування
+
+База 1c0c707353dfcc55be6949118c06d99b84731127; гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Main не змінюється, 3.4.3 не розпочато. AID read-only, pinned SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb.
+
+- Головна: workspace-actions/workspace-shortcuts з App AID; п'ять карток «Щоденна робота», активні лише працівники й налаштування. Майбутні модулі позначені «У розробці». EmployeeSummary та читання кадрових даних на головній вилучено; герб/банер/футер збережено.
+- Реєстр: звичайний виразний ПІБ, відкриття через Eye; створення останнім у aid-toolbar; Дії центровані; зайвого загального підсумку немає. Дві таблиці, фільтри, незалежне сортування й modal state без змін. З історії картки прибрано тільки відображення колонки category; дані/контракти незмінні.
+- Контакти: кнопки відкриття та копіювання, помилка з ручним fallback. system.openContact приймає тільки phone/workEmail/personalEmail/telegram, Main визначає фіксований tel/mailto/HTTPS і викликає shell.openExternal. Довільного URL IPC немає; sender/frame/URL та Zod збережені.
+- Backup UI: короткий стан/останній успіх, політика в details, компактні картки/дії, окреме небезпечне відновлення, без приховування помилок чи warning одного тому. Історія в DictionaryTable за структурою EventTable/BackupManagement AID: час/операція/місце/результат, останні 5 або всі, фільтр усі/успіх/помилки. Demo events та серверна/auth-логіка не переносилися.
+- Main-only backup-history.json поряд з активною БД: %LOCALAPPDATA%/HromadaHR/data/backup-history.json (dev — HromadaHR-dev). Окремо від SQLite й recovery journal, не замінюється при restore. JSON із Zod strict schema; максимум 200 подій і 64 КіБ; запис через тимчасовий файл та rename. Немає ПІБ, шляхів, вмісту БД чи довільного тексту помилок. Читання тільки backup.getHistory без аргументів.
+- Фактичні результати auto/manual окремо за slot, успішний config, restore success/cancel/error та відхилена підготовка restore. Статус і пропущені цикли не журналюються. Старі події не вигадуються; порожній стан прямо пояснює початок накопичення після оновлення. Збій читання/запису — available=false, основні операції продовжуються. Невідомий результат при аварійному завершенні не видається за успіх; цей діагностичний журнал не замінює recovery journal і не гарантує фінального запису при падінні процесу/живлення.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; 4 нові цільові тести IPC/history, 18 наявних backup і 18 IPC тестів пройшли (40 загалом). Повний pnpm test не запускався — для UI змін немає технічної необхідності. Нових GUI-тестів немає; всі руйнівні тестові операції лише в mkdtemp профілях. Ручне GUI-приймання не виконувалося. Міграції 1–4, кадрова модель/13 IPC, файли snapshot/recovery/WAL, політика резервування та залежності незмінні.
+
+
+## Етап 3.4.3 — стартовий екран і фінальне ручне приймання
+
+База 1747a0ac11f534fbd4e9af2d8ab72269868a1815, та сама гілка codex/3.4.1-aid-ui-foundation; початкове дерево чисте. Main не зливався. AID source SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово прочитано src/App.tsx StartupScreen/sequence, src/lib/startup-timing.ts, src/styles.css та src/main.tsx. Джерело не змінювалося.
+
+- StartupScreen повторно використовує JSX/геометрію/анімації AID: світле тло, UsersRound, HromadaHR, кадровий підпис, indeterminate loader. Тільки сиреневі токени HR; reduced-motion вимикає нові анімації. Кадровий UI не змінено.
+- Єдина STARTUP_MINIMUM_MS=2000 замість AID 5000. App від моменту монтування показує заставку до ready й мінімуму; тривала SQLite не отримує додаткових 2 секунд. Error/closed має пріоритет над gate й одразу веде в чинний RecoveryScreen. Polling status — раз на секунду, без команди ініціалізації з React/StrictMode. Після успішного gate заставка не повторюється через IPC, модалки чи навігацію; справжнє перезавантаження renderer створює новий gate.
+- Main createStartup memoize Promise: створити/завантажити вікно, дочекатися ready-to-show, показати, один раз initializeSafely, тільки ready + відсутній вихід => backups.start. Системний фон вікна узгоджено з темою. Ранній storage.retry повертає initializing без другого reopen. Вихід очікує startup initialization та чинну backup-операцію; не запускає новий auto-цикл під час закриття.
+- Bootstrap: StartupBoundary із AID main.tsx; окремий малий main.tsx ловить відмову dynamic import React/App/CSS до існування boundary. Помилки без stack traces. Помилку документа loadFile/loadURL як і раніше показує native dialog Main. Не перенесені auth/welcome/user sessions/connection/update gates.
+- Збережені Storage.initializeSafely, перевірки/маркери першого запуску, protective snapshots, міграції 1–4/checksum, recovery, WAL, sender/security/isolation та всі IPC-контракти. Нових залежностей чи IPC немає.
+
+Мінімальні перевірки: pnpm typecheck, pnpm build, git diff --check; tests/startup.test.mjs 5/5 (fast/slow/error gate, Main order/once, retry/personnel guard, close/error без auto). Наявний Electron Main smoke — ELECTRON_STORAGE_OK (Electron 44.7.1, Node 24.21.0, Windows x64). Тільки temp БД/профілі; повний pnpm test не запускався, UI/CSS/animation тести не створювалися.
+
+Відомі межі: перший показ Windows та точність анімацій ще не прийняті вручну; sync integrity-check/частини міграцій можуть займати Main і затримувати IPC status, тому індикатор без відсотків. Мінімум рахується від монтування App, не від запуску процесу ОС. Boundary не відновлює падіння renderer-процесу й не може виконатися, якщо відсутній сам початковий JS entry; документна помилка обробляється Main. Повний приймальний чекліст 3.4 нижче в UI-TRANSFER, усі пункти невиконані. Автооновлення/installer/майбутні кадрові модулі не реалізовувалися. До наступних етапів і merge main — тільки окрема вказівка.
+
+Уточнення startup/recovery 3.4.3: успішний BackupController.confirmRestore викликає Main onRestored callback. Той запускає наявний scheduler тільки за ready та !closing; це відновлює auto-backup після початкової помилки, коли startup його не запускав. Cancel/error callback не викликають. Формат/підтвердження/атомарність restore незмінні. Цей callback додатково перевірено в наявному справжньому Electron Main smoke без GUI-діалогів.
+
+Перший кадр та renderer-ready: openWindow очікує і ready-to-show, і перше довірене storage.getStatus із змонтованого App effect (чинний IPC, без нового каналу). Це не дає почати SQLite до завантаження динамічних React/CSS залежностей і появи заставки. Закриття вікна завершує очікування без ініціалізації; при помилці bootstrap видно fallback, а SQLite ще не відкривається.
+
+
+## Етап 3.4.3.1 — оболонка, заставка й навігація
+
+База d3fd0534e276cf0d4df9a812a18f62becb02e0a0, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Цільово звірено read-only electron/main.ts і src/styles.css HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb.
+
+- Вікно: AID maximize() перед show() у ready-to-show при show=false. Звичайна максимізація, без fullscreen/kiosk і ручного обчислення пікселів; робочу область/DPI визначає Windows/Electron. Відновлення/resize/minimize/close штатні; 1000×700 лишається розміром відновленого вікна.
+- Єдина STARTUP_MINIMUM_MS тепер 3500 мс від App mount; helper решти часу, пріоритет RecoveryScreen, анімації/reduced-motion та Main coordinator незмінні.
+- На головній чотири картки: працівники активні, відпустки/стаж і ранги/документи — «У розробці». Settings-картку вилучено, налаштування доступні в sidebar. Геометрія/токени AID/HR збережені. Container query workspace-actions: <520 CSS px — 1 колонка, від 520 — 2, від 1040 — 4; це внутрішня доступна ширина контейнера, не роздільність монітора.
+- Help перенесено над СИСТЕМА/Налаштування в sidebar-bottom. Margin-top:auto та чинні overflow/narrow sidebar правила збережені; налаштування тепер останні внизу. Герб/банер/футер незмінні.
+- Чинний startup-тест лише підтримано: очікування залишку залежить від константи замість старих 1500 мс; нових тестів немає. Виконано тільки pnpm typecheck, pnpm build, git diff --check. Тести/ Electron smoke не запускалися: критичну послідовність ініціалізації не змінено. SQLite/кадровий backend/backup/restore/IPC не змінені.
+
+Ручний GUI-чекліст — НЕ ВИКОНАНО:
+
+- [ ] Dev та built: перший видимий кадр максимізований, без малого вікна; Відновити/resize/minimize/close працюють, taskbar не перекритий. Перевірити різні монітори й Windows 125–200%.
+- [ ] Успішний старт: мінімум 3,5 с від App mount, довша SQLite без додаткової затримки; помилка на тестовому профілі одразу відкриває RecoveryScreen.
+- [ ] Full HD/2K за достатньої ширини: чотири картки в ряд; звуження контейнера дає 2/1 без обрізання та горизонтального overflow сторінки. Settings-картки немає.
+- [ ] Help над системним блоком, settings унизу; вузький sidebar/коротке вікно: focus/click/внутрішній scroll доступні.
+
+Історичні описи 3.4.3 вище з 2000 мс не переписуються; актуальна тривалість — 3500 мс. Main не зливати; 3.4.3.2 не починати без завдання.
+
+
+## Етап 3.4.3.2 — кадрові форми, реєстр і картка
+
+База b3b8758729b20dc891e058f42784b3559d7f31d4, гілка codex/3.4.1-aid-ui-foundation; початкове дерево чисте. Цільово звірено read-only AID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: src/components/Select.tsx, src/RecipientRegistry.tsx і відповідні src/styles.css (Select search, recipient history/footer, icon actions). Чинні компоненти повторно використано; нової UI-системи немає.
+
+- EmployeeGroupTable: ПІБ → підрозділ → посада → дата прийняття → дії; sort keys department/position та клітинки відповідають назвам, ширини 28/24/26% і чинні фіксовані дата/дії. Фільтри, official/staff та логіка сортування незмінні.
+- EmployeeForm/AssignmentForm: спочатку два селектори, дата нижче у повноширинному рядку з компактним полем до 260 px. DOM-порядок відповідає візуальному, без ручних tabIndex. Payload/DateField validity/drafts незмінні. DirectoryFields використовує спільні secondary-button з Plus (44×44), title/aria-label і попередні disabled/pending/створення/повернення фокусу.
+- Select: причина подвійного фокусу — наявний зовнішній app-select-search:focus-within плюс загальні input:focus-visible та data-keyboard-active shadow. Локальне правило лише для focused input усередині app-select-popup/app-select-search прибирає внутрішні outline/shadow/border/background; зовнішня focus-within рамка з shadow залишається. Select JSX, keyboard attributes/навігація та інші поля не змінені.
+- Картка: історія має 5 колонок початок/завершення/підрозділ/посада/дії, назви з чинних dictionary ID maps. Ширини 16/16/25/27/16%, fixed layout, min-width 760 px, прокручування wrapper. Pencil/Trash2 — кнопки 40×40 з hover/focus, aria-label/title та збереженим confirm/забороною видалення єдиного запису. Прибрано технічне пояснення.
+- Видалення працівника перенесено поруч із редагуванням, без нижнього дубля; використовує той самий EmployeeActionDialog/ConfirmDialog з актуальними ПІБ/кількістю/попередженням/блокуванням. Нижній стандартний recipient-form-actions footer має «Скасувати» й той самий guarded close, що хрестик (також при loading/error). Parent/modal stack не змінено.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check. Нових тестів немає, чисті функції не змінювалися, повну регресію/GUI-тести не запускали. SQLite/міграції/PersonnelService/IPC/category/history/delete policy/backup/restore незмінні.
+
+Ручне приймання — НЕ ВИКОНАНО:
+
+- [ ] Обидві таблиці: підрозділ перед посадою, заголовок сортує саме свій стовпець; пошук/фільтри/дії збережені.
+- [ ] Створення й кадрова зміна: селектори вгорі, компактна дата окремо, Tab/Enter/Ctrl+Enter, дати/validation/payload без втрати даних.
+- [ ] Обидва Plus: tooltip/назва, вкладена форма збереження/CONFLICT/повернення фокусу; поточна форма не втрачає даних.
+- [ ] Пошуковий Select мишею й клавіатурою: одна видима рамка без внутрішнього зсуву; ввід/стрілки/Tab/Escape працюють.
+- [ ] Історія: 5 колонок, довгі назви переносяться; Дії відцентровані, Pencil/Trash2 доступні, єдиний запис не видаляється.
+- [ ] Верхнє видалення працівника — тільки синтетичний запис, із підтвердженням. «Скасувати»/хрестик закривають ту саму картку; вкладені модалки/dirty guard/pending не обходяться. Видалення — РУЙНІВНЕ, лише тестові дані.
+- [ ] Вузьке вікно/Windows 125–200%: scroll лише таблиці, не всього modal; footer та дії доступні.
+
+Main не зливати; 3.4.3.3 не починати без окремого завдання.
+
+
+## Етап 3.4.3.3 — бренд, About і підтримка
+
+База 0d46bb28dd46d2b2962adbae4f1a5e0f5863b953, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Джерело AID read-only SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово прочитано assets/hromadaaid.svg/png/ico, assets/README.md, electron/copy-assets.mjs, electron/main.ts, src/SettingsPage.tsx, App Help Modal і scripts/generate-manager-icons.mjs.
+
+- Власний комплект assets/hromadahr.svg/png/ico: знак чинного UsersRound із встановленого lucide-react, 22×22 у квадраті 42×42, rx=12, stroke 2.1, білий на #6F5AA5. SVG — джерело, PNG 512×512, ICO 16/24/32/48/64/128/256 із PNG-кадрами. Ліцензія геометрії — assets/LUCIDE-LICENSE.txt. Герб community-coat.png незмінний.
+- Генератор scripts/generate-icons.mjs адаптовано з AID: тільки наявний Electron offscreen, перевірений mkdtemp profile/session/log/crash, без продукційної БД і нових залежностей. Команда розробника node scripts/generate-icons.mjs; готові PNG/ICO в Git. Build і запуск не генерують зображення.
+- electron/copy-assets.mjs копіює готові три ресурси до dist-electron/electron/assets через build:electron. BrowserWindow.icon — ICO у Windows, PNG поза Windows; однаковий шлях для dev/built без Vite, бо обидва запускають скомпільований Main. Packaged lookup, за AID, очікує resources/assets поза ASAR; фактичний packager/extraResources має бути налаштований в окремому етапі. NSIS/EXE/реліз не створюються. App ID/AppUserModelID/назва/профілі/startup coordinator незмінні.
+- SettingsPage About тепер імпортує продуктовий SVG, як AID hromadaAidLogo; версія з IPC, технічні дані, розробник/громада збережені. Головна лишається з гербом.
+- Help: wide Modal; одна візуальна картка контакту з двома сусідніми button (open і Copy), без вкладених button/великих написів «Скопіювати». Container width >=600 px — дві колонки, нижче одна, довгі адреси переносяться. Copy має aria-label/title, hover/focus і success SystemToast; чинні помилки й Ctrl+C fallback збережені. Чотири ID та Main external IPC незмінні. Нижня примітка тільки про версію.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; SVG розібраний XML-парсером, PNG IHDR=512×512, ICO directory/межі/сім PNG frame sizes перевірені одноразово, ICO також відкрився Windows System.Drawing decoder (32×32). Всі три built-ресурси побайтово збігаються з вихідними. PNG переглянуто як окремий ресурс; GUI/панель завдань/About/контакти вручну не приймалися. Нових UI-тестів/системи перевірки іконок/повної регресії немає.
+
+Межа Windows: незапакований electron . може показувати іконку executable Electron у taskbar/Explorer/старому закріпленні. BrowserWindow.icon налаштований; фірмові EXE/ярлик/інсталятор потребують майбутнього пакування, конфігурації ICO й extraResources. Кеш Windows і персональні ярлики не змінюємо.
+
+Ручне приймання — НЕ ВИКОНАНО:
+
+- [ ] Dev і built без Vite: іконка вікна/Alt+Tab; окремо зафіксувати можливу стандартну taskbar-іконку незапакованого Electron, не плутати з майбутнім EXE.
+- [ ] About: продуктовий логотип/реальна версія/відомості; на головній лишився герб громади.
+- [ ] Контакти: дві/одна колонки, цілісні картки, адреси без неприродного перенесення; open і Copy виконують різні дії.
+- [ ] Copy: tooltip/Tab/Enter, один success toast або зрозуміла помилка; tel/mailto/Telegram та fallback Ctrl+C працюють.
+- [ ] Вузьке вікно/масштаб Windows 125–200%: немає горизонтального overflow чи надмірно вузького тексту.
+
+Main не зливати, 3.4.3.4 не починати без окремого завдання.
+
+
+## Етап 3.4.3.4 — нове компонування резервування
+
+База d33887191f655f45f04d7cdb04367fa197bfc487, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Read-only AID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово звірено src/SettingsPage.tsx і server-manager/src/BackupManagement.tsx (settings cards, компактні заголовки/статуси, preview/running/error modal та footer). Повторно використано чинні HR Modal/Alert/DictionaryTable/Select/Toast, без нової UI-системи або backend AID.
+
+Фактичні п'ять зон:
+
+1. Короткий заголовок, стан і час останньої успішної копії без великого кольорового panel. Стан визначається з поточних availability/error/config, а не зі старого lastSuccess. Помилка читання статусу показується окремо; невідомі дані не підміняються нулями або відсутністю копій. Same-volume — один короткий видимий Alert.
+2. Дві рівновисокі компактні картки тек (на вузькій ширині одна): availability, path/title, lastSuccess і зміна теки. Draft позначено «Не збережено», час попередньої копії явно належить активній конфігурації. Помилки тек видимі, технічні коди не замінюють зрозумілого тексту.
+3. Один toolbar: головна ручна копія для налаштованих тек; інакше головна дія — збереження. Save disabled без draft або неповної конфігурації. choices/FolderSelection.token лишаються в тому самому стані змонтованого BackupSettings; SettingsPage продовжує ховати backup tab через hidden, не демонтувати. Автозбереження немає; ручна копія використовує активні теки, про draft є коротке нагадування.
+4. Історія: чинний Main-only журнал, 5/усі, фільтр, та сама хронологія/дані/опитування. Порожній стан — невеликий текст; недоступна/неповна історія — error Alert, не порожній успіх. Коди подій доступні через title результату без постійного технічного рядка.
+5. Відновлення: короткий підпис і одна кнопка, без старого backup-restore panel/вкладених details/великого Alert. Спільні «Технічні відомості» нижче згорнуті: політика/інтервал/ліміти й обидві теки з active path, lastAttempt, kind, autoDay (UI-формат), fileName та error code.
+
+Restore UI: chooseRestore відкриває штатний picker; cancel тихо повертає settings. Успішний вибір показує Modal із fileName/schemaVersion, попередженням про заміну та protective copy, footer Cancel/Continue. Безпечний початковий фокус на Cancel. Continue передає лише чинний token у confirmRestore; обов'язковий native Electron confirmation лишається в незміненому Main. Реф-guard/busy блокують дублювання та закриття; після success Modal блокується до чинного reload. Native cancel закриває preview без помилкового success. Після будь-якої спроби confirm UI консервативно не використовує token повторно; при помилці Modal лишається з Cancel/новим вибором (також для expired token). Транспортна невизначеність після confirm чесно позначена як непідтверджений результат. Повторний picker інвалідовує старий вибір за чинною Main-політикою; його cancel закриває preview.
+
+Межі збережено: BackupService/Controller, recovery/Win32/mutex, staged snapshot/protection/rollback, SQLite/міграції, backup-history.json, IPC, auto cycles/two targets/rotation не змінені. src/backup/presentation.ts та чисті функції незмінні. Сторінка max-width 1100px; адаптація двох карток/technical grid від ширини backup-container 640px, toolbar переноситься; нових nested scroll-панелей немає.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check — успішні. Нових GUI/текстових/модальних тестів немає; повні/backup тести не запускалися: змінено тільки React presentation/інтеракцію, яку приймає замовник вручну; критичний backend і чисті моделі незмінні. Застосунок/продукційна БД та реальні резервні копії для перевірок не запускалися.
+
+Ручне GUI-приймання — ПЕРЕДАНО ЗАМОВНИКУ, НЕ ВИКОНАНО:
+
+- [ ] Дві теки: первинний вибір, зміна однієї/обох, draft badge; About і назад/перерендер не губить вибір; Save зберігає лише явно. Ручна копія до Save використовує активну конфігурацію.
+- [ ] Ручна копія: немає подвійного запуску, окремі результати обох тек; на тестовому профілі часткова недоступність показує конкретну помилку й не видає старий lastSuccess за поточний успіх. Same-volume warning лише один.
+- [ ] Журнал: 5/усі/фільтр, маленький empty; недоступність — помилка, без вигаданих подій. Технічний details відкриває всі службові дані, без ISO дат у UI.
+- [ ] Restore picker cancel — тихе повернення; preview показує правильний файл/schema, Cancel/хрестик/Escape/backdrop повертають settings.
+- [ ] ТІЛЬКИ ІЗОЛЬОВАНИЙ ПРОФІЛЬ: native confirm cancel, expired token/повторний вибір; busy не дозволяє повторне підтвердження/закриття. Помилка лишає preview з безпечним Cancel.
+- [ ] ВІДНОВЛЕННЯ РУЙНІВНЕ: лише тестова БД/копія; Continue → обов'язковий native confirmation → protective copy/reload. Не виконувати на продукційних даних.
+- [ ] 1366×768, Full HD, вузьке вікно/Windows 125–200%: компактні зони, довгі шляхи, toolbar, modal footer і фокус без накладання/горизонтального overflow сторінки.
+
+Main не зливати. Наступні кадрові модулі без окремого завдання не реалізовувати.
+
+
+## 3.4.3.5 — zoom, сітка дат і CSP логотипа
+
+База d51e2fb79696b1d8a88acf4fd12a1f0f90782f2f, та сама робоча гілка; початкове дерево чисте. У read-only AID S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb) цільово перевірено electron/main.ts і src/SettingsPage.tsx: у цих файлах zoom-аналога немає; HR використовує власний вузький Main-механізм і чинний Select.
+
+- ZoomController — єдиний стан 80/90/100/110/125/150%; before-input-event перехоплює тільки Ctrl Plus/Equal/Minus/0 та NumPad +/-, ігнорує Alt/Meta/composition, не чіпає Ctrl+Enter. Межі 80–150%, кроки за тим самим переліком. Викликається setZoomFactor; значення застосовується перед show та після load. Menu/DevTools не повертаються, startup coordinator незмінний.
+- interface-settings.json у app.getPath('userData'): %APPDATA%/HromadaHR[-dev], незалежні dev/built, без SQLite/нових залежностей. Strict дозволені числа, обмежене читання, запис через .tmp/rename. Некоректний файл дає 100% і saved=false; збій запису не приховується, UI попереджає про можливу втрату масштабу після перезапуску.
+- Явні system.getZoom/setZoom у типізованому preload/IPC з наявними sender/frame/URL guards, Zod args/results. SettingsPage показує компактний Select праворуч у heading; читає Main після resize/focus та раз на секунду, не має окремого джерела масштабу/localStorage.
+- employee-date-row — subgrid: дата займає повну ширину першої колонки й автоматично єдину колонку вузької форми. DirectoryFields постійна підказка вилучена. DateField/значення/dirty/validation/payload/кадровий backend незмінні.
+- Підтверджено старий data:image/svg+xml у bundle. About import svg?no-inline примусово створює dist/assets/hromadahr-*.svg; посилання у built bundle перевірено, img-src 'self' не послаблено. Продуктовий логотип і головний герб незмінні.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; одна tests/zoom.test.mjs перевірка — allowed IPC/sender/URL, клавіші без перехоплення Ctrl+Enter, фактичний виклик ZoomFactor через double, persistence/профілі/некоректні значення/помилка запису, лише mkdtemp. Наявне preload allowlist очікування підтримано для get/set; повний набір/GUI/snapshots не запускали. Фактичне Windows GUI-приймання не виконано.
+
+Ручний чекліст: Ctrl +/Shift+=/−/0 і NumPad у формі; відсоток у Settings, шість варіантів, restart і незалежні dev/built; Ctrl+Enter форм збережений; дата за сіткою/вузьке вікно; About логотип у dev та built/file://. При збої збереження zoom — видиме повідомлення. Main не зливати, наступний підетап без завдання не починати.
+
+
+## 3.4.3.6 — остаточне компонування резервування
+
+База a03bcaac776a6db81b446e30fdd480540ec93422, гілка codex/3.4.1-aid-ui-foundation, початкове дерево чисте. AID S1 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово повторно звірено server-manager/src/BackupManagement.tsx та server-manager/electron/main.ts — патерн відкриття збереженого резервного каталогу.
+
+- Прибрано max-width 1100px: root та історія заповнюють доступний .content, дві рівні колонки лишаються responsive 2→1 за шириною container. BackupHistory і фільтри не змінені.
+- Збережена конфігурація без draft: лише «Створити резервну копію». З draft: компактна панель «Зберегти зміни / Скасувати зміни» з нагадуванням про старі auto-шляхи; cancel відкидає тільки локальний вибір, не змінює активний backend. Початкове налаштування пропонує дві теки, Save доступний після двох виборів; ручної копії до збереження немає. Busy/ref, toast, явні часткові помилки збережені.
+- Активний доступний шлях — selectable текстова button-link із ArrowUpRight, title/aria-label/focus. Мишаче виділення не відкриває каталог, Ctrl+C зберігається; Enter активує дію. Draft/недоступний шлях — лише текст без open.
+- Новий єдиний Main operation backup.openBackupFolder(slot): strict tuple 1|2, чинні sender/mainFrame/URL та result=null Zod. Controller читає збережений path через BackupService.getStatus, відхиляє busy/відсутність/недоступність, повторно виконує directory (absolute/directory/realpath/access) та shell.openPath; shell errors нормалізуються FOLDER_UNAVAILABLE, без технічних деталей. Renderer не передає path. У тесті OS opener ін'єктується лише в Main-конструктор; production використовує Electron shell. BackupService не змінено.
+- Технічний details і його CSS повністю вилучені з BackupSettings. Поля BackupStatus/БД/журналу, 14 auto/два місця/retry policy збережені. Restore picker/Modal/token/native confirm/algorithm, RecoveryScreen та історія не змінені.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; одна цільова tests/open-backup-folder.test.mjs перевірка в Electron Main із mock shell.openPath та temp профілем — пройшла (slot allowlist, extra/path args, sender/frame/URL, повторна перевірка missing/unavailable/not-configured, shell error без витоку, busy). Перший запуск test harness мав timeout через top-level await app.whenReady в ESM; виправлено лише тестовий запуск на whenReady().then, повторний запуск успішний. Провідник реально не відкривався, продукційні дані не використовувалися. Нових GUI-тестів/повної регресії немає. Наявне preload allowlist очікування оновлено для одного нового методу.
+
+Ручне GUI-приймання — НЕ ВИКОНАНО:
+
+- [ ] Full HD/1366×768/вузький container/zoom: дві рівні картки та історія на всю доступну ширину, 2→1 без overflow сторінки.
+- [ ] Active path: клік/Enter відкриває саме відповідну теку; виділення + Ctrl+C не відкриває її. Недоступний і draft шляхи без дії; OS-відмова дає зрозумілу помилку.
+- [ ] Після збереження — одна ручна дія; зміна теки показує Save/Cancel, старі auto-шляхи лишаються активними. Cancel повертає активні шляхи, Save явний; перемикання About не губить draft.
+- [ ] З нуля: вибір однієї/двох тек, Save disabled/available, ручної копії до Save немає. Ручний partial failure й same-volume warning видимі; технічної секції немає.
+- [ ] Історія/фільтри та чинний restore без регресій; відновлення — РУЙНІВНЕ, лише в ізольованому тестовому профілі.
+
+Один коміт/push у робочу гілку, без merge main; 3.4.3.7 не починати без завдання.
+
+
+## 3.4.3.7 — відновлення конкретної копії
+
+База 468d189555d6ede277b41fce296e4753f57a11ca; codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Read-only AID S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb): цільово повторно прочитано server-manager/src/BackupManagement.tsx — архівна таблиця, дія за ID, окремі стани доступності та повної перевірки. Серверний архівний алгоритм/auth/HTTP не перенесено.
+
+- Одна панель: «Наявні копії» за замовчуванням та «Операції». Наявний BackupHistory/його фільтри/5 або всі/формат JSON незмінні; компонент залишається змонтованим при перемиканні. Нижню секцію відновлення прибрано. «Вибрати файл…» у заголовку запускає попередній picker/Modal/confirmRestore без зміни RecoveryScreen.
+- Нові явні backup.listCopies() і backup.selectCopy(id): strict Zod args/results, UUID ID без path, чинні sender/mainFrame/URL guards. Список не походить із backup-history.json. Main BackupCatalog перелічує лише прямі файли двох активних тек: точна назва hromadahr-INSTANCE-(auto|manual)-TIMESTAMP-UUID.db, реальна ISO-дата, standalone SQLite header та збіг backup_config.instance_id. Partial/protect/staging/previous/rejected/інша lineage/невідомі файли не включаються.
+- Межі: не більше 4096 назв переглядається на теку; до 100 найновіших кандидатів серед переглянутих назв перевіряється на теку, до 200 рядків/ID загалом. При обрізанні є повідомлення; довільний старий архів доступний через picker. Немає integrity_check у list чи опитування списку кожні 5 секунд: завантаження, явне оновлення та оновлення після ручної копії/зміни тек/невдалого вибору. Нові автоматичні копії видно після «Оновити». Журнал продовжує власне чинне polling. StrictMode повтор ефекту використовує ту саму Promise.
+- ID прив'язано до lineage, slot, активного canonical каталогу та його dev/ino/birthtime, файла dev/ino/birthtime/ctime/mtime/size. Зміна конфігурації, видалення/перезапис/підміна або symlink/junction відхиляються; hardlinks також не включаються. Після refresh ID зберігається тільки для незмінного файла. Це метадані походження, не криптографічний підпис і не гарантія цілісності SQLite.
+- selectCopy під чинним exclusive: повторна перевірка каталогу/файла, чинний Win32 preservation handle із забороною стороннього читання/запису/видалення, повторна перевірка після захоплення, копіювання саме з handle у приватний staging/catalog-* і повтор lineage. Приватна копія передається в наявний chooseRestore → повний inspectDatabase → staged snapshot → одноразовий 5-хвилинний token. Тимчасове захоплення прибирається у finally. Розділяти source та staged потрібно, щоб зовнішня підміна не змінила вибрану копію. Додатковий I/O лише при виборі, не при list.
+- confirmRestore/native dialog (Cancel default)/protective snapshot/checkpoint/recovery journal/rollback/reopen/migration/integrity/reload не переписані. Події restore проходять через наявний журнал і переживають restore. Міграції 1–4, персонал, auto/14/two-folder policy, Win32 helpers та RecoveryScreen незмінні.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; tests/backup-catalog.test.mjs — 1 інтеграційна перевірка реального Electron Main/SQLite/Win32 із temp profile (дозволені/сторонні/видалені/перезаписані/замінені файли, junction/каталог, зміна конфігурації, фізично пошкоджена SQLite, strict IPC без path, sender/frame/URL, native-confirm callback із Cancel default, одноразовий token, immutable staging, protection/reload/history persistence та ін'єкція reopen failure з реальним rollback/integrity/FK). Дві наявні профільні IPC-перевірки — allowlist та built preload — пройшли. Нативне вікно підтвердження замінено mock у тесті; реальних вікон/продукційних копій не відкривали. Перший варіант corruption fixture не відтворював пошкодження при readonly перевірці; fixture замінено на фізично пошкоджену B-tree сторінку, backend integrity не послаблювався. Повної регресії/GUI-тестів немає.
+
+Ручне GUI-приймання НЕ ВИКОНАНО:
+- [ ] Наявні копії з обох тек: час ДД.ММ.РРРР ГГ:ХХ, auto/manual, slot, доступність; Refresh після auto/видалення; offline/порожній/обмежений перелік.
+- [ ] Перемикання «Операції» зберігає фільтр/5 або всі; журнал не видається за перелік файлів.
+- [ ] «Відновити» → правильна назва/schema в чинному Modal, Cancel без заміни; старий ID після зовнішньої зміни дає помилку, а не іншу копію.
+- [ ] «Вибрати файл…» → системний picker, cancel без помилки, архів з іншого носія; nested focus/busy/повторне натискання.
+- [ ] РУЙНІВНЕ, ЛИШЕ ІЗОЛЬОВАНИЙ ТЕСТОВИЙ ПРОФІЛЬ: підтверджений restore через обов'язковий native dialog, protection/reload, журнал після перезапуску. На продукційній БД не виконувати.
+- [ ] Вузьке вікно/1366×768/масштаб 125–200%: scroll лише таблиці, дії/Modal footer доступні.
+
+Один коміт/push у робочу гілку; main не зливати, наступні модулі не починати.
+
+
+## 3.4.3.8 — фінальне резервування та налаштування
+
+База f5356f8d339d16a2b899bfc7c33b2ce03826760d, codex/3.4.1-aid-ui-foundation, початкове дерево чисте. Read-only AID 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільово звірено server-manager/src/BackupManagement.tsx (summary/cards/архівна таблиця); HR використовує свої перенесені компоненти, без серверного/auth/архівного алгоритму.
+
+Реалізовано: один online snapshot → два незалежні verified/fsynced/no-replace файли, спільний SHA-256 ID у суфіксі назви; повторне дублювання exact образу після partial/restart, включно з manual між auto та retry. Якщо джерела немає — новий ID. Ліміти повторів і 14 auto збережено. Нові logical copy rows (1/2 із 2), fallback тільки всередині тієї самої групи, один logical event із locations/partial/duplicate; старі копії й події сумісні. Бounded журнал до 200/64 КіБ. Подробиці/межі — ARCHITECTURE 3.4.3.8. Міграції/кадри/recovery lifecycle незмінні.
+
+Settings: видимий zoom і його state/polling/CSS вилучено; Main zoom/клавіші/persistence та IPC збережено. Summary-card має ліворуч title/status/lastSuccess/inline same-volume warning, праворуч єдину primary-копію (до збереження двох місць не пропонується). Read-only address + квадратний Open + Change одного control-height; нові назви основного/додаткового місць, lastSuccess одним рядком, draft Save/Cancel лишилися. Dirty вимикає ручну дію до Save/Cancel. UI показує partial warning, не toast повного успіху.
+
+Перевірки: typecheck/build/diff-check; нова tests/paired-backup.test.mjs у справжньому Electron Main/temp профілі перевіряє один виклик backup, тотожність/SQLite-validity обох файлів, partial, repair після restart та manual без нового backup, нову ідентичність без source, grouped list/fallback/чинний native-confirm callback/одноразовий token/protection/restore/history, старі UUID copies/події та journal bounds. Наявна backup-catalog security/rollback перевірка з legacy fixture збережена; цільові mutex/retry/publication/rotation і journal result/failure перевірки пройшли. Перші прогони виявили довгі тимчасові Windows/SQLite paths: скорочено .partial і приватний source.db; фінальне нове ім'я використовує SHA-256 замість UUID, без їх дублювання. Нових UI-тестів/повної регресії немає; продукційні дані не використовувалися.
+
+Ручне GUI-приймання НЕ ВИКОНАНО:
+- [ ] Settings без zoom-selector; Ctrl +/−/0/NumPad та restart зберігають масштаб dev/built.
+- [ ] Summary на підложці: єдина кнопка, inline one-volume warning, lastSuccess, busy/partial/error; старий успіх не видається за новий.
+- [ ] Два місця 50%/одна колонка, довгі selectable адреси/Ctrl+C, Open/Change однакової висоти, draft без Open, Save/Cancel, About і назад.
+- [ ] Нова копія — один рядок 2 із 2; недоступне місце — 1 із 2/partial, auto повтор → точний дублікат. Операції: один запис/фільтр Помилки включає partial; старі події доступні.
+- [ ] ЛИШЕ ІЗОЛЬОВАНИЙ ПРОФІЛЬ, РУЙНІВНЕ: restore з єдиного доступного дубліката/ручний picker → native cancel/confirm → reload/protection/журнал. На продукційній БД не виконувати.
+- [ ] Full HD/1366×768/вузьке вікно/125–200%: без загального overflow, читабельні адреси та дії.
+
+Один тематичний коміт/push; main не зливати, наступний етап не починати.

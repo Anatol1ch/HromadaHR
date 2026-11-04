@@ -1,13 +1,15 @@
+import { filterEmployees, sortEmployees } from '../src/employees/registry.ts'
+const selectEmployees = (rows, query, departmentId, descending) => sortEmployees(filterEmployees(rows, { query, departmentId, positionId: '' }), { key: 'fullName', direction: descending ? 'desc' : 'asc' })
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { creationInput, dictionaryName, fullName, historyRows, personalDetails, selectEmployees,
+import { creationInput, dictionaryName, fullName, historyRows, personalDetails,
   validateAssignment, validateEmployee, validDate, valuesForEmployee, emptyValues } from '../src/employees/model.ts'
 import { createEmployee, employeeDetails, departmentInput } from '../dist-electron/electron/personnel/schemas.js'
 
 const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333']
 const values = { ...emptyValues, lastName: 'Тестовий', firstName: 'Умовний', startDate: '2026-01-01', departmentId: ids[0], positionId: ids[1] }
 function card(id, lastName, departmentId = ids[0], middleName = null) {
-  return { id, lastName, firstName: 'Умовне', middleName, birthDate: null, employeeType: 'official', note: null, hireDate: '2026-01-01',
+  return { id, lastName, firstName: 'Умовне', middleName, birthDate: null, employeeType: 'official', hireDate: '2026-01-01',
     currentAssignment: { id: ids[2], employeeId: id, positionId: ids[1], departmentId, category: null, startDate: '2026-01-01',
       position: { id: ids[1], name: 'Тестова посада' }, department: { id: departmentId, name: 'Тестовий підрозділ' } } }
 }
@@ -40,10 +42,10 @@ test('history presentation derives inclusive previous ends across leap days/year
 })
 
 test('client validation and Main Zod agree on required fields, calendar dates and trimmed text limits', () => {
-  for (const change of [{}, { middleName: ' ' }, { birthDate: '2000-02-29' }, { note: ' '.repeat(10) },
-    { lastName: 'Т'.repeat(200) }, { note: 'Н'.repeat(4000) }, { category: 'К'.repeat(200) },
+  for (const change of [{}, { middleName: ' ' }, { birthDate: '2000-02-29' },
+    { lastName: 'Т'.repeat(200) },
     { lastName: ' ' }, { firstName: '' }, { lastName: 'Т'.repeat(201) }, { middleName: 'Т'.repeat(201) },
-    { note: 'Н'.repeat(4001) }, { category: 'К'.repeat(201) }, { employeeType: 'other' },
+    { employeeType: 'other' },
     { birthDate: '1900-02-29' }, { birthDate: '2027-01-01' }, { startDate: '2026-02-30' },
     { startDate: '0000-01-01' }, { startDate: '2026-1-01' }, { startDate: '' }, { departmentId: '' }, { positionId: '' }]) {
     const input = { ...values, ...change }
@@ -57,12 +59,11 @@ test('client validation and Main Zod agree on required fields, calendar dates an
 test('edit payload contains only supported personal fields and roundtrips nullable form values', () => {
   const employee = card(ids[2], 'Тестовий')
   const initial = valuesForEmployee(employee)
-  const changed = { ...initial, note: ' Оновлено ', startDate: '2030-01-01', category: 'Категорія', departmentId: ids[1] }
-  assert.deepEqual(Object.keys(personalDetails(changed)).sort(), ['birthDate', 'employeeType', 'firstName', 'lastName', 'middleName', 'note'])
+  const changed = { ...initial, startDate: '2030-01-01', category: 'Категорія', departmentId: ids[1] }
+  assert.deepEqual(Object.keys(personalDetails(changed)).sort(), ['birthDate', 'employeeType', 'firstName', 'lastName', 'middleName'])
   assert.equal(employeeDetails.safeParse(personalDetails(changed)).success, true)
   assert.equal(personalDetails(changed).middleName, null)
-  assert.equal(personalDetails(changed).note, 'Оновлено')
-  assert.deepEqual(personalDetails(initial), { lastName: 'Тестовий', firstName: 'Умовне', middleName: null, birthDate: null, employeeType: 'official', note: null })
+  assert.deepEqual(personalDetails(initial), { lastName: 'Тестовий', firstName: 'Умовне', middleName: null, birthDate: null, employeeType: 'official' })
   assert.ok(validateEmployee({ ...initial, birthDate: '2027-01-01' }, true).birthDate)
 })
 
@@ -83,11 +84,11 @@ test('history boundaries never underflow year 0001 or create reversed ranges', (
     }
   }
 })
-test('assignment form rejects future/before-birth/invalid dates and excessive category length', () => {
-  const input = { startDate: '2026-11-02', departmentId: ids[0], positionId: ids[1], category: '' }
+test('assignment form rejects future/before-birth/invalid dates in the visible assignment fields', () => {
+  const input = { startDate: '2026-11-02', departmentId: ids[0], positionId: ids[1] }
   assert.deepEqual(validateAssignment(input, null, '2026-11-02'), {})
   for (const change of [{ startDate: '2026-11-03' }, { startDate: '1999-12-31' }, { startDate: '2026-02-30' },
-    { departmentId: '' }, { positionId: '' }, { category: 'X'.repeat(201) }]) {
+    { departmentId: '' }, { positionId: '' }]) {
     assert.ok(Object.keys(validateAssignment({ ...input, ...change }, '2000-01-01', '2026-11-02')).length > 0)
   }
 })
