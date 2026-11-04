@@ -77,7 +77,6 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
         </div>
       })}
     </div>
-    <p className="employee-hint">Нові посади й підрозділи зберігаються одразу та залишаються у довіднику після скасування форми.</p>
     {draft && <DirectoryForm kind={draft} inFlight={inFlight} navigationGuard={navigationGuard} onPending={setPending} onConflict={refreshConflict} onCreated={created}
       onClose={() => { setDraft(null); focusSelect(draft) }} />}
   </div>

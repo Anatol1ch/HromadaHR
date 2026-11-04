@@ -112,7 +112,7 @@
 
 .hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }
 
-.employee-date-row > .employee-field { width: min(260px, 100%); }
+.employee-date-row { display:grid; grid-template-columns:subgrid; }
 .employee-select-action > .employee-directory-add { width:var(--control-height); height:var(--control-height); padding:0; justify-content:center; }
 .employee-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .employee-card-actions .danger-action:hover:not(:disabled) { background:var(--feedback-error-bg); border-color:var(--feedback-error-border); }

@@ -359,3 +359,18 @@ Restore UI: chooseRestore відкриває штатний picker; cancel ти�
 - [ ] 1366×768, Full HD, вузьке вікно/Windows 125–200%: компактні зони, довгі шляхи, toolbar, modal footer і фокус без накладання/горизонтального overflow сторінки.
 
 Main не зливати. Наступні кадрові модулі без окремого завдання не реалізовувати.
+
+
+## 3.4.3.5 — zoom, сітка дат і CSP логотипа
+
+База d51e2fb79696b1d8a88acf4fd12a1f0f90782f2f, та сама робоча гілка; початкове дерево чисте. У read-only AID S1 (33eca10733caaf73b1a99e75a24ff35e706a0afb) цільово перевірено electron/main.ts і src/SettingsPage.tsx: у цих файлах zoom-аналога немає; HR використовує власний вузький Main-механізм і чинний Select.
+
+- ZoomController — єдиний стан 80/90/100/110/125/150%; before-input-event перехоплює тільки Ctrl Plus/Equal/Minus/0 та NumPad +/-, ігнорує Alt/Meta/composition, не чіпає Ctrl+Enter. Межі 80–150%, кроки за тим самим переліком. Викликається setZoomFactor; значення застосовується перед show та після load. Menu/DevTools не повертаються, startup coordinator незмінний.
+- interface-settings.json у app.getPath('userData'): %APPDATA%/HromadaHR[-dev], незалежні dev/built, без SQLite/нових залежностей. Strict дозволені числа, обмежене читання, запис через .tmp/rename. Некоректний файл дає 100% і saved=false; збій запису не приховується, UI попереджає про можливу втрату масштабу після перезапуску.
+- Явні system.getZoom/setZoom у типізованому preload/IPC з наявними sender/frame/URL guards, Zod args/results. SettingsPage показує компактний Select праворуч у heading; читає Main після resize/focus та раз на секунду, не має окремого джерела масштабу/localStorage.
+- employee-date-row — subgrid: дата займає повну ширину першої колонки й автоматично єдину колонку вузької форми. DirectoryFields постійна підказка вилучена. DateField/значення/dirty/validation/payload/кадровий backend незмінні.
+- Підтверджено старий data:image/svg+xml у bundle. About import svg?no-inline примусово створює dist/assets/hromadahr-*.svg; посилання у built bundle перевірено, img-src 'self' не послаблено. Продуктовий логотип і головний герб незмінні.
+
+Перевірки: pnpm typecheck, pnpm build, git diff --check; одна tests/zoom.test.mjs перевірка — allowed IPC/sender/URL, клавіші без перехоплення Ctrl+Enter, фактичний виклик ZoomFactor через double, persistence/профілі/некоректні значення/помилка запису, лише mkdtemp. Наявне preload allowlist очікування підтримано для get/set; повний набір/GUI/snapshots не запускали. Фактичне Windows GUI-приймання не виконано.
+
+Ручний чекліст: Ctrl +/Shift+=/−/0 і NumPad у формі; відсоток у Settings, шість варіантів, restart і незалежні dev/built; Ctrl+Enter форм збережений; дата за сіткою/вузьке вікно; About логотип у dev та built/file://. При збої збереження zoom — видиме повідомлення. Main не зливати, наступний підетап без завдання не починати.

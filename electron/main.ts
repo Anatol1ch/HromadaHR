@@ -1,3 +1,4 @@
+import { ZoomController } from './zoom.js'
 import { createStartup } from './startup.js'
 import { openContact } from './contacts.js'
 import { PersonnelService } from './personnel/service.js'
@@ -23,6 +24,7 @@ app.setPath('userData', join(app.getPath('appData'), isDev ? 'HromadaHR-dev' : '
 // Select userData before the lock: development and built profiles are independent.
 const hasLock = app.requestSingleInstanceLock()
 let mainWindow: BrowserWindow | null = null
+const zoom = new ZoomController(join(app.getPath('userData'), 'interface-settings.json'), () => mainWindow?.webContents ?? null)
 const storage = new Storage()
 const backups = new BackupService(storage)
 let closing = false
@@ -55,6 +57,7 @@ async function createWindow() {
     window.once('ready-to-show', () => {
       if (!window.isDestroyed()) {
         // AID: maximize before showing; Windows handles work area and DPI.
+        zoom.apply()
         window.maximize()
         window.show()
         resolve(true)
@@ -69,6 +72,10 @@ async function createWindow() {
   })
   window.webContents.on('destroyed', () => backupController.invalidate())
   window.removeMenu()
+  window.webContents.on('did-finish-load', zoom.apply)
+  window.webContents.on('before-input-event', (event, input) => {
+    if (zoom.shortcut(input)) event.preventDefault()
+  })
   window.webContents.on('will-navigate', (event) => event.preventDefault())
   window.webContents.on('will-redirect', (event) => event.preventDefault())
   window.webContents.on('will-attach-webview', (event) => event.preventDefault())
@@ -100,7 +107,7 @@ if (!hasLock) {
   }), () => {
     acknowledgeRenderer()
     return storage.getStatus()
-  }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory)
+  }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory, zoom)
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()

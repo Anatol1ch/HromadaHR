@@ -34,6 +34,8 @@ const api: HromadaHRApi = {
     confirmRestore: token => call(ipcChannels.backupConfirmRestore, token),
   },
   system: {
+    getZoom: () => call(ipcChannels.systemGetZoom),
+    setZoom: percent => call(ipcChannels.systemSetZoom, percent),
     openContact: id => call(ipcChannels.systemOpenContact, id),
     quit: () => call(ipcChannels.systemQuit),
     getInfo: async () => {

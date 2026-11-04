@@ -74,3 +74,6 @@ Main createStartup — HR-only узгодження з наявним SQLite: в
 ## 3.4.3.4 — presentation резервування
 
 S1: повторно цільово звірено src/SettingsPage.tsx (cards/heading/Modal) та server-manager/src/BackupManagement.tsx (короткі статуси/restore preview, busy/error та footer). Рішення — адаптувати наявну візуальну мову через вже перенесені HR Modal/Alert/DictionaryTable/Select/Toast: п'ять компактних зон, common technical details, модальний restore. Server auth/API/архівний backend/шифрування/демонстраційні дані не переносилися; власний надійніший HR backend збережено. Фактично змінені тільки BackupSettings/BackupHistory/settings.css, а guarantees одноразового токена/нативного підтвердження/rollback чинні. Ручне приймання передано замовнику, ще не виконане; деталі — UI-TRANSFER 3.4.3.4.
+
+
+3.4.3.5: S1 electron/main.ts і src/SettingsPage.tsx цільово перевірено — zoom-аналога у цих файлах немає (це не повний аудит інших модулів). Рішення: власний мінімальний Main ZoomController, вузький get/set IPC, наявний Select у settings heading; native setZoomFactor і окремі Electron-profile preferences. Чинна сітка форми адаптована subgrid без нового компонента; продуктовий SVG збережений, Vite inline вимкнено для сумісності з незмінною CSP. Стан — реалізовано, ручне приймання очікується.

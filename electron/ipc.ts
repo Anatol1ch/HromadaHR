@@ -1,3 +1,5 @@
+import { zoomPercent, zoomStatus } from './zoom.js'
+import type { ZoomController } from './zoom.js'
 import { backupHistory } from '../shared/backupHistory.js'
 import { PersonnelError } from './personnel/service.js'
 import type { PersonnelService } from './personnel/service.js'
@@ -44,7 +46,16 @@ export function registerIpcHandlers(
   personnel: PersonnelService,
   openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
   getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
+  zoom?: Pick<ZoomController, 'get' | 'set'>,
 ) {
+  register(ipcChannels.systemGetZoom, z.tuple([]), zoomStatus, () => {
+    if (!zoom) throw new Error('Zoom unavailable')
+    return zoom.get()
+  })
+  register(ipcChannels.systemSetZoom, z.tuple([zoomPercent]), zoomStatus, ([percent]) => {
+    if (!zoom) throw new Error('Zoom unavailable')
+    return zoom.set(percent)
+  })
   register(ipcChannels.systemOpenContact, z.tuple([z.enum(['phone', 'workEmail', 'personalEmail', 'telegram'])]), z.boolean(), ([id]) => openContact(id))
   register(ipcChannels.backupGetHistory, z.tuple([]), backupHistory, getBackupHistory)
   register(ipcChannels.systemGetInfo, getInfoArgs, systemInfo, getInfo)

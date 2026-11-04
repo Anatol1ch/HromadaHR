@@ -1,3 +1,4 @@
+import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
 import type { PersonnelApi, PersonnelErrorCode, AssignmentInput, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
@@ -15,6 +16,7 @@ export const ipcChannels = {
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
   personnelCreatePosition: 'personnel:createPosition',
+  systemGetZoom: 'system:getZoom', systemSetZoom: 'system:setZoom',
   systemOpenContact: 'system:openContact', backupGetHistory: 'backup:getHistory',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
   storageRetry: 'storage:retry', systemQuit: 'system:quit',
@@ -38,6 +40,8 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.systemGetZoom]: { args: []; result: ZoomStatus }
+  [ipcChannels.systemSetZoom]: { args: [ZoomPercent]; result: ZoomStatus }
   [ipcChannels.systemOpenContact]: { args: [ContactId]; result: boolean }
   [ipcChannels.backupGetHistory]: { args: []; result: BackupHistory }
   [ipcChannels.personnelCreateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
@@ -69,6 +73,8 @@ export interface HromadaHRApi {
   readonly personnel: PersonnelApi
   readonly backup: BackupApi
   readonly system: {
+    readonly getZoom: () => Promise<IpcResult<ZoomStatus>>
+    readonly setZoom: (percent: ZoomPercent) => Promise<IpcResult<ZoomStatus>>
     readonly openContact: (id: ContactId) => Promise<IpcResult<boolean>>
     readonly quit: () => Promise<IpcResult<null>>
     readonly getInfo: (...args: IpcOperations[typeof ipcChannels.systemGetInfo]['args']) => Promise<IpcResult<SystemInfo>>

@@ -132,3 +132,8 @@
 .support-contact-copy:hover { background:var(--accent-soft); }
 .support-contact-detail:disabled { cursor:default; opacity:.65; }
 @container support-content (min-width:600px) { .support-contact-card { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.settings-heading { align-items:flex-start; flex-wrap:wrap; }
+.settings-zoom { display:grid; gap:6px; width:200px; max-width:100%; margin-left:auto; }
+.settings-zoom > span { font-size:12px; font-weight:600; color:var(--color-text-label); }
+.settings-zoom .field-error { margin:0; }
