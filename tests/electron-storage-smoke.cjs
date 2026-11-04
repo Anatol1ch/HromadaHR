@@ -17,8 +17,17 @@ app.whenReady().then(async () => {
   const { openStorageSafely, Storage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
   const { PersonnelService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/personnel/service.js')).href)
   const { BackupService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/service.js')).href)
+  const { BackupController } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/controller.js')).href)
   const { snapshot } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/files.js')).href)
   assert.ok(process.versions.electron)
+  // Resume the startup scheduler only after a confirmed successful recovery.
+  let resumed = 0, restored = false
+  const controller = new BackupController({ confirmRestore: async () => ({ restored }) }, () => null, () => { resumed++ })
+  await controller.confirmRestore('smoke')
+  assert.equal(resumed, 0)
+  restored = true
+  await controller.confirmRestore('smoke')
+  assert.equal(resumed, 1)
   const file = join(root, 'data', 'smoke.db')
   const first = await openStorageSafely(file)
   let source, employeeId, assignmentInput

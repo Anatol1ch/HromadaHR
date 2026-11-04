@@ -1,4 +1,4 @@
-# Перенесення UI HromadaAID → HromadaHR (3.4.1–3.4.2.2)
+# Перенесення UI HromadaAID → HromadaHR (3.4.1–3.4.3)
 
 Джерело: `Anatol1ch/HromadaAID`, commit **33eca10733caaf73b1a99e75a24ff35e706a0afb**. HEAD перевірено через read-only Git та GitHub connector 03.11.2026; він збігався з погодженим SHA. Файли прочитано за фіксованим ref, не з рухомої гілки. Локального checkout HromadaAID не було: потрібні текстові файли збережено в окремому тимчасовому каталозі без `.git` для аналізу. Джерело, його історія/налаштування та `reference/` не змінювалися.
 
@@ -221,3 +221,40 @@ Home EmployeeSummary рахує total/official/staff із listEmployees, не п
 - [ ] Кожен контакт відкриває системний обробник; без обробника — помилка, копіювання або Ctrl+C. Tab/Enter/focus.
 - [ ] Backup: короткий огляд, один same-volume warning, помилки видимі; політика/технічні деталі розгортаються. Тільки тестовий профіль: manual/auto/config/restore створюють реальні рядки, без рядків від status/skipped tick; 5/усі та фільтри працюють, після restart/restore історія залишається.
 - [ ] 1600×900, 1366×768, вузьке вікно, Windows 125–200%: toolbar/cards/шляхи/таблиці/модалки/focus/scroll без перекриття.
+
+
+## Етап 3.4.3 — джерела startup та фактичні адаптації
+
+Pinned AID SHA **33eca10733caaf73b1a99e75a24ff35e706a0afb**, read-only.
+
+| Джерело | Реалізація HR | Адаптація |
+| --- | --- | --- |
+| src/App.tsx StartupScreen і startup sequence | src/components/StartupScreen.tsx, src/App.tsx | JSX/UsersRound/HR та локальний status замість auth/connection; gate лише один раз на монтування |
+| src/lib/startup-timing.ts | src/lib/startup-timing.ts | Оригінальні waitForMinimumDisplay/waitForStartupGate; єдина константа 2000 мс замість 5000 |
+| src/styles.css app-startup, startup-enter/loader, reduced-motion | src/styles/startup.css | Оригінальна геометрія й keyframes; green/direct text colors замінені HR semantic tokens; welcome styles не потрібні |
+| src/main.tsx StartupBoundary | src/bootstrap.tsx, src/main.tsx | Render boundary + guarded dynamic import для ранніх JS/CSS помилок; без ClientUpdateGate, auth чи sessions |
+
+Main раннє вікно/одноразовий createStartup, retry guard і очікування shutdown — автономна адаптація HR, не перенесення server lifecycle AID. Readiness SQLite та її critical snapshots/recovery незмінні. Нова заставка не запускається від кадрового IPC або модалок; повний renderer reload запускає її знову. Наявні page/modal/calendar/skeleton/transition правила залишено.
+
+Перевірено програмно: typecheck/build/diff; 5 startup gate/lifecycle перевірок і реальний наявний Electron Main storage/recovery smoke. Нових GUI-тестів немає, повної регресії не запускали. Візуальне приймання, Windows scaling/focus/анімації вручну не виконувалися. Sync integrity/migration можуть затримувати status IPC; немає відсотків або обіцянки фіксованої загальної тривалості. Мінімум від App mount. Error boundary не охоплює відсутність самого JS entry чи падіння renderer-процесу; помилка документа loadFile/loadURL має native dialog Main.
+
+### Єдиний підсумковий чекліст GUI-приймання 3.4 — НЕ ВИКОНАНО
+
+Цей список є актуальним наскрізним прийманням; попередні чеклісти вище — історичні. Усі зміни даних — лише синтетичні дані/ізольований тестовий Windows-профіль. Built без Vite використовує власний профіль даних, а не dev; не перевіряти відновлення на продукційній БД.
+
+- [ ] Холодний dev через pnpm dev (Vite лише для dev); окремо built через pnpm build / pnpm start:built із вимкненим Vite. Повторний екземпляр фокусує наявне вікно, профілі не змішуються.
+- [ ] Startup: світла сиренева заставка/UsersRound/назва/підпис/loader, мінімум 2 с, потім головна. На ізольованій копії: тривала ініціалізація чекає readiness; CORRUPT/MISSING_DATABASE показує Recovery без таймерної затримки й без порожньої заміни. Вихід під час startup не пошкоджує тестові дані.
+- [ ] Оболонка: герб/банер/футер, «Щоденна робота», працівники/налаштування активні, три майбутні модулі явно «У розробці»; немає миготіння оболонки чи повторної заставки при навігації/IPC/закритті модалок.
+- [ ] Дві таблиці: ПІБ/дії, пошук, обидва фільтри/очищення, незалежне сортування чотирьох колонок/скидання, лічильники/empty/error. Параметри зберігаються при модалках.
+- [ ] Тільки тестовий працівник: створити, відредагувати персональні дані/тип, додати й виправити призначення; історія/current/hire оновлюються. Видалення призначення/працівника — РУЙНІВНЕ, лише синтетичні дані.
+- [ ] Вкладені модалки/довідники: фокус повертається до батьківського вікна, Escape закриває верхнє, Tab/Shift+Tab/Ctrl+Enter, збереження не дублюється, вихід із dirty форми/навігація потребує одного підтвердження.
+- [ ] DateField: вручну/вставлення/календар/високосні/невалідні дати, усі видимі дати ДД.ММ.РРРР, час ДД.ММ.РРРР ГГ:ХХ. Календар/селектор із клавіатури.
+- [ ] Допомога: чотири системні обробники контактів, зрозуміла помилка без обробника, копіювання або Ctrl+C; налаштування/about.
+- [ ] Лише ізольований профіль/тестові носії: зміна двох тек, один same-volume warning, manual/auto та їхні помилки, технічні details, журнал 5/усі/фільтри/restart. ВІДНОВЛЕННЯ РУЙНІВНЕ — тільки тестова БД/копії, cancel/native confirmation/protection/reload; історія журналу залишається.
+- [ ] 1366×768, 1600×900, вузьке вікно, Windows 125–200% і reduced-motion: sidebar/topbar, прокручування/футер/довгі назви, видимі дії модалок, focus після відкриття workspace. Необов'язкові анімації вимкнені за reduced-motion.
+
+Merge main, автооновлення, installer і наступні предметні модулі не виконуються без окремого завдання.
+
+Уточнення startup/recovery 3.4.3: успішний BackupController.confirmRestore викликає Main onRestored callback. Той запускає наявний scheduler тільки за ready та !closing; це відновлює auto-backup після початкової помилки, коли startup його не запускав. Cancel/error callback не викликають. Формат/підтвердження/атомарність restore незмінні. Цей callback додатково перевірено в наявному справжньому Electron Main smoke без GUI-діалогів.
+
+Перший кадр та renderer-ready: openWindow очікує і ready-to-show, і перше довірене storage.getStatus із змонтованого App effect (чинний IPC, без нового каналу). Це не дає почати SQLite до завантаження динамічних React/CSS залежностей і появи заставки. Закриття вікна завершує очікування без ініціалізації; при помилці bootstrap видно fallback, а SQLite ще не відкривається.

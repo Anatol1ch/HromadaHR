@@ -15,7 +15,7 @@
 | Налаштування, «Про програму»: `src/SettingsPage.tsx`, `src/styles.css` | S1 | Адаптувати секційну навігацію й about-картки; замість account/server — чинний BackupSettings; без updates runtime | Інтегровано в продовженні 3.4.1; ручне GUI-приймання ще не виконано |
 | «Потрібна допомога?»: `src/App.tsx` help-card / support-contact-card | S1 | Адаптувати кнопку й Modal підтримки; контакти з джерела, без нового external IPC | Інтегровано в продовженні 3.4.1; ручне GUI-приймання ще не виконано |
 | Кадрові реєстр/форми/історія/модальна картка: `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx`, модальні форми | S1 | Адаптувати RecipientFormModal/RecipientDetails, DecisionFormModal і registry-row-actions; без допомог/виплат | Реалізовано 3.4.2; на 3.4.2.2 — дві групи DictionaryTable, спільні filters/незалежні sorts; note вилучено, category read-only; GUI-приймання відкрите |
-| Стартовий екран/анімації: `src/App.tsx` StartupScreen/StartPage | S1 | Відкласти предметну адаптацію запуску; auth/welcome-сеанси не потрібні HR | Лише source page-transition використано; стартовий сценарій не перебудований |
+| Стартовий екран/анімації: `src/App.tsx` StartupScreen, `src/lib/startup-timing.ts`, `src/styles.css`, `src/main.tsx` | S1 | Адаптувати заставку, helper і boundary до HR/UsersRound/сиреневих токенів та SQLite; без auth/welcome/network/update gates | Реалізовано 3.4.3; 2000 мс, раннє Main-вікно, GUI-приймання очікується |
 | Резервування й відновлення | Не визначено: відповідні технічні файли AID ще не оцінювалися | Зберегти чинний перевірений локальний SQLite online backup/recovery. Сумісні вдосконалення оцінити окремо за конкретною потребою | HR runtime без змін; формат дат UI вже адаптовано |
 | Автоматичні оновлення | S1 лише для UI `src/SettingsPage.tsx`; технічний механізм не перевірено | Відкласти до відповідного етапу; не переносити клієнт-серверні залежності | Не реалізовано |
 | Інсталятор, пакування, релізи та інші технічні механізми | Не визначено, цільова оцінка ще не проводилася | Відкласти; на початку відповідного завдання перевірити актуальне джерело й зафіксувати SHA | Не реалізовано |
@@ -44,3 +44,10 @@ Backup UI більше не дублює sameVolume у summary; runtime HR зб�
 | Історія: server-manager/src/App.tsx EventTable; server-manager/src/BackupManagement.tsx таблиця станів | S1 | Адаптувати компактні рядки часу/операції/статусу через вже перенесений DictionaryTable. Demo events, auth, API, encryption не переносити | Реальний Main-only журнал HR, backup.getHistory; ніякої вигаданої історії |
 
 Зберігання/обмеження/невтручання діагностичного журналу — HR-only рішення, описане в ARCHITECTURE/HANDOFF. Це не перенесення серверного backup backend AID.
+
+
+## Startup 3.4.3
+
+За S1 повторно прочитано src/App.tsx (StartupScreen/послідовність), src/lib/startup-timing.ts, src/styles.css (app-startup/keyframes/reduced-motion), src/main.tsx (StartupBoundary). Фактично адаптовано до src/components/StartupScreen.tsx, src/lib/startup-timing.ts, src/styles/startup.css, src/bootstrap.tsx/main.tsx та gate App. Збережено JSX/геометрію/анімації/helper; змінено бренд/іконку/семантичні кольори й мінімум 5000→2000.
+
+Main createStartup — HR-only узгодження з наявним SQLite: вікно до initializeSafely, once Promise, ready перед auto-backup, retry guard і завершення startup до close. AuthenticatedUser/Login/Welcome/session/connection/ClientUpdateGate та серверні механізми не перенесено як несумісні. П'ять цільових перевірок/наявний Electron Main smoke/typecheck/build/diff пройшли; ручний підсумковий чекліст 3.4 в UI-TRANSFER невиконаний.

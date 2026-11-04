@@ -175,6 +175,8 @@ export class BackupService {
   }
   stop() { if (this.timer) clearInterval(this.timer); this.timer = undefined }
   async retryStorage() {
+    // An early window may query IPC while Main owns startup initialization.
+    if (this.storage.getStatus().state === 'initializing') return this.storage.getStatus()
     return this.exclusive(async () => {
       this.invalidateSelections()
       if (this.storage.getStatus().state !== 'ready') {

@@ -6,7 +6,8 @@ import { BackupError } from './files.js'
 
 export class BackupController {
   private generation = 0
-  constructor(private service: BackupService, private getWindow: () => BrowserWindow | null) {}
+  constructor(private service: BackupService, private getWindow: () => BrowserWindow | null,
+    private onRestored: () => void = () => {}) {}
   invalidate() { this.generation++; this.service.invalidateSelections() }
   getStatus = () => this.service.getStatus()
   getHistory = () => this.service.getHistory()
@@ -51,6 +52,7 @@ export class BackupController {
       return answer.response === 1
     })
     if (result.restored) {
+      this.onRestored()
       setTimeout(() => {
         const window = this.getWindow()
         if (window && !window.isDestroyed()) window.webContents.reload()

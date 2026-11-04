@@ -1,3 +1,5 @@
+import StartupScreen from './components/StartupScreen'
+import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import { useEffect, useRef, useState } from 'react'
@@ -122,16 +124,27 @@ export default function App() {
   function navigate(id: SectionId) {
     if (id !== active) navigationGuard.current(() => setActive(id))
   }
+  const [startupReady, setStartupReady] = useState(false)
+  const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   useEffect(() => {
-    let alive = true, pending = false
+    let alive = true, pending = false, settled = false
+    const accept = (status: StorageStatus) => {
+      if (!alive) return
+      setStorage(status)
+      if (!settled && status.state !== 'initializing') {
+        settled = true
+        void waitForStartupGate(startedAt.current, STARTUP_MINIMUM_MS, async () => status, Date.now, undefined, value => value.state !== 'ready')
+          .then(() => { if (alive) setStartupReady(true) })
+      }
+    }
     const refresh = async () => {
       if (pending) return
       pending = true
       try {
         const result = await window.hromadaHR.storage.getStatus()
-        if (alive) setStorage(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
-      } catch { if (alive) setStorage({ state: 'error', code: 'INITIALIZATION_FAILED' }) }
+        accept(result.ok ? result.data : { state: 'error', code: 'INITIALIZATION_FAILED' })
+      } catch { accept({ state: 'error', code: 'INITIALIZATION_FAILED' }) }
       finally { pending = false }
     }
     void refresh()
@@ -141,6 +154,8 @@ export default function App() {
   const current = sections.find(section => section.id === active)!
   const CurrentIcon = current.icon
 
+  if (storage.state === 'error' || storage.state === 'closed') return <RecoveryScreen status={storage} />
+  if (!startupReady) return <StartupScreen />
   if (storage.state !== 'ready') return <RecoveryScreen status={storage} />
 
   return <div className="app-shell">

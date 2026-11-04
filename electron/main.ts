@@ -1,3 +1,4 @@
+import { createStartup } from './startup.js'
 import { openContact } from './contacts.js'
 import { PersonnelService } from './personnel/service.js'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
@@ -23,14 +24,24 @@ const hasLock = app.requestSingleInstanceLock()
 let mainWindow: BrowserWindow | null = null
 const storage = new Storage()
 const backups = new BackupService(storage)
-const backupController = new BackupController(backups, () => mainWindow)
+let closing = false
+let acknowledgeRenderer: () => void
+const rendererMounted = new Promise<void>(resolve => { acknowledgeRenderer = resolve })
+const startBackups = () => { if (!closing && storage.getStatus().state === 'ready') backups.start() }
+const backupController = new BackupController(backups, () => mainWindow, startBackups)
+const startup = createStartup({
+  openWindow: createWindow,
+  initializeStorage: () => storage.initializeSafely(() => storagePath(process.env.LOCALAPPDATA, isDev)),
+  getStatus: () => storage.getStatus(), startBackups, isClosing: () => closing,
+})
 
 async function createWindow() {
   const window = new BrowserWindow({
     width: 1000,
     height: 700,
     title: identity,
-    backgroundColor: '#f5f6f8',
+    backgroundColor: '#f7f6fa',
+    show: false,
     webPreferences: {
       preload: join(directory, '../preload.cjs'),
       contextIsolation: true,
@@ -38,6 +49,13 @@ async function createWindow() {
       sandbox: true,
     },
   })
+  const painted = new Promise<boolean>(resolve => {
+    window.once('ready-to-show', () => {
+      if (!window.isDestroyed()) { window.show(); resolve(true) }
+    })
+    window.once('closed', () => resolve(false))
+  })
+  const closed = new Promise<false>(resolve => { window.once('closed', () => resolve(false)) })
   mainWindow = window
   window.webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
     if (isMainFrame) backupController.invalidate()
@@ -55,10 +73,15 @@ async function createWindow() {
     if (isDev) await window.loadURL(devUrl)
     else await window.loadFile(builtFile)
     console.log(`[HromadaHR] ${isDev ? 'dev' : 'built'}: ${window.webContents.getURL()}`)
+    if (!await painted) return false
+    // The first trusted status read comes from the mounted App effect. Wait
+    // for it too, so dynamic React/CSS loading precedes SQLite preparation.
+    return await Promise.race([rendererMounted.then(() => true), closed])
   } catch (error) {
     console.error('[HromadaHR] Не вдалося завантажити інтерфейс:', error)
     dialog.showErrorBox(identity, 'Не вдалося завантажити інтерфейс. Перевірте збірку або запуск Vite у dev-режимі.')
     app.quit()
+    return false
   }
 }
 
@@ -67,31 +90,34 @@ if (!hasLock) {
 } else {
   registerIpcHandlers(ipcMain, () => mainWindow, isDev ? devUrl : pathToFileURL(builtFile).href, () => ({
     name: app.getName(), version: app.getVersion(), mode: isDev ? 'dev' : 'built',
-  }), () => storage.getStatus(), backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory)
+  }), () => {
+    acknowledgeRenderer()
+    return storage.getStatus()
+  }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory)
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.show()
     mainWindow.focus()
   })
-  void app.whenReady().then(async () => {
-    await storage.initializeSafely(() => storagePath(process.env.LOCALAPPDATA, isDev))
-    backups.start()
-    return createWindow()
+  void app.whenReady().then(startup.start).catch(() => {
+    dialog.showErrorBox(identity, 'Не вдалося підготувати застосунок. Перезапустіть HromadaHR або зверніться по технічну допомогу.')
+    app.quit()
   })
   let quitting = false
   app.on('before-quit', event => {
-    if (backups.isBusy() && !quitting) {
+    closing = true
+    if ((startup.isInitializing() || backups.isBusy()) && !quitting) {
       event.preventDefault()
       backups.stop()
       const wait = setInterval(() => {
-        if (!backups.isBusy()) { clearInterval(wait); quitting = true; app.quit() }
+        if (!startup.isInitializing() && !backups.isBusy()) { clearInterval(wait); quitting = true; app.quit() }
       }, 100)
     }
   })
   app.on('will-quit', () => { backups.stop(); backupController.invalidate(); storage.close() })
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) void createWindow()
+    if (!closing && BrowserWindow.getAllWindows().length === 0) void createWindow()
   })
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

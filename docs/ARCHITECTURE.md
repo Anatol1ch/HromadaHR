@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує версію 0.1.0 у робочій гілці після 3.4.2.2 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
+Документ описує версію 0.1.0 у робочій гілці після 3.4.3 (UI-основа та модальний кадровий модуль HromadaAID; main поки 3.3). Етап 2.3 остаточно скасовано. Погоджені рішення наведено окремо в [DECISIONS.md](DECISIONS.md).
 
 ## Стек та структура
 
@@ -289,3 +289,16 @@ Backup presentation розділяє config/availability/latest-attempt success/
 BackupService додає тільки спостереження фактичного результату: BackupHistoryStore (electron/backup/history.ts) зберігає останні 200 strict Zod подій у data/backup-history.json поточного незалежного профілю, максимум 64 КіБ. Файл окремий від SQLite, не входить до знімка БД і не замінюється відновленням. Атомарна публікація JSON через .tmp/rename, обмежене читання; пошкоджений/завеликий журнал не переписується мовчки. Помилки не впливають на backup/restore, available=false повідомляє про недоступну/неповну історію. Це діагностика, без crash-durability гарантій чи аудиту персоналу; recovery journal залишається єдиним механізмом фізичного повернення БД. Подія містить ISO time, operation, slot|null, result, enum code|null, без шляхів/ПІБ. backup.getHistory — явний read-only IPC без аргументів.
 
 system.openContact — єдиний новий зовнішній IPC: чотири enum ID, відповідні URI тільки в electron/contacts.ts; shell.openExternal отримує лише Main allowlist. Невдача повертає boolean false, без деталей ОС, UI дає копіювання контакту. Обидва нові методи проходять наявні sender/mainFrame/URL та Zod args/results. Кадрові IPC/схема 4 й правила резервування не змінені.
+
+
+## Startup lifecycle після 3.4.3
+
+Single-instance та незалежні шляхи встановлюються до запуску вікна. createStartup (electron/startup.ts) запам'ятовує єдину Promise: createWindow з show=false → loadURL/loadFile + ready-to-show/show → Storage.initializeSafely → auto-backup тільки за ready, якщо не почато вихід. Помилка/закриття вікна не ініціалізує SQLite; вихід під час ініціалізації очікує її завершення, потім закриває Storage. Той самий before-quit бар'єр продовжує чекати backup mutex. storage.retry при initializing нічого не відкриває; кадрові операції, як раніше, мають getDatabase ready guard. Нових IPC чи міграцій немає.
+
+Renderer src/main.tsx — малий loader із обробкою rejected dynamic import bootstrap (JS/CSS-залежності). src/bootstrap.tsx переносить AID StartupBoundary і чинні KeyboardNavigation/Toast/UnsavedChanges hosts; runtime render error показує загальне повідомлення без технічних винятків. App тільки poll storage.getStatus; при ready чекає решту STARTUP_MINIMUM_MS=2000 від монтування, помилка одразу відображає RecoveryScreen. Gate не залежить від кадрових запитів/модалок/навігації. Політика збереження/міграцій/відновлення й renderer reload після restore незмінна; reload запускає новий gate.
+
+Startup JSX, minimum-display helper, startup CSS/keyframes та boundary адаптовані з AID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Відмінності: 2 секунди, HR/UsersRound/сиреневі токени, локальна SQLite замість auth/network; без welcome/update gate. CSS-анімації вимкнені reduced-motion. Sync SQLite роботи лишаються в Main; readiness/помилка помічаються renderer наступною status-відповіддю (poll 1 с), без фіктивного прогресу. Відсутність самого початкового JS entry або крах renderer не лікуються React boundary.
+
+Уточнення startup/recovery 3.4.3: успішний BackupController.confirmRestore викликає Main onRestored callback. Той запускає наявний scheduler тільки за ready та !closing; це відновлює auto-backup після початкової помилки, коли startup його не запускав. Cancel/error callback не викликають. Формат/підтвердження/атомарність restore незмінні. Цей callback додатково перевірено в наявному справжньому Electron Main smoke без GUI-діалогів.
+
+Перший кадр та renderer-ready: openWindow очікує і ready-to-show, і перше довірене storage.getStatus із змонтованого App effect (чинний IPC, без нового каналу). Це не дає почати SQLite до завантаження динамічних React/CSS залежностей і появи заставки. Закриття вікна завершує очікування без ініціалізації; при помилці bootstrap видно fallback, а SQLite ще не відкривається.
