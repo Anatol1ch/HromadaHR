@@ -2,6 +2,7 @@ import { ZoomController } from './zoom.js'
 import { createStartup } from './startup.js'
 import { openContact } from './contacts.js'
 import { PersonnelService } from './personnel/service.js'
+import { LeaveService } from './leave/service.js'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -107,7 +108,8 @@ if (!hasLock) {
   }), () => {
     acknowledgeRenderer()
     return storage.getStatus()
-  }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory, zoom)
+  }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), new LeaveService(storage, () => backups.isBusy()),
+  id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory, zoom)
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()

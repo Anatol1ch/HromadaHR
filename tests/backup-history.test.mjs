@@ -26,6 +26,7 @@ test('contact IDs and history IPC enforce argument, sender, frame and URL bounda
   const trusted = { sender: contents, senderFrame: contents.mainFrame }
   registerIpcHandlers({ handle: (channel, handler) => handlers.set(channel, handler) }, () => win,
     contents.mainFrame.url, () => ({}), () => ({}), {}, () => {}, {},
+    { listPeriods: () => [], proposePeriods: () => [], savePeriods: () => [], deletePeriod: () => null },
     id => openContact(id, async uri => { opened.push(uri) }), () => ({ available: true, events: [event] }))
   const contact = handlers.get(ipcChannels.systemOpenContact), history = handlers.get(ipcChannels.backupGetHistory)
   for (const args of [['https://evil.test'], ['file:///x'], [{ id: 'phone' }], ['phone', 'https://evil.test'], ['__proto__'], []]) {

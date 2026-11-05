@@ -74,9 +74,14 @@ export class PersonnelService {
       this.checkReferences(db, value)
       const result = db.prepare(`UPDATE employees SET last_name=?, first_name=?, middle_name=?, birth_date=?,
         employee_type=?, hire_date=?, position_id=?, department_id=? WHERE id=?`)
-        .run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType,
+      const currentHireDate = db.prepare<[string], { hireDate: string }>('SELECT hire_date AS hireDate FROM employees WHERE id=?').get(id)
+      if (!currentHireDate) throw new PersonnelError('NOT_FOUND')
+      if (currentHireDate.hireDate !== value.hireDate && db.prepare('SELECT 1 FROM leave_period_balances WHERE employee_id=? LIMIT 1').get(id)) {
+        throw new PersonnelError('HIRE_DATE_HAS_LEAVE_PERIODS')
+      }
+      const changed = result.run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType,
           value.hireDate, value.positionId, value.departmentId, id)
-      if (!result.changes) throw new PersonnelError('NOT_FOUND')
+      if (!changed.changes) throw new PersonnelError('NOT_FOUND')
       return this.card(db, id)
     }).immediate())
   }

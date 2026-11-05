@@ -2,6 +2,7 @@ import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
 import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, EmployeeDetails, Department, Position } from './personnel.js'
+import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, LeaveType, ProposedLeavePeriod } from './leave.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
@@ -14,6 +15,10 @@ export const ipcChannels = {
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
   personnelCreatePosition: 'personnel:createPosition',
+  leaveListPeriods: 'leave:listPeriods',
+  leaveProposePeriods: 'leave:proposePeriods',
+  leaveSavePeriods: 'leave:savePeriods',
+  leaveDeletePeriod: 'leave:deletePeriod',
   systemGetZoom: 'system:getZoom', systemSetZoom: 'system:setZoom',
   systemOpenContact: 'system:openContact', backupGetHistory: 'backup:getHistory',
   systemGetInfo: 'system:getInfo', storageGetStatus: 'storage:getStatus',
@@ -36,7 +41,7 @@ export interface SystemInfo {
   mode: 'dev' | 'built'
 }
 
-export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode
+export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
@@ -56,6 +61,10 @@ export interface IpcOperations {
   [ipcChannels.personnelCreateDepartment]: { args: [Omit<Department, 'id'>]; result: Department }
   [ipcChannels.personnelListPositions]: { args: []; result: Position[] }
   [ipcChannels.personnelCreatePosition]: { args: [Omit<Position, 'id'>]; result: Position }
+  [ipcChannels.leaveListPeriods]: { args: [string]; result: ConfirmedLeavePeriod[] }
+  [ipcChannels.leaveProposePeriods]: { args: [string, string, LeaveType]; result: ProposedLeavePeriod[] }
+  [ipcChannels.leaveSavePeriods]: { args: [string, LeavePeriodInput[]]; result: ConfirmedLeavePeriod[] }
+  [ipcChannels.leaveDeletePeriod]: { args: [string]; result: null }
   [ipcChannels.systemGetInfo]: { args: []; result: SystemInfo }
   [ipcChannels.storageGetStatus]: { args: []; result: StorageStatus }
   [ipcChannels.storageRetry]: { args: []; result: StorageStatus }
@@ -70,6 +79,7 @@ export interface IpcOperations {
 
 export interface HromadaHRApi {
   readonly personnel: PersonnelApi
+  readonly leave: LeaveApi
   readonly backup: BackupApi
   readonly system: {
     readonly getZoom: () => Promise<IpcResult<ZoomStatus>>

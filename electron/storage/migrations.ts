@@ -72,6 +72,46 @@ CREATE TABLE employees (
 ) STRICT;
 CREATE INDEX employees_position ON employees(position_id);
 CREATE INDEX employees_department ON employees(department_id);`,
+}, {
+  version: 6,
+  name: 'leave_period_balances',
+  requiresBackup: true,
+  sql: `CREATE TABLE leave_period_balances (
+  id TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 36),
+  employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  leave_type TEXT NOT NULL CHECK (leave_type IN ('annual_main', 'oms_service_additional', 'children_social_additional')),
+  period_start TEXT NOT NULL CHECK (length(period_start) = 10 AND period_start GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(period_start, 1, 4) != '0000' AND coalesce(date(period_start, '+0 days') = period_start, 0)),
+  period_end TEXT NOT NULL CHECK (length(period_end) = 10 AND period_end GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(period_end, 1, 4) != '0000' AND coalesce(date(period_end, '+0 days') = period_end, 0)),
+  accounting_basis TEXT NOT NULL CHECK (accounting_basis IN ('initial_balance', 'confirmed_entitlement')),
+  confirmed_days INTEGER NOT NULL CHECK (confirmed_days >= 0),
+  reference_entitlement_days INTEGER CHECK (reference_entitlement_days IS NULL OR reference_entitlement_days >= 0),
+  CHECK (period_start <= period_end),
+  CHECK ((accounting_basis = 'initial_balance' AND period_start < '2027-01-01') OR
+    (accounting_basis = 'confirmed_entitlement' AND period_start >= '2027-01-01')),
+  CHECK (accounting_basis = 'initial_balance' OR reference_entitlement_days IS NULL),
+  UNIQUE (employee_id, leave_type, period_start)
+) STRICT;
+CREATE INDEX leave_period_balances_employee ON leave_period_balances(employee_id, period_start);
+CREATE TRIGGER leave_period_balances_no_overlap_insert
+BEFORE INSERT ON leave_period_balances
+WHEN EXISTS (
+  SELECT 1 FROM leave_period_balances p
+  WHERE p.employee_id = NEW.employee_id AND p.leave_type = NEW.leave_type AND p.period_start != NEW.period_start
+    AND NEW.period_start <= p.period_end AND p.period_start <= NEW.period_end
+)
+BEGIN
+  SELECT RAISE(ABORT, 'leave period overlap');
+END;
+CREATE TRIGGER leave_period_balances_no_overlap_update
+BEFORE UPDATE ON leave_period_balances
+WHEN EXISTS (
+  SELECT 1 FROM leave_period_balances p
+  WHERE p.id != OLD.id AND p.employee_id = NEW.employee_id AND p.leave_type = NEW.leave_type
+    AND NEW.period_start <= p.period_end AND p.period_start <= NEW.period_end
+)
+BEGIN
+  SELECT RAISE(ABORT, 'leave period overlap');
+END;`,
 }]
 
 function checksum(migration: Migration) {

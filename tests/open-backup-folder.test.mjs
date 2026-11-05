@@ -42,7 +42,8 @@ if (!process.versions.electron) {
     const handlers = new Map(), contents = { isDestroyed: () => false, mainFrame: { url: 'file:///hr/index.html' } }
     const trusted = { sender: contents, senderFrame: contents.mainFrame }
     registerIpcHandlers({ handle: (channel, handler) => handlers.set(channel, handler) },
-      () => ({ isDestroyed: () => false, webContents: contents }), contents.mainFrame.url, () => ({}), () => ({}), controller, () => {}, {})
+      () => ({ isDestroyed: () => false, webContents: contents }), contents.mainFrame.url, () => ({}), () => ({}), controller, () => {}, {},
+      { listPeriods: () => [], proposePeriods: () => [], savePeriods: () => [], deletePeriod: () => null })
     const open = handlers.get(ipcChannels.backupOpenFolder)
     for (const args of [[], [0], [3], ['1'], [folders[0]], [{ slot: 1, path: folders[0] }], [1, folders[0]], [null]]) {
       assert.equal((await open(trusted, ...args)).error.code, 'INVALID_ARGUMENTS')

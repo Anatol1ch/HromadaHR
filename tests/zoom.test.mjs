@@ -17,7 +17,7 @@ test('zoom IPC accepts only allowed values/trusted callers; shortcuts share pers
     const handlers = new Map(), event = { sender: contents, senderFrame: contents.mainFrame }
     registerIpcHandlers({ handle: (channel, handler) => handlers.set(channel, handler) },
       () => ({ isDestroyed: () => false, webContents: contents }), contents.mainFrame.url,
-      () => ({}), () => ({}), {}, () => {}, {}, undefined, undefined, controller)
+      () => ({}), () => ({}), {}, () => {}, {}, { listPeriods: () => [], proposePeriods: () => [], savePeriods: () => [], deletePeriod: () => null }, undefined, undefined, controller)
     const get = handlers.get(ipcChannels.systemGetZoom), set = handlers.get(ipcChannels.systemSetZoom)
     for (const value of [0, 79, 81, 120, 200, NaN, Infinity, '125', null, undefined, {}]) {
       assert.equal((await set(event, value)).error.code, 'INVALID_ARGUMENTS')

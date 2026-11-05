@@ -4,6 +4,9 @@ import { backupHistory } from '../shared/backupHistory.js'
 import { PersonnelError } from './personnel/service.js'
 import type { PersonnelService } from './personnel/service.js'
 import * as personnelSchemas from './personnel/schemas.js'
+import { LeaveError } from './leave/service.js'
+import type { LeaveService } from './leave/service.js'
+import * as leaveSchemas from './leave/schemas.js'
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron'
 import { z } from 'zod'
 import { ipcChannels } from '../shared/ipc.js'
@@ -45,6 +48,7 @@ export function registerIpcHandlers(
   backup: Pick<BackupController, 'listCopies' | 'selectCopy' | 'openBackupFolder' | 'getStatus' | 'chooseFolder' | 'saveConfig' | 'runManual' | 'chooseRestore' | 'confirmRestore' | 'retryStorage'>,
   quit: () => void,
   personnel: PersonnelService,
+  leave: LeaveService,
   openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
   getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
   zoom?: Pick<ZoomController, 'get' | 'set'>,
@@ -99,6 +103,15 @@ export function registerIpcHandlers(
   register(ipcChannels.personnelCreatePosition, z.tuple([personnelSchemas.positionInput]), personnelSchemas.position,
     ([input]) => personnel.createPosition(input))
 
+  register(ipcChannels.leaveListPeriods, z.tuple([personnelSchemas.id]), leaveSchemas.confirmedPeriod.array(),
+    ([employeeId]) => leave.listPeriods(employeeId))
+  register(ipcChannels.leaveProposePeriods, z.tuple([personnelSchemas.id, leaveSchemas.calendarDate, leaveSchemas.leaveType]),
+    leaveSchemas.proposedPeriod.array(), ([employeeId, throughDate, leaveType]) => leave.proposePeriods(employeeId, throughDate, leaveType))
+  register(ipcChannels.leaveSavePeriods, z.tuple([personnelSchemas.id, leaveSchemas.periodsInput]), leaveSchemas.confirmedPeriod.array(),
+    ([employeeId, periods]) => leave.savePeriods(employeeId, periods))
+  register(ipcChannels.leaveDeletePeriod, z.tuple([personnelSchemas.id]), z.null(),
+    ([periodId]) => leave.deletePeriod(periodId))
+
   // Internal registration only: channels and signatures come from the allowlist.
   // Keep security checks here when adding future explicitly allowed operations.
   function register<Channel extends keyof IpcOperations>(
@@ -124,11 +137,11 @@ export function registerIpcHandlers(
         // Keep synchronous diagnostics synchronous; await privileged operations
         // before validating output and normalizing errors. No authentication.
         if (result instanceof Promise) return result.then(data => ({ ok: true as const, data: resultSchema.parse(data) }))
-          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError) ? error.code : 'INTERNAL_ERROR' as const } }))
+          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError) ? error.code : 'INTERNAL_ERROR' as const } }))
         return { ok: true, data: resultSchema.parse(result) }
       } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError) ? error.code : 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError) ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

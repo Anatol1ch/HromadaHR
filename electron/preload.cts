@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { ipcChannels } from '../shared/ipc.js'
 import type { HromadaHRApi, IpcOperations, IpcResult } from '../shared/ipc.js'
+import { ipcChannels } from '../shared/ipc.js'
 
 // Private transport; only the explicit methods below cross contextBridge.
 async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOperations[C]['args']): Promise<IpcResult<IpcOperations[C]['result']>> {
@@ -19,6 +19,12 @@ const api: HromadaHRApi = {
     createDepartment: (input) => call(ipcChannels.personnelCreateDepartment, input),
     listPositions: () => call(ipcChannels.personnelListPositions),
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
+  },
+  leave: {
+    listPeriods: employeeId => call(ipcChannels.leaveListPeriods, employeeId),
+    proposePeriods: (employeeId, throughDate, leaveType) => call(ipcChannels.leaveProposePeriods, employeeId, throughDate, leaveType),
+    savePeriods: (employeeId, periods) => call(ipcChannels.leaveSavePeriods, employeeId, periods),
+    deletePeriod: periodId => call(ipcChannels.leaveDeletePeriod, periodId),
   },
   backup: {
     listCopies: () => call(ipcChannels.backupListCopies),

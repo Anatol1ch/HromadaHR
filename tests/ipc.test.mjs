@@ -30,7 +30,7 @@ function setup(getInfo = () => info, allowedUrl = url, personnel) {
     saveConfig: async () => { throw new Error('Not selected') }, runManual: async () => { throw new Error('Not configured') },
     confirmRestore: async () => { throw new Error('Not selected') },
     retryStorage: async () => ({ state: 'ready', created: false, schemaVersion: 1 }),
-  }, () => {}, personnel)
+  }, () => {}, personnel, { listPeriods: () => [], proposePeriods: () => [], savePeriods: () => [], deletePeriod: () => null })
   const event = { sender: contents, senderFrame: contents.mainFrame }
   return {
     handlers, event, contents,
@@ -139,7 +139,7 @@ test('built preload exposes only the typed method and invokes the real handler',
     calls.push([channel, ...args])
     return fixture.handlers.get(channel)(fixture.event, ...args)
   })
-  assert.deepEqual(Object.keys(api).sort(), ['backup', 'personnel', 'storage', 'system'])
+  assert.deepEqual(Object.keys(api).sort(), ['backup', 'leave', 'personnel', 'storage', 'system'])
   assert.deepEqual(Object.keys(api.backup).sort(), ['chooseFolder', 'chooseRestore', 'confirmRestore', 'getHistory', 'getStatus', 'listCopies', 'openBackupFolder', 'runManual', 'saveConfig', 'selectCopy'])
   assert.deepEqual(Object.keys(api.system).sort(), ['getInfo', 'getZoom', 'openContact', 'quit', 'setZoom'])
   assert.deepEqual(Object.keys(api.storage).sort(), ['getStatus', 'retry'])

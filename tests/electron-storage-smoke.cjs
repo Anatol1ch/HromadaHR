@@ -16,6 +16,7 @@ app.disableHardwareAcceleration()
 app.whenReady().then(async () => {
   const { openStorageSafely, Storage } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/storage/index.js')).href)
   const { PersonnelService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/personnel/service.js')).href)
+  const { LeaveService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/leave/service.js')).href)
   const { BackupService } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/service.js')).href)
   const { BackupController } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/controller.js')).href)
   const { snapshot } = await import(pathToFileURL(join(__dirname, '../dist-electron/electron/backup/files.js')).href)
@@ -32,7 +33,7 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 5)
+    assert.equal(first.schemaVersion, 6)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
@@ -41,6 +42,9 @@ app.whenReady().then(async () => {
     input = { departmentId: department.id, positionId: position.id, hireDate: '2026-01-01',
       lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, employeeType: 'staff' }
     employeeId = personnel.createEmployee(input).id
+    new LeaveService({ getDatabase: () => first.database }, () => false).savePeriods(employeeId, [
+      { leaveType: 'annual_main', periodStart: '2026-01-01', periodEnd: '2026-12-31', accountingBasis: 'initial_balance', confirmedDays: 5, referenceEntitlementDays: null },
+    ])
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
@@ -50,9 +54,11 @@ app.whenReady().then(async () => {
     assert.equal(second.created, false)
     assert.equal(second.database.prepare('SELECT value FROM test_smoke').get().value, 'persisted')
     const personnel = new PersonnelService({ getDatabase: () => second.database }, () => false)
-    assert.equal(personnel.updateEmployee(employeeId, { ...input, hireDate: '2026-02-01' }).hireDate, '2026-02-01')
+    assert.equal(personnel.updateEmployee(employeeId, { ...input, firstName: 'Інше ім’я' }).firstName, 'Інше ім’я')
+    assert.throws(() => personnel.updateEmployee(employeeId, { ...input, hireDate: '2026-02-01' }), error => error.code === 'HIRE_DATE_HAS_LEAVE_PERIODS')
     personnel.deleteEmployee(employeeId)
     assert.equal(second.database.prepare('SELECT count(*) n FROM employees').get().n, 0)
+    assert.equal(second.database.prepare('SELECT count(*) n FROM leave_period_balances').get().n, 0)
   } finally { second.close() }
   // Real Electron loads Koffi and exercises exclusive Win32 preservation,
   // handle-based rename, online staging and emergency SQLite reopen.
@@ -66,7 +72,9 @@ app.whenReady().then(async () => {
     await service.confirmRestore(selection.token, async () => true)
     assert.equal(storage.getDatabase().prepare('SELECT value FROM test_smoke').get().value, 'persisted')
     const personnel = new PersonnelService(storage, () => service.isBusy())
+    const leave = new LeaveService(storage, () => service.isBusy())
     assert.equal(personnel.getEmployee(employeeId).hireDate, '2026-01-01')
+    assert.equal(leave.listPeriods(employeeId)[0].confirmedDays, 5)
     const protection = join(root, 'data', 'protection')
     const raw = readdirSync(protection).find(name => name.startsWith('raw-'))
     assert.equal(readFileSync(join(protection, raw, 'database.db'), 'utf8'), 'damaged Electron fixture')

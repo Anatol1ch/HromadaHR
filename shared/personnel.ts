@@ -18,7 +18,7 @@ export interface EmployeeCard extends EmployeeDetails {
   position: Position
   department: Department
 }
-export type PersonnelErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE'
+export type PersonnelErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'HIRE_DATE_HAS_LEAVE_PERIODS'
 export interface PersonnelApi {
   deleteEmployee: (employeeId: string) => Promise<IpcResult<null>>
   listEmployees: () => Promise<IpcResult<EmployeeCard[]>>

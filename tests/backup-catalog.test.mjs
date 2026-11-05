@@ -107,7 +107,9 @@ if (!process.versions.electron) {
       const handlers = new Map(), window = { isDestroyed: () => false, webContents: { isDestroyed: () => false, mainFrame: { url: 'file:///hr/index.html' }, reload: () => { reloads++ } } }
       let reloads = 0, resumed = 0, response = 0, prompts = 0
       const controller = new BackupController(service, () => window, () => { resumed++ })
-      registerIpcHandlers({ handle: (channel, handler) => handlers.set(channel, handler) }, () => window, window.webContents.mainFrame.url, () => ({}), () => ({}), controller, () => {}, {})
+      registerIpcHandlers({ handle: (channel, handler) => handlers.set(channel, handler) }, () => window, window.webContents.mainFrame.url,
+        () => ({}), () => ({}), controller, () => {}, {},
+        { listPeriods: () => [], proposePeriods: () => [], savePeriods: () => [], deletePeriod: () => null })
       const trusted = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
       const select = handlers.get(ipcChannels.backupSelectCopy), list = handlers.get(ipcChannels.backupListCopies)
       for (const args of [[], [source], [{ id: fresh.id, path: source }], [fresh.id, source]]) assert.equal((await select(trusted, ...args)).error.code, 'INVALID_ARGUMENTS')
@@ -127,7 +129,7 @@ if (!process.versions.electron) {
       await assert.rejects(service.selectCopy(fresh.id), code('INVALID_SELECTION'))
       storage.getDatabase().prepare('UPDATE backup_config SET folder1=?').run(folders[0])
       const selected = await select(trusted, fresh.id)
-      assert.equal(selected.ok, true); assert.equal(selected.data.fileName, basename(source)); assert.equal(selected.data.schemaVersion, 5)
+      assert.equal(selected.ok, true); assert.equal(selected.data.fileName, basename(source)); assert.equal(selected.data.schemaVersion, 6)
       assert.equal(prompts, 0)
       const originalPrompt = dialog.showMessageBox
       dialog.showMessageBox = async (_window, options) => {
