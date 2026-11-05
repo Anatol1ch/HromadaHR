@@ -1,7 +1,67 @@
-.leave-layout { display: grid; gap: 12px; min-width: 0; }
+.leave-workspace { max-width: 1060px; }
+.leave-layout { display: grid; gap: var(--space-3); min-width: 0; container-type: inline-size; }
 .leave-layout p { margin: 0; }
-.leave-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.leave-select { width: min(100%, 25rem); }
-.leave-dates { display: grid; gap: 6px; min-width: 11rem; }
-.leave-dates label { display: grid; gap: 4px; }
-.leave-layout td > input { width: 100%; min-width: 5rem; }
+
+.leave-person-toolbar, .leave-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.leave-person-toolbar { justify-content: flex-start; padding-block-end: var(--space-3); border-bottom: 1px solid var(--border-surface); }
+.leave-select { width: min(100%, 22rem); min-width: 0; }
+.leave-person-context { min-width: 0; overflow-wrap: anywhere; }
+.leave-person-context h2 { margin: 0; font-size: 1rem; }
+.leave-person-context p, .leave-muted, .leave-period-note { color: var(--color-text-secondary); font-size: .8125rem; }
+.leave-toolbar .primary-button { min-height: var(--control-height); height: auto; }
+
+.leave-summary { display: grid; gap: 3px; padding-block: var(--space-2); }
+.leave-summary > strong { color: var(--color-text); font-size: 1.625rem; line-height: 1.2; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.leave-summary > span { font-weight: 600; font-size: .875rem; }
+.leave-summary > p { color: var(--color-text-secondary); font-size: .8125rem; }
+
+.leave-layout .dictionary-table-wrap { background: var(--surface-card); }
+.leave-layout .leave-table th { padding: 8px 12px; }
+.leave-layout .leave-table td { height: 50px; padding: 6px 12px; }
+.leave-layout .leave-table .leave-group th {
+  background: var(--surface-panel);
+  border-top: 1px solid var(--border-surface);
+  padding-block: 6px;
+}
+.leave-layout .leave-table .leave-days-column { text-align: right; font-variant-numeric: tabular-nums; }
+.leave-days-column strong, .leave-period { color: var(--color-text); font-weight: 650; }
+.leave-period { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.leave-layout .leave-table .leave-icon-action { width: 36px; height: 36px; color: var(--color-text-secondary); }
+.leave-layout .leave-table .leave-remove:is(:hover, :focus-visible) {
+  color: var(--color-text-error);
+  background: var(--feedback-error-bg, var(--surface-panel));
+}
+
+.leave-editor-modal .app-modal-content { scroll-padding-bottom: 9rem; }
+.leave-editor .leave-table { min-width: 16rem; }
+.leave-period-note { display: block; margin-top: 2px; }
+.leave-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: var(--space-2); }
+.leave-dates .recipient-field { min-width: 0; margin: 0; }
+.leave-editor > .secondary-button { justify-self: start; }
+.leave-days-field { width: min(100%, 6.5rem); margin-inline-start: auto; }
+.leave-days-field input { width: 100%; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.leave-editor-footer { position: sticky; bottom: 0; z-index: 2; background: var(--surface-card); }
+.leave-editor-modal .app-modal-content .leave-editor-actions {
+  position: static;
+  margin-top: 0;
+  padding-block: var(--space-3) var(--space-2);
+}
+.leave-editor-actions .leave-save-actions { margin-inline-start: auto; justify-content: flex-end; }
+
+@container (max-width: 35rem) {
+  .leave-toolbar { align-items: flex-start; flex-direction: column; }
+  .leave-dates { grid-template-columns: minmax(0, 1fr) auto; }
+  .leave-dates .recipient-field { grid-column: 1; }
+  .leave-dates .leave-icon-action { grid-column: 2; grid-row: 2; }
+}
+@container (max-width: 24rem) {
+  .leave-layout .leave-table :is(th, td) { padding-inline: 6px; }
+  .leave-editor-actions .leave-save-actions { flex: 1 1 100%; }
+  .leave-editor-modal .leave-editor-actions button { white-space: normal; }
+}

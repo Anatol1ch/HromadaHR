@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { Fragment, useEffect, useId, useRef, useState, type RefObject } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { leaveTypes, type LeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import { todayIsoDate } from '../../lib/dates'
@@ -7,7 +8,7 @@ import DictionaryTable from '../DictionaryTable'
 import Select from '../Select'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import BalanceEditor, { basisLabels, periodLabel } from './BalanceEditor'
+import BalanceEditor, { periodLabel } from './BalanceEditor'
 import { cutoff, type Period } from './draft'
 
 const labels = {
@@ -16,12 +17,23 @@ const labels = {
   children_social_additional: 'Додаткова соціальна на дітей',
 }
 const options = leaveTypes.map(value => ({ value, label: labels[value] }))
-const columns = [{ label: 'Обліковий період' }, { label: 'Основа обліку' }, { label: 'Підтверджено' }, { label: 'Дії' }]
+const columns = [{ label: 'Обліковий період' },
+  { label: 'Підтверджено', width: '8rem', className: 'leave-days-column' }, { label: 'Дії', width: '3.5rem' }]
+const groups = [
+  { basis: 'initial_balance', label: 'Початкові залишки' },
+  { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
+] as const
+const dayPlural = new Intl.PluralRules('uk-UA')
+const dayLabel = (days: bigint) => {
+  const category = dayPlural.select(Number(days % 100n))
+  return category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
+}
 
 export default function LeaveBalances({ employeeId, hireDate, navigationGuard }: {
   employeeId: string; hireDate: string; navigationGuard: RefObject<NavigationGuard>
 }) {
   const [type, setType] = useState<LeaveType>('annual_main')
+  const groupId = useId()
   const [revision, setRevision] = useState(0)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState<ConfirmedLeavePeriod | null>(null)
@@ -89,28 +101,43 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard }:
   }
 
   return <section ref={owner} className="leave-layout" aria-label="Залишки відпусток">
-    <div className="leave-actions">
+    {periods && <div className="leave-summary" aria-live="polite">
+      <strong>{confirmed.length ? sum.toLocaleString('uk-UA') + ' ' + dayLabel(sum) : 'Залишки не внесено'}</strong>
+      {confirmed.length > 0 && <span>Підтверджені періоди: {confirmed.length} з {periods.length}</span>}
+      <p>{confirmed.length > 0 && confirmed.length < periods.length ? 'Сума може бути неповною. ' : ''}
+        Використані відпустки ще не враховано.</p>
+    </div>}
+    <div className="leave-toolbar">
       <div className="leave-select"><Select label="Вид відпустки" value={type} options={options} advanceOnSelect={false}
         onChange={value => { setState(undefined); setType(value as LeaveType) }} /></div>
       <button className="primary-button" type="button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')}
-        onClick={() => setEditing(true)}>{confirmed.length ? 'Редагувати залишки' : 'Внести залишки'}</button>
+        onClick={() => setEditing(true)}>
+        {confirmed.length ? <Pencil size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+        {confirmed.length ? 'Редагувати залишки' : 'Внести залишки'}
+      </button>
     </div>
-    {periods && <div aria-live="polite">
-      <strong>Сума підтверджених днів: {confirmed.length ? sum.toLocaleString('uk-UA') : 'Не внесено'}</strong>
-      <p>{periods.some(period => period.status === 'proposed') ? 'Є непідтверджені періоди. Сума може бути неповною. ' : ''}
-        Сума показує внесені величини без обліку використаних відпусток.</p>
-    </div>}
-    <DictionaryTable label="Залишки за періодами" columns={columns} loading={!data}
+    <DictionaryTable label="Залишки за періодами" className="leave-table" columns={columns} loading={!data}
       empty={!periods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined} error={data?.error} onRetry={refresh}>
-      {periods?.map(period => <tr key={period.periodStart}>
-        <td>{periodLabel(period)}</td>
-        <td>{basisLabels[period.accountingBasis]}</td>
-        <td>{period.status === 'confirmed' ? period.confirmedDays + ' дн.' : 'Не внесено'}</td>
-        <td>{period.status === 'confirmed' && <button type="button" className="secondary-button danger-action"
-          aria-label={'Вилучити підтвердження за період ' + periodLabel(period)} onClick={() => { setDeleteError(''); setDeleting(period) }}>Вилучити</button>}</td>
-      </tr>)}
+      {groups.map(group => {
+        const entries = periods?.filter(period => period.accountingBasis === group.basis)
+        if (!entries?.length) return null
+        return <Fragment key={group.basis}>
+          <tr className="leave-group"><th id={groupId + group.basis} colSpan={3}>{group.label}</th></tr>
+          {entries.map(period => <tr key={period.periodStart}>
+            <td className="leave-period" aria-describedby={groupId + group.basis}>{periodLabel(period)}</td>
+            <td className="leave-days-column">{period.status === 'confirmed'
+              ? <strong>{period.confirmedDays} {dayLabel(BigInt(period.confirmedDays))}</strong>
+              : <span className="leave-muted">Не внесено</span>}</td>
+            <td>{period.status === 'confirmed' && <div className="registry-row-actions">
+              <button type="button" className="table-action leave-icon-action leave-remove" title="Вилучити підтвердження"
+                aria-label={'Вилучити підтвердження за період ' + periodLabel(period)}
+                onClick={() => { setDeleteError(''); setDeleting(period) }}><Trash2 size={16} aria-hidden="true" /></button>
+            </div>}</td>
+          </tr>)}
+        </Fragment>
+      })}
     </DictionaryTable>
-    {editing && periods && <BalanceEditor employeeId={employeeId} periods={periods} type={type} navigationGuard={navigationGuard}
+    {editing && periods && <BalanceEditor employeeId={employeeId} periods={periods} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard}
       onClose={() => setEditing(false)} onSaved={() => {
         setEditing(false)
         refresh()

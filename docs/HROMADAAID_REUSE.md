@@ -100,3 +100,7 @@ S1: повторно цільово звірено src/SettingsPage.tsx (cards/h
 ## 4.2 — Панель залишків
 
 На SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb звірено src/RecipientRegistry.tsx (DictionaryTable і стани завантаження) та src/AidRegistry.tsx (Select працівника за аналогією з отримувачем, DateField, Modal, форма зі збереженням і захистом чернетки). У HromadaHR використано чинні спільні компоненти й семантичні стилі. Предметний сценарій використовує власні контракти leave.
+
+## 4.2.1 — Компактний редактор і таблиця
+
+На SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb перевірено src/RecipientRegistry.tsx та src/AidRegistry.tsx. Реалізовано адаптацію дій рядка, спільних полів та футера через наявні компоненти HR. Деталі композиції зафіксовано в UI-TRANSFER.

@@ -22,15 +22,22 @@ export default function LeaveWorkspace({ navigationGuard }: { navigationGuard: R
     return () => { active = false }
   }, [revision])
   const employee = employees?.find(item => item.id === selected)
-  return <div className="page-transition">
+  return <div className="page-transition leave-workspace">
     <div className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Відпустки</h1></div></div>
-    <section className="dashboard-panel leave-layout" aria-label="Облік залишків">
+    <section className="leave-layout" aria-label="Облік залишків">
       {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRevision(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
         !employees ? <DataState kind="loading" message="Завантаження працівників…" /> :
         employees.length === 0 ? <DataState kind="empty" message="У реєстрі ще немає працівників." /> :
-        <div className="leave-select"><Select label="Працівник" value={selected} searchable advanceOnSelect={false}
+        <div className="leave-person-toolbar"><div className="leave-select"><Select label="Працівник" value={selected} searchable advanceOnSelect={false}
           options={employees.map(item => ({ value: item.id, label: fullName(item), description: item.position.name + ' · ' + item.department.name }))}
-          onChange={id => navigationGuard.current(() => setSelected(id))} /></div>}
+          onChange={id => navigationGuard.current(() => setSelected(id))} /></div>
+          {employee && <div className="leave-person-context">
+            <h2>{fullName(employee)}</h2>
+            <p>{employee.position.name} · {employee.department.name}</p>
+          </div>}
+        </div>}
+      {employees && employees.length > 0 && !employee && !error &&
+        <DataState kind="empty" message="Оберіть працівника" description="Тут з’являться його облікові періоди та підтверджені залишки." />}
       {employee && <LeaveBalances key={employee.id} employeeId={employee.id} hireDate={employee.hireDate} navigationGuard={navigationGuard} />}
     </section>
   </div>

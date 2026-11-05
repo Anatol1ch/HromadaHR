@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
+import { Check, Plus, X } from 'lucide-react'
 import type { LeaveType } from '../../../shared/leave'
 import { formatDate, parseDateInput } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
@@ -7,14 +8,14 @@ import ConfirmDialog from '../ConfirmDialog'
 import DateField from '../DateField'
 import DictionaryTable from '../DictionaryTable'
 import Modal from '../Modal'
+import ValidatedInput from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import { buildChanges, cutoff, type Draft, type Period } from './draft'
 
-export const basisLabels = { initial_balance: 'Початковий залишок', confirmed_entitlement: 'Підтверджене право за період' }
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, periods, type, navigationGuard, onClose, onSaved }: {
-  employeeId: string; periods: Period[]; type: LeaveType; navigationGuard: RefObject<NavigationGuard>
+export default function BalanceEditor({ employeeId, periods, type, typeLabel, navigationGuard, onClose, onSaved }: {
+  employeeId: string; periods: Period[]; type: LeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
 }) {
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
@@ -66,36 +67,43 @@ export default function BalanceEditor({ employeeId, periods, type, navigationGua
     }
   }
 
-  return <Modal title="Внесення та редагування залишків" size="large" busy={busy} onClose={() => close(onClose)}>
-    <form ref={form} className="leave-layout" onSubmit={event => void submit(event)}>
-      <p>Порожнє поле для нового періоду означає «Не внесено». Нуль підтверджує відсутність днів.</p>
-      <DictionaryTable label="Введення залишків" columns={[{ label: 'Обліковий період' }, { label: 'Основа обліку' }, { label: 'Дні', width: '9rem' }]}
+  return <Modal title="Залишки за періодами" description={typeLabel} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
+    <form ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
+      <p className="leave-muted">Порожнє поле нового періоду означає «Не внесено». 0 підтверджує відсутність залишку.</p>
+      <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
+        columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-days-column' }]}
         empty={rows.length ? undefined : 'Немає періодів для введення.'}>
         {rows.map((row, index) => {
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
           const basis = 'period' in row ? row.period.accountingBasis : manualStart ? manualStart < cutoff ? 'initial_balance' : 'confirmed_entitlement' : null
           return <tr key={'period' in row ? row.period.periodStart : row.id}>
-            <td>{'period' in row ? periodLabel(row.period) : <div className="leave-dates">
-              <label>Початок<DateField disabled={busy} value={row.startIso} onChange={startIso => update(index, current => 'start' in current ? { ...current, startIso } : current)} onDraftChange={start => update(index, current => 'start' in current ? { ...current, start } : current)} /></label>
-              <label>Завершення<DateField disabled={busy} value={row.endIso} onChange={endIso => update(index, current => 'end' in current ? { ...current, endIso } : current)} onDraftChange={end => update(index, current => 'end' in current ? { ...current, end } : current)} /></label>
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => setRows(current => current.filter((_, i) => i !== index))}>Прибрати рядок</button>
-            </div>}</td>
-            <td>{basis ? basisLabels[basis] : '—'}</td>
-            <td><input type="text" inputMode="numeric" disabled={busy} value={row.days}
+            <td>{'period' in row ? <span className="leave-period">{periodLabel(row.period)}</span> : <div className="leave-dates">
+              <label className="recipient-field">Початок<DateField disabled={busy} value={row.startIso} onChange={startIso => update(index, current => 'start' in current ? { ...current, startIso } : current)} onDraftChange={start => update(index, current => 'start' in current ? { ...current, start } : current)} /></label>
+              <label className="recipient-field">Завершення<DateField disabled={busy} value={row.endIso} onChange={endIso => update(index, current => 'end' in current ? { ...current, endIso } : current)} onDraftChange={end => update(index, current => 'end' in current ? { ...current, end } : current)} /></label>
+              <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy}
+                onClick={() => setRows(current => current.filter((_, i) => i !== index))}><X size={16} aria-hidden="true" /></button>
+            </div>}
+            {basis === 'confirmed_entitlement' && <small className="leave-period-note">Право за новим періодом</small>}
+            </td>
+            <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
               aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)}
-              onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days })) }} /></td>
+              onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days })) }} /></div></td>
           </tr>
         })}
       </DictionaryTable>
-      {error && <Alert variant="error">{error}</Alert>}
-      <div className="leave-actions">
         {type === 'oms_service_additional' && <button type="button" className="secondary-button" disabled={busy} onClick={() => {
           const id = nextRowId.current++
           setRows(current => [...current, { id, start: '', end: '', startIso: '', endIso: '', days: '' }])
-        }}>Додати період</button>}
-        <button type="button" className="secondary-button" disabled={busy || !zeroCount} onClick={() => setConfirmZeros(true)}>Заповнити незаповнені нулями ({zeroCount})</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>Скасувати</button>
-        <button type="submit" className="primary-button" disabled={busy}>{busy ? 'Збереження…' : 'Зберегти'}</button>
+        }}><Plus size={16} aria-hidden="true" />Додати період</button>}
+      <div className="leave-editor-footer">
+        {error && <Alert variant="error">{error}</Alert>}
+        <div className="recipient-form-actions leave-editor-actions">
+          <button type="button" className="secondary-button" disabled={busy || !zeroCount} onClick={() => setConfirmZeros(true)}>Заповнити порожні нулями ({zeroCount})</button>
+          <div className="leave-save-actions">
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>Скасувати</button>
+            <button type="submit" className="primary-button" disabled={busy}><Check size={16} aria-hidden="true" />{busy ? 'Збереження…' : 'Зберегти'}</button>
+          </div>
+        </div>
       </div>
     </form>
     {confirmZeros && <ConfirmDialog title="Заповнити нулями?" variant="primary" confirmLabel="Заповнити нулями"
