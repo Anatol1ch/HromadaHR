@@ -1,10 +1,9 @@
-import type { Assignment, EmployeeCard } from '../../shared/personnel'
+import type { EmployeeCard } from '../../shared/personnel'
 import { defaultSort, initialRegistry, nextSort } from './registry.ts'
 import type { RegistryState, SortKey } from './registry.ts'
 import type { EmployeeType } from '../../shared/personnel'
 
-export type EmployeeFormTarget = { kind: 'create' } | { kind: 'edit'; employee: EmployeeCard } |
-  { kind: 'assignment'; employee: EmployeeCard; assignment?: Assignment }
+export type EmployeeFormTarget = { kind: 'create' } | { kind: 'edit'; employee: EmployeeCard }
 export interface EmployeeWorkspaceState {
   registry: RegistryState
   cardId: string | null

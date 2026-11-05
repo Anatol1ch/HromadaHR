@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { dateInputError, daysInMonth, formatDate, formatDateInput, formatDateTime, isIsoCalendarDate, parseDateInput } from '../src/lib/dates.ts'
 import { calendarDate, mondayIndex, monthGrid, shiftDays, shiftMonths } from '../src/lib/calendar.ts'
 import { cancelCloseConfirmation, confirmModalClose, finishCloseConfirmation, getCloseConfirmation, subscribeCloseConfirmation } from '../src/components/closeConfirmation.ts'
-import { createEmployee, assignmentInput } from '../dist-electron/electron/personnel/schemas.js'
-import { creationInput, emptyValues, validateEmployee } from '../src/employees/model.ts'
+import { employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
+import { employeeInput, emptyValues, validateEmployee } from '../src/employees/model.ts'
 
 test('AID date boundary presents only DD.MM.YYYY and preserves ISO calendar dates', () => {
   for (const iso of ['0001-01-01', '1600-02-29', '2000-02-29', '2026-11-03', '9999-12-31']) {
@@ -86,15 +86,14 @@ test('backup timestamp presentation is fixed Ukrainian local date/time without s
   assert.equal(formatDateTime(stamp), `${pad(local.getDate())}.${pad(local.getMonth() + 1)}.${local.getFullYear()} ${pad(local.getHours())}:${pad(local.getMinutes())}`)
 })
 
-test('formatted UI fields roundtrip into the unchanged employee and assignment IPC schemas', () => {
+test('formatted UI fields roundtrip into the employee IPC schema', () => {
   const id = '11111111-1111-4111-8111-111111111111'
-  const fields = { ...emptyValues, firstName: 'Умовний', lastName: 'Тестовий', birthDate: parseDateInput('29.02.2000'), startDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id }
-  assert.deepEqual(validateEmployee(fields, false), {})
-  const value = createEmployee.parse(creationInput(fields))
+  const fields = { ...emptyValues, firstName: 'Умовний', lastName: 'Тестовий', birthDate: parseDateInput('29.02.2000'), hireDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id }
+  assert.deepEqual(validateEmployee(fields), {})
+  const value = employeeDetails.parse(employeeInput(fields))
   assert.equal(value.birthDate, '2000-02-29')
-  assert.equal(value.startDate, '2026-11-03')
-  assert.equal(assignmentInput.parse({ startDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id, category: null }).startDate, '2026-11-03')
-  assert.equal(createEmployee.safeParse({ ...value, startDate: '03.11.2026' }).success, false)
+  assert.equal(value.hireDate, '2026-11-03')
+  assert.equal(employeeDetails.safeParse({ ...value, hireDate: '03.11.2026' }).success, false)
 })
 
 test('source close-confirmation store preserves one pending request, cancellation and disconnected owners', () => {

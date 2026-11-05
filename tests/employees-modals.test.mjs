@@ -3,10 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCloseGuards } from '../src/employees/closeGuards.ts'
 import { initialWorkspace, mergeEmployee, workspaceReducer } from '../src/employees/workspace.ts'
-import { assignmentInput, creationInput, emptyValues, personalDetails, validateAssignment, validateEmployee } from '../src/employees/model.ts'
-import { dateInputError, parseDateInput } from '../src/lib/dates.ts'
 import { confirmModalClose, getCloseConfirmation, finishCloseConfirmation, cancelCloseConfirmation } from '../src/components/closeConfirmation.ts'
-import { assignmentInput as assignmentSchema, createEmployee, employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
 
 const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']
 const employee = { id: ids[0], lastName: 'Синтетичний', firstName: 'Приклад', middleName: null }
@@ -16,7 +13,7 @@ test('nested form cancellation retains the parent card and registry options; onl
   let state = workspaceReducer(initialWorkspace, { type: 'registry', registry })
   state = workspaceReducer(state, { type: 'card', id: employee.id })
   const card = state
-  state = workspaceReducer(state, { type: 'form', form: { kind: 'assignment', employee } })
+  state = workspaceReducer(state, { type: 'form', form: { kind: 'edit', employee } })
   assert.equal(state.cardId, card.cardId)
   assert.equal(state.registry, card.registry)
   state = workspaceReducer(state, { type: 'form', form: null })
@@ -40,7 +37,7 @@ test('nested form cancellation retains the parent card and registry options; onl
 
 test('authoritative mutation replies replace list entries without duplicating or mutating existing rows', () => {
   const rows = [employee, { ...employee, id: ids[1] }]
-  const saved = { ...employee, firstName: 'Оновлений', hireDate: '2000-01-01', currentAssignment: { position: { name: 'Нова' } } }
+  const saved = { ...employee, firstName: 'Оновлений', hireDate: '2000-01-01', position: { name: 'Нова' } }
   const merged = mergeEmployee(rows, saved)
   assert.equal(merged.length, 2)
   assert.equal(merged[0], saved)
@@ -128,28 +125,4 @@ test('busy operations block closure and unload; a changed or disconnected stack 
   assert.equal(left, false)
   state.dirty = false
   assert.equal(guards.shouldBlockUnload(), false)
-})
-
-test('modal payloads keep ISO and nullable fields, restrict personal edits, and validate manual date drafts', () => {
-  const fields = { ...emptyValues, lastName: ' Приклад ', firstName: ' Умовний ', middleName: ' ', birthDate: '', startDate: parseDateInput('29.02.2024'), positionId: ids[0], departmentId: ids[1] }
-  assert.deepEqual(validateEmployee(fields, false), {})
-  assert.equal(createEmployee.safeParse(creationInput(fields)).success, true)
-  assert.equal(creationInput(fields).middleName, null)
-  assert.equal(creationInput(fields).birthDate, null)
-  assert.equal(creationInput(fields).category, null)
-  const personal = personalDetails(fields)
-  assert.equal(employeeDetails.safeParse(personal).success, true)
-  for (const key of ['departmentId', 'positionId', 'startDate', 'category']) assert.equal(key in personal, false)
-  const input = assignmentInput(fields, 'Текст категорії')
-  assert.deepEqual(Object.keys(input).sort(), ['category', 'departmentId', 'positionId', 'startDate'])
-  assert.equal(assignmentSchema.safeParse(input).success, true)
-  assert.equal(input.category, 'Текст категорії')
-  for (const display of ['29.02.1900', '31.04.2024', '32.01.2024', '29.02.', '']) {
-    assert.ok(dateInputError(display, true))
-    assert.equal(parseDateInput(display), null)
-  }
-  // A stale ISO must not justify submitting an invalid visible draft.
-  assert.ok(dateInputError('31.02.2024', true))
-  assert.equal(assignmentSchema.safeParse({ ...input, startDate: '29.02.2024' }).success, false)
-  assert.ok(validateAssignment({ ...fields, startDate: '2024-03-01' }, null, '2024-02-29').startDate)
 })

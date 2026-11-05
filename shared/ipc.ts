@@ -1,17 +1,15 @@
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
-import type { PersonnelApi, PersonnelErrorCode, AssignmentInput, EmployeeCard, CreateEmployee, EmployeeDetails, Assignment, Department, Position } from './personnel.js'
+import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, EmployeeDetails, Department, Position } from './personnel.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
-  personnelCreateAssignment: 'personnel:createAssignment', personnelUpdateAssignment: 'personnel:updateAssignment',
-  personnelDeleteAssignment: 'personnel:deleteAssignment', personnelDeleteEmployee: 'personnel:deleteEmployee',
+  personnelDeleteEmployee: 'personnel:deleteEmployee',
   personnelListEmployees: 'personnel:listEmployees',
   personnelGetEmployee: 'personnel:getEmployee',
   personnelCreateEmployee: 'personnel:createEmployee',
   personnelUpdateEmployee: 'personnel:updateEmployee',
-  personnelGetHistory: 'personnel:getHistory',
   personnelListDepartments: 'personnel:listDepartments',
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
@@ -49,15 +47,11 @@ export interface IpcOperations {
   [ipcChannels.systemSetZoom]: { args: [ZoomPercent]; result: ZoomStatus }
   [ipcChannels.systemOpenContact]: { args: [ContactId]; result: boolean }
   [ipcChannels.backupGetHistory]: { args: []; result: BackupHistory }
-  [ipcChannels.personnelCreateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
-  [ipcChannels.personnelUpdateAssignment]: { args: [string, AssignmentInput]; result: EmployeeCard }
-  [ipcChannels.personnelDeleteAssignment]: { args: [string]; result: EmployeeCard }
   [ipcChannels.personnelDeleteEmployee]: { args: [string]; result: null }
   [ipcChannels.personnelListEmployees]: { args: []; result: EmployeeCard[] }
   [ipcChannels.personnelGetEmployee]: { args: [string]; result: EmployeeCard }
-  [ipcChannels.personnelCreateEmployee]: { args: [CreateEmployee]; result: EmployeeCard }
+  [ipcChannels.personnelCreateEmployee]: { args: [EmployeeDetails]; result: EmployeeCard }
   [ipcChannels.personnelUpdateEmployee]: { args: [string, EmployeeDetails]; result: EmployeeCard }
-  [ipcChannels.personnelGetHistory]: { args: [string]; result: Assignment[] }
   [ipcChannels.personnelListDepartments]: { args: []; result: Department[] }
   [ipcChannels.personnelCreateDepartment]: { args: [Omit<Department, 'id'>]; result: Department }
   [ipcChannels.personnelListPositions]: { args: []; result: Position[] }

@@ -34,7 +34,7 @@ export default function EmployeeGroupTable({ title, rows, total, sort, onSort, l
         })), { label: 'Дії', width: '124px', className: 'employee-actions-heading' }]}>
         {rows.map(employee => <tr key={employee.id}>
           <td><strong className="employee-name">{fullName(employee)}</strong></td>
-          <td>{employee.currentAssignment.department.name}</td><td>{employee.currentAssignment.position.name}</td>
+          <td>{employee.department.name}</td><td>{employee.position.name}</td>
           <td className="employee-date">{displayDate(employee.hireDate)}</td>
           <td className="dictionary-actions-cell"><div className="registry-row-actions">
             <button type="button" className="table-action" title="Переглянути" aria-label={`Переглянути: ${fullName(employee)}`} onClick={() => actions.onOpen(employee)}><Eye size={17} aria-hidden="true"/></button>

@@ -10,15 +10,11 @@ async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOpera
 
 const api: HromadaHRApi = {
   personnel: {
-    createAssignment: (id, input) => call(ipcChannels.personnelCreateAssignment, id, input),
-    updateAssignment: (id, input) => call(ipcChannels.personnelUpdateAssignment, id, input),
-    deleteAssignment: id => call(ipcChannels.personnelDeleteAssignment, id),
     deleteEmployee: id => call(ipcChannels.personnelDeleteEmployee, id),
     listEmployees: () => call(ipcChannels.personnelListEmployees),
     getEmployee: (id) => call(ipcChannels.personnelGetEmployee, id),
     createEmployee: (input) => call(ipcChannels.personnelCreateEmployee, input),
     updateEmployee: (id, input) => call(ipcChannels.personnelUpdateEmployee, id, input),
-    getHistory: (id) => call(ipcChannels.personnelGetHistory, id),
     listDepartments: () => call(ipcChannels.personnelListDepartments),
     createDepartment: (input) => call(ipcChannels.personnelCreateDepartment, input),
     listPositions: () => call(ipcChannels.personnelListPositions),

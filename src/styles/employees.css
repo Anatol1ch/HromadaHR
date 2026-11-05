@@ -1,12 +1,6 @@
 /* Personnel composition adapted from HromadaAID 33eca107: RecipientRegistry.tsx,
-   recipient-details/history, dictionary-tabs and registry-row-actions in src/styles.css.
+   recipient-details, dictionary-tabs and registry-row-actions in src/styles.css.
    HR-specific selectors only connect these patterns to personnel data. */
-.recipient-history-table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--border-surface); border-radius: var(--radius-control); }
-.recipient-history-table { min-width: 620px; width: 100%; border-collapse: collapse; font-size: 11px; }
-.recipient-history-table th { padding: 9px 10px; color: var(--color-text-secondary); background: var(--surface-panel); text-align: left; font-size: 10px; font-weight: 700; }
-.recipient-history-table td { padding: 10px; border-top: 1px solid var(--border-surface); color: var(--color-text-secondary); vertical-align: middle; }
-.recipient-history-table td small { display: block; margin-top: 3px; color: var(--color-text-secondary); }
-.recipient-history-table { min-width: 0; width: 100%; table-layout: fixed; }
 .registry-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; white-space: nowrap; }
 .recipient-details { width: min(760px, 100%); max-height: calc(100vh - 44px); overflow-y: auto; border-radius: 13px; background: var(--surface-card); padding: 23px; box-shadow: var(--shadow-modal); }
 .recipient-details > header { display: flex; align-items: center; gap: var(--space-3); border-bottom: 1px solid var(--border-surface); padding-bottom: 17px; }
@@ -17,10 +11,6 @@
 .recipient-detail-item { min-width: 0; display: grid; gap: 5px; padding: var(--space-3) 0; border-bottom: 1px solid var(--border-surface); }
 .recipient-detail-item span { color: var(--color-text-secondary); font-size: 10px; }
 .recipient-detail-item strong { overflow-wrap: anywhere; color: var(--color-text); font-size: 13px; font-weight: 600; }
-.recipient-history { margin-top: 19px; }
-.recipient-history-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: 9px; }
-.recipient-history-heading h3 { margin: 0; color: var(--color-text); font-size: 15px; }
-.recipient-history-heading > span { color: var(--color-text-secondary); font-size: 11px; }
 .app-modal-content .recipient-details { width: auto; max-height: none; overflow: visible; padding: 0; box-shadow: none; }
 .danger-action { color: #8b534f !important; }
 .danger-action:hover:not(:disabled):not([aria-busy="true"]):not([aria-disabled="true"]) { color: #713d39 !important; }
@@ -75,8 +65,6 @@
 .employee-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .app-modal.employee-form-modal { width: min(880px, 100%); }
 .employee-form-modal .app-modal-content, .employee-card-modal .app-modal-content { container-type: inline-size; }
-.employee-field-wide { grid-column: span 2; }
-.employee-field-full { grid-column: 1 / -1; }
 .employee-select-action { display: flex; align-items: start; gap: 8px; min-width: 0; }
 .employee-select-action > .app-select { flex: 1; }
 .employee-select-action > .secondary-button { flex: none; min-height: var(--control-height); }
@@ -86,22 +74,40 @@
 .employee-card-identity h3 { margin: 0; color: var(--color-text); font-size: 19px; }
 .employee-card-identity p { margin: 4px 0 0; color: var(--color-text-secondary); font-size: 12px; }
 .employee-card .dictionary-tabs { margin-top: 18px; }
-.employee-card .recipient-history-heading { align-items: center; flex-wrap: wrap; }
-.employee-history-table { min-width: 760px; table-layout: fixed; }
-.employee-history-table td { overflow-wrap: anywhere; }
-.employee-current-tag { color: var(--accent); font-weight: 650; }
 .employee-card [role="tabpanel"]:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 .employee-form-modal .recipient-fieldset { padding-block: 12px 16px; }
-.employee-form-modal .recipient-form-grid { gap: 12px 16px; }
+.employee-form-grid { display: grid; gap: 12px 16px; align-items: start; }
+.employee-form-grid, .employee-card .recipient-detail-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.employee-form-grid.employee-personal-grid, .employee-card .employee-personal-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.employee-personal-grid > * { grid-column: span 2; }
+.employee-personal-grid > :nth-child(n+4) { grid-column: span 3; }
+
+/* Keep the two directory controls aligned to the parent tracks. */
+.employee-directory-fields {
+  grid-column: span 2;
+  grid-template-columns: subgrid;
+  row-gap: 12px;
+}
+.employee-directory-fields > * { grid-column: 1 / -1; }
+.employee-directory-grid { display: grid; grid-template-columns: subgrid; row-gap: 12px; }
+.employee-form-modal .recipient-field .app-select-trigger > span { overflow-wrap: anywhere; }
+
+@container (max-width: 650px) {
+  .employee-form-grid, .employee-form-grid.employee-personal-grid, .employee-card .recipient-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .employee-personal-grid > *, .employee-personal-grid > :nth-child(n+4) { grid-column: auto; }
+  .employee-directory-fields { grid-column: 1 / -1; }
+}
+@container (max-width: 440px) {
+  .employee-form-grid, .employee-form-grid.employee-personal-grid, .employee-card .recipient-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .employee-form-modal .app-modal-header { padding-block: 18px 14px; }
 .employee-form-modal .app-modal-content { padding-top: 16px; }
 @container (max-width: 580px) {
-  .employee-form-modal .recipient-form-grid { grid-template-columns: minmax(0, 1fr); }
-  .employee-field-wide { grid-column: auto; }
   .employee-card > header { flex-wrap: wrap; }
   .employee-card-identity { flex-basis: calc(100% - 60px); }
   .employee-card-actions { margin-left: auto; }
-  .recipient-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
   .employee-register-panel { padding: 14px; }
@@ -112,14 +118,7 @@
 
 .hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }
 
-.employee-date-row { display:grid; grid-template-columns:subgrid; }
 .employee-select-action > .employee-directory-add { width:var(--control-height); height:var(--control-height); padding:0; justify-content:center; }
 .employee-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .employee-card-actions .danger-action:hover:not(:disabled) { background:var(--feedback-error-bg); border-color:var(--feedback-error-border); }
 .employee-card-footer { justify-content:flex-end; }
-.employee-history-table .employee-history-actions { text-align:center; }
-.employee-history-table .registry-row-actions { justify-content:center; gap:8px; }
-.employee-history-table .table-action { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; padding:0; flex:none; border:1px solid var(--border-surface); border-radius:var(--radius-control); color:var(--accent); background:var(--surface-card); }
-.employee-history-table .table-action:hover:not(:disabled) { background:var(--accent-soft); border-color:var(--border-focus); }
-.employee-history-table .danger-action:hover:not(:disabled) { background:var(--feedback-error-bg); border-color:var(--feedback-error-border); }
-.employee-history-table .table-action:disabled { opacity:.45; cursor:default; }

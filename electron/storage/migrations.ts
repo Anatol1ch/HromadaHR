@@ -52,6 +52,26 @@ export const migrations: readonly Migration[] = [{
   name: 'remove_employee_note',
   requiresBackup: true,
   sql: 'ALTER TABLE employees DROP COLUMN note',
+}, {
+  version: 5,
+  name: 'simplify_personnel',
+  requiresBackup: true,
+  sql: `DROP TABLE employee_positions;
+DROP TABLE employees;
+CREATE TABLE employees (
+  id TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 36),
+  last_name TEXT NOT NULL CHECK (length(trim(last_name)) BETWEEN 1 AND 200),
+  first_name TEXT NOT NULL CHECK (length(trim(first_name)) BETWEEN 1 AND 200),
+  middle_name TEXT CHECK (middle_name IS NULL OR length(trim(middle_name)) BETWEEN 1 AND 200),
+  birth_date TEXT CHECK (birth_date IS NULL OR (length(birth_date) = 10 AND birth_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(birth_date, 1, 4) != '0000' AND coalesce(date(birth_date, '+0 days') = birth_date, 0))),
+  employee_type TEXT NOT NULL CHECK (employee_type IN ('official', 'staff')),
+  hire_date TEXT NOT NULL CHECK (length(hire_date) = 10 AND hire_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(hire_date, 1, 4) != '0000' AND coalesce(date(hire_date, '+0 days') = hire_date, 0)),
+  position_id TEXT NOT NULL REFERENCES positions(id) ON DELETE RESTRICT,
+  department_id TEXT NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+  CHECK (birth_date IS NULL OR birth_date <= hire_date)
+) STRICT;
+CREATE INDEX employees_position ON employees(position_id);
+CREATE INDEX employees_department ON employees(department_id);`,
 }]
 
 function checksum(migration: Migration) {

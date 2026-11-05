@@ -1,195 +1,176 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, readdirSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { randomUUID, createHash } from 'node:crypto'
 import Database from 'better-sqlite3'
-import { openStorage, openStorageSafely } from '../dist-electron/electron/storage/index.js'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, renameSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, join, resolve, sep } from 'node:path'
+import { PersonnelService } from '../dist-electron/electron/personnel/service.js'
+import { BackupService } from '../dist-electron/electron/backup/service.js'
+import { openStorageSafely, Storage } from '../dist-electron/electron/storage/index.js'
 import { migrations } from '../dist-electron/electron/storage/migrations.js'
 import { inspectDatabase } from '../dist-electron/electron/storage/validation.js'
-import { PersonnelService } from '../dist-electron/electron/personnel/service.js'
-import { nameKey } from '../dist-electron/electron/personnel/schemas.js'
 
-async function fixture(t, legacy = false) {
-  const root = mkdtempSync(join(tmpdir(), 'hromadahr-personnel-'))
-  const file = join(root, 'data', 'test.db')
-  let connection
-  t.after(() => { connection?.close(); rmSync(root, { recursive: true, force: true }) })
-  let previousLedger
-  if (legacy) {
-    const previous = openStorage(file, migrations.slice(0, 2))
-    previous.database.prepare('INSERT INTO backup_config(id, instance_id, folder1) VALUES (1, ?, ?)').run(randomUUID(), 'saved-folder')
-    previousLedger = previous.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
-    previous.close()
-  }
-  connection = await openStorageSafely(file)
-  let busy = false
-  const service = new PersonnelService({ getDatabase: () => connection.database }, () => busy)
-  const department = service.createDepartment({ name: 'Відділ' })
-  const position = service.createPosition({ name: 'Спеціаліст' })
-  const input = { lastName: 'Тестовий', firstName: 'Тест', middleName: null, birthDate: '2000-02-29',
-    startDate: '2026-01-01', employeeType: 'official', category: null, departmentId: department.id, positionId: position.id }
-  return { root, file, db: connection.database, service, input, previousLedger, setBusy: value => { busy = value } }
-}
-const code = expected => error => error.code === expected
-const details = input => {
-  const { positionId, departmentId, startDate, category, ...result } = input
-  return result
+const v4 = migrations.slice(0, 4)
+const checksum = (value) => createHash('sha256').update(value).digest('hex')
+const hasCode = code => error => error.code === code
+const tables = db => db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(row => row.name)
+const ledger = db => db.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
+function integrity(db) {
+  assert.equal(db.pragma('integrity_check', { simple: true }), 'ok')
+  assert.deepEqual(db.pragma('foreign_key_check'), [])
 }
 
-test('migration 1–2 names and checksums remain the original published values', () => {
-  assert.deepEqual(migrations.slice(0, 2).map(m => [m.version, m.name, createHash('sha256').update(m.name + '\n' + m.sql).digest('hex')]), [
+function fixture(t) {
+  const root = mkdtempSync(join(tmpdir(), 'hr-personnel-v5-'))
+  const handles = []
+  t.after(() => {
+    for (const handle of handles.reverse()) handle.close()
+    assert.ok(resolve(root).startsWith(resolve(tmpdir()) + sep) && basename(root).startsWith('hr-personnel-v5-'))
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 })
+  })
+  const file = join(root, 'data', 'app.db')
+  return { root, file, handles, async open(manifest) {
+    const handle = await openStorageSafely(file, manifest)
+    handles.push(handle)
+    return handle
+  } }
+}
+
+async function legacy(f) {
+  const connection = await f.open(v4)
+  const db = connection.database
+  const ids = { employee: randomUUID(), department: randomUUID(), position: randomUUID(), instance: randomUUID() }
+  db.prepare('INSERT INTO departments VALUES (?, ?, ?)').run(ids.department, 'Відділ', 'відділ')
+  db.prepare('INSERT INTO positions VALUES (?, ?, ?)').run(ids.position, 'Посада', 'посада')
+  db.prepare('INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?)').run(ids.employee, 'Тест', 'Приклад', null, null, 'staff')
+  db.prepare('INSERT INTO employee_positions VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(), ids.employee, ids.department, ids.position, 'II', '2025-01-01')
+  db.prepare('INSERT INTO backup_config VALUES (1, ?, ?, ?)').run(ids.instance, join(f.root, 'one'), join(f.root, 'two'))
+  db.exec("UPDATE backup_state SET auto_day='2025-01-01', attempt_count=2 WHERE slot=1")
+  const before = { ledger: ledger(db), config: db.prepare('SELECT * FROM backup_config').all(), state: db.prepare('SELECT * FROM backup_state').all() }
+  connection.close()
+  return { ids, before }
+}
+
+test('published migration names and checksums 1–4 are immutable', () => {
+  assert.deepEqual(v4.map(m => [m.version, m.name, checksum(m.name + '\n' + m.sql)]), [
     [1, 'create_schema_migrations', '036a71f598fd2dda448ee6e82cf561ffde47bb64af6e5491455e130085df7d80'],
     [2, 'backup_configuration', '54b8316b87116a7cac831f41bdb5768b3560bb9b91df2f9a601d6de6674fd368'],
+    [3, 'personnel_foundation', '2b9225e9791caab6a06563c0da2a76ba783c8fd2bc655139df68e0a449d4865c'],
+    [4, 'remove_employee_note', '67898bbdf6d4637b0af44c0e4def23bced884633c6628493a8995cd3cec3cc3c'],
   ])
-  assert.equal(migrations[2].requiresBackup, true)
 })
 
-test('new and v2 databases upgrade to v4 with verified pre-v3/pre-v4 snapshots and preserve ledger/config', async t => {
-  for (const legacy of [false, true]) {
-    const f = await fixture(t, legacy)
-    assert.equal(f.db.pragma('user_version', { simple: true }), 4)
-    assert.deepEqual(f.db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(r => r.name),
-      ['backup_config', 'backup_state', 'departments', 'employee_positions', 'employees', 'positions', 'schema_migrations'])
-    const protection = join(f.root, 'data', 'protection')
-    const copies = readdirSync(protection)
-    assert.equal(copies.length, 2)
-    assert.deepEqual(copies.map(name => inspectDatabase(join(protection, name))).sort(), [2, 3])
-    assert.equal(inspectDatabase(join(protection, copies.find(name => inspectDatabase(join(protection, name)) === 2))), 2)
-    const snapshot = new Database(join(protection, copies[0]), { readonly: true })
-    try { assert.equal(snapshot.prepare("SELECT name FROM sqlite_schema WHERE name='employees'").get(), undefined) }
-    finally { snapshot.close() }
-    if (legacy) {
-      assert.deepEqual(f.db.prepare('SELECT * FROM schema_migrations WHERE version<=2 ORDER BY version').all(), f.previousLedger)
-      assert.equal(f.db.prepare('SELECT folder1 FROM backup_config').get().folder1, 'saved-folder')
-    }
-    assert.equal(f.db.pragma('integrity_check', { simple: true }), 'ok')
-    assert.deepEqual(f.db.pragma('foreign_key_check'), [])
-  }
-})
-
-test('critical v3 cannot execute through the synchronous API or without its protective snapshot', async t => {
-  const root = mkdtempSync(join(tmpdir(), 'hromadahr-personnel-protection-'))
-  t.after(() => rmSync(root, { recursive: true, force: true }))
-  const file = join(root, 'test.db')
-  openStorage(file, migrations.slice(0, 2)).close()
-  assert.throws(() => openStorage(file), code('BACKUP_REQUIRED'))
-  writeFileSync(join(root, 'protection'), 'blocked')
-  await assert.rejects(openStorageSafely(file))
-  const previous = openStorage(file, migrations.slice(0, 2))
+test('v4 → v5 preserves directories and service tables and protects the original test personnel', async t => {
+  const f = fixture(t)
+  const { ids, before } = await legacy(f)
+  assert.equal(migrations[4].requiresBackup, true)
+  const current = await f.open()
+  const db = current.database
+  assert.equal(current.schemaVersion, 5)
+  assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employees', 'positions', 'schema_migrations'])
+  assert.deepEqual(db.pragma('table_info(employees)').map(column => column.name),
+    ['id', 'last_name', 'first_name', 'middle_name', 'birth_date', 'employee_type', 'hire_date', 'position_id', 'department_id'])
+  assert.equal(db.pragma('table_list').find(row => row.name === 'employees').strict, 1)
+  assert.deepEqual(ledger(db).slice(0, 4), before.ledger)
+  assert.deepEqual(db.prepare('SELECT * FROM backup_config').all(), before.config)
+  assert.deepEqual(db.prepare('SELECT * FROM backup_state').all(), before.state)
+  assert.equal(db.prepare('SELECT count(*) AS n FROM employees').get().n, 0)
+  assert.equal(db.prepare('SELECT id FROM departments').get().id, ids.department)
+  assert.equal(db.prepare('SELECT id FROM positions').get().id, ids.position)
+  integrity(db)
+  const folder = join(f.root, 'data', 'protection')
+  const copy = join(folder, readdirSync(folder).find(name => name.includes('protect-migration-v5-')))
+  assert.equal(inspectDatabase(copy), 4)
+  const saved = new Database(copy, { readonly: true })
   try {
-    assert.equal(previous.schemaVersion, 2)
-    assert.equal(previous.database.prepare("SELECT name FROM sqlite_schema WHERE name='employees'").get(), undefined)
-  } finally { previous.close() }
+    assert.equal(saved.prepare('SELECT id FROM employees').get().id, ids.employee)
+    assert.equal(saved.prepare('SELECT employee_id FROM employee_positions').get().employee_id, ids.employee)
+    integrity(saved)
+  } finally { saved.close() }
 })
 
-test('create/list/card/update derive first date and latest assignment solely from ordered history', async t => {
-  const { service, input, db } = await fixture(t)
-  const employee = service.createEmployee(input)
-  assert.equal(employee.hireDate, input.startDate)
-  assert.equal(employee.currentAssignment.position.id, input.positionId)
-  assert.equal(employee.middleName, null)
-  assert.deepEqual(service.listEmployees(), [employee])
-  const before = service.getHistory(employee.id)
-  assert.equal(before.length, 1)
-  assert.equal(service.updateEmployee(employee.id, { ...details(input), middleName: 'Тестович', employeeType: 'staff' }).employeeType, 'staff')
-  assert.deepEqual(service.getHistory(employee.id), before)
-  const position = service.createPosition({ name: 'Інша посада' })
-  const insert = db.prepare('INSERT INTO employee_positions(id, employee_id, department_id, position_id, category, start_date) VALUES (?, ?, ?, ?, ?, ?)')
-  // Fixture SQL only: no public service/IPC for later assignments in 3.1.
-  insert.run(randomUUID(), employee.id, input.departmentId, position.id, 'Категорія', '2030-03-01')
-  insert.run(randomUUID(), employee.id, input.departmentId, input.positionId, null, '2025-12-01')
-  const card = service.getEmployee(employee.id)
-  assert.equal(card.hireDate, '2025-12-01')
-  assert.equal(card.currentAssignment.startDate, '2030-03-01') // latest, regardless of today
-  assert.equal(card.currentAssignment.category, 'Категорія')
-  assert.equal(card.currentAssignment.position.id, position.id)
-  assert.deepEqual(service.getHistory(employee.id).map(a => a.startDate), ['2025-12-01', '2026-01-01', '2030-03-01'])
-  assert.throws(() => service.updateEmployee(employee.id, { ...details(input), birthDate: '2026-01-01' }), code('INVALID_ARGUMENTS'))
-  for (const [table, forbidden] of [['employees', ['hire_date', 'position_id', 'department_id']], ['positions', ['category']], ['employee_positions', ['end_date']]]) {
-    const columns = db.pragma('table_info(' + table + ')').map(c => c.name)
-    for (const column of forbidden) assert.equal(columns.includes(column), false)
+test('v5 refuses to run without protection and rolls back destructive SQL on failure', async t => {
+  const f = fixture(t)
+  const { ids, before } = await legacy(f)
+  const folder = join(f.root, 'data', 'protection')
+  renameSync(folder, folder + '-saved')
+  writeFileSync(folder, 'blocked')
+  await assert.rejects(f.open())
+  function assertLegacy() {
+    const db = new Database(f.file, { readonly: true })
+    try {
+      assert.deepEqual(ledger(db), before.ledger)
+      assert.equal(db.pragma('user_version', { simple: true }), 4)
+      assert.equal(db.prepare('SELECT id FROM employees').get().id, ids.employee)
+      assert.equal(db.prepare('SELECT employee_id FROM employee_positions').get().employee_id, ids.employee)
+      integrity(db)
+    } finally { db.close() }
   }
+  assertLegacy()
+  rmSync(folder)
+  const broken = [...v4, { ...migrations[4], sql: migrations[4].sql + ' INSERT INTO missing_table VALUES (1);' }]
+  await assert.rejects(f.open(broken), hasCode('MIGRATION_FAILED'))
+  assertLegacy()
 })
 
-test('required fields, employee enum and real calendar dates reject invalid payloads before SQL', async t => {
-  const { service, input } = await fixture(t)
-  for (const change of [{ lastName: ' ' }, { firstName: '' }, { middleName: '' }, { employeeType: 'other' },
-    { birthDate: '1900-02-29' }, { birthDate: '2001-02-29' }, { startDate: '2026-04-31' },
-    { startDate: '0000-01-01' }, { startDate: '2026-1-01' }, { birthDate: '2027-01-01' },
-    { startDate: '2026-13-01' }, { startDate: null }, { sql: 'DELETE' }, { departmentId: 'x' }]) {
-    assert.throws(() => service.createEmployee({ ...input, ...change }), code('INVALID_ARGUMENTS'))
-  }
-  for (const field of Object.keys(input)) {
-    const missing = { ...input }; delete missing[field]
-    assert.throws(() => service.createEmployee(missing), code('INVALID_ARGUMENTS'))
-  }
+test('fresh v5 validates and updates the current employee atomically with an independent hire date', async t => {
+  const f = fixture(t)
+  const connection = await f.open()
+  assert.equal(connection.created, true)
+  assert.equal(connection.schemaVersion, 5)
+  const db = connection.database
+  const service = new PersonnelService({ getDatabase: () => db }, () => false)
   assert.deepEqual(service.listEmployees(), [])
-  const employee = service.createEmployee({ ...input, birthDate: null, employeeType: 'staff' })
-  assert.equal(employee.birthDate, null)
-  assert.throws(() => service.updateEmployee(employee.id, { ...details(input), birthDate: '2026-02-30' }), code('INVALID_ARGUMENTS'))
-  assert.equal(service.getEmployee(employee.id).birthDate, null)
-})
-
-test('failure inserting initial assignment rolls back the employee; missing dictionary references are rejected', async t => {
-  const { service, db, input } = await fixture(t)
-  for (const change of [{ positionId: randomUUID() }, { departmentId: randomUUID() }]) {
-    assert.throws(() => service.createEmployee({ ...input, ...change }), code('NOT_FOUND'))
+  const department = service.createDepartment({ name: '  Відділ  кадрів  ' })
+  const position = service.createPosition({ name: 'Посада' })
+  assert.throws(() => service.createDepartment({ name: 'ВІДДІЛ кадрів' }), hasCode('CONFLICT'))
+  const input = { lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: '2000-02-29',
+    employeeType: 'staff', hireDate: '2024-02-29', positionId: position.id, departmentId: department.id }
+  for (const change of [{ firstName: ' ' }, { hireDate: undefined }, { hireDate: '2025-02-29' },
+    { birthDate: '0000-01-01' }, { hireDate: '1999-12-31' }, { category: null }]) {
+    assert.throws(() => service.createEmployee({ ...input, ...change }), hasCode('INVALID_ARGUMENTS'))
   }
-  db.exec("CREATE TRIGGER test_fail BEFORE INSERT ON employee_positions BEGIN SELECT RAISE(ABORT, 'injected'); END")
-  assert.throws(() => service.createEmployee(input), code('CONFLICT'))
-  assert.equal(db.prepare('SELECT count(*) n FROM employees').get().n, 0)
-  assert.equal(db.prepare('SELECT count(*) n FROM employee_positions').get().n, 0)
+  assert.throws(() => service.createEmployee({ ...input, positionId: randomUUID() }), hasCode('NOT_FOUND'))
+  const card = service.createEmployee(input)
+  assert.deepEqual(card, { ...input, id: card.id, position, department })
+  const nextPosition = service.createPosition({ name: 'Нова посада' })
+  const nextDepartment = service.createDepartment({ name: 'Новий відділ' })
+  const changed = { ...input, positionId: nextPosition.id, departmentId: nextDepartment.id }
+  assert.equal(service.updateEmployee(card.id, changed).hireDate, input.hireDate)
+  const final = service.updateEmployee(card.id, { ...changed, hireDate: '2025-03-01' })
+  assert.deepEqual(final, { ...changed, hireDate: '2025-03-01', id: card.id, position: nextPosition, department: nextDepartment })
+  assert.throws(() => service.updateEmployee(card.id, { ...changed, departmentId: randomUUID() }), hasCode('NOT_FOUND'))
+  assert.deepEqual(service.listEmployees(), [final])
+  assert.throws(() => db.prepare('UPDATE employees SET hire_date=? WHERE id=?').run('2025-02-29', card.id), /CHECK constraint/)
+  assert.throws(() => db.prepare('UPDATE employees SET department_id=? WHERE id=?').run(randomUUID(), card.id), /FOREIGN KEY/)
+  assert.throws(() => db.prepare('DELETE FROM positions WHERE id=?').run(nextPosition.id), /FOREIGN KEY/)
+  service.deleteEmployee(card.id)
+  assert.throws(() => service.getEmployee(card.id), hasCode('NOT_FOUND'))
+  assert.equal(service.listPositions().length, 2)
+  assert.equal(service.listDepartments().length, 2)
+  assert.equal(tables(db).includes('employee_positions'), false)
+  integrity(db)
 })
 
-test('SQL enforces STRICT, FK, unique employee/date, required fields and cascading history deletion', async t => {
-  const { service, db, input } = await fixture(t)
-  const employee = service.createEmployee(input)
-  const insert = (employeeId, departmentId, positionId, date) => db.prepare('INSERT INTO employee_positions VALUES (?, ?, ?, ?, ?, ?)')
-    .run(randomUUID(), employeeId, departmentId, positionId, null, date)
-  assert.throws(() => insert(employee.id, input.departmentId, input.positionId, input.startDate), { code: 'SQLITE_CONSTRAINT_UNIQUE' })
-  assert.throws(() => insert(randomUUID(), input.departmentId, input.positionId, '2026-02-01'), { code: 'SQLITE_CONSTRAINT_FOREIGNKEY' })
-  assert.throws(() => insert(employee.id, randomUUID(), input.positionId, '2026-02-01'), { code: 'SQLITE_CONSTRAINT_FOREIGNKEY' })
-  assert.throws(() => insert(employee.id, input.departmentId, randomUUID(), '2026-02-01'), { code: 'SQLITE_CONSTRAINT_FOREIGNKEY' })
-  for (const date of ['2026-02-30', '2026-04-31', '0000-01-01']) assert.throws(() => insert(employee.id, input.departmentId, input.positionId, date))
-  assert.throws(() => db.prepare('UPDATE employees SET employee_type=? WHERE id=?').run('other', employee.id))
-  assert.throws(() => db.prepare('UPDATE employees SET last_name=NULL WHERE id=?').run(employee.id))
-  assert.throws(() => db.prepare('UPDATE employees SET first_name=? WHERE id=?').run(' ', employee.id))
-  assert.throws(() => db.prepare('UPDATE employees SET first_name=? WHERE id=?').run(Buffer.from('x'), employee.id), { code: 'SQLITE_CONSTRAINT_DATATYPE' })
-  assert.throws(() => db.prepare('DELETE FROM positions WHERE id=?').run(input.positionId))
-  assert.throws(() => db.prepare('DELETE FROM departments WHERE id=?').run(input.departmentId))
-  insert(employee.id, input.departmentId, input.positionId, '2026-02-01')
-  db.prepare('DELETE FROM employees WHERE id=?').run(employee.id) // schema readiness only, not exposed
-  assert.equal(db.prepare('SELECT count(*) n FROM employee_positions').get().n, 0)
-  assert.equal(service.listPositions().length, 1)
-  assert.deepEqual(db.pragma('foreign_key_check'), [])
-})
-
-test('dictionary names normalize Unicode, whitespace and case; UNIQUE guards persisted keys', async t => {
-  const { service, db } = await fixture(t)
-  for (const [create, list, table] of [['createDepartment', 'listDepartments', 'departments'], ['createPosition', 'listPositions', 'positions']]) {
-    const value = service[create]({ name: '  ВІДДІЛ\t  КАДРІВ\u00a0' })
-    assert.equal(value.name, 'ВІДДІЛ КАДРІВ')
-    for (const name of ['відділ кадрів', 'Відділ   кадрів', 'ВІДДІЛ\nКАДРІВ']) assert.throws(() => service[create]({ name }), code('CONFLICT'))
-    service[create]({ name: 'ЙОГО' })
-    assert.throws(() => service[create]({ name: 'И\u0306ОГО' }), code('CONFLICT'))
-    service[create]({ name: 'Straße' })
-    assert.throws(() => service[create]({ name: 'STRASSE' }), code('CONFLICT'))
-    assert.throws(() => service[create]({ name: '\t\u00a0' }), code('INVALID_ARGUMENTS'))
-    assert.throws(() => db.prepare('INSERT INTO ' + table + ' VALUES (?, ?, ?)').run(randomUUID(), 'Інша назва', nameKey(value.name)), { code: 'SQLITE_CONSTRAINT_UNIQUE' })
-    assert.equal(service[list]().filter(row => row.name === value.name).length, 1)
-  }
-})
-
-test('personnel respects backup/restore busy state, unavailable storage and not-found results', async t => {
-  const { service, setBusy, input } = await fixture(t)
-  setBusy(true)
-  assert.throws(() => service.createEmployee(input), code('BUSY'))
-  assert.throws(() => service.listEmployees(), code('BUSY'))
-  setBusy(false)
-  for (const method of ['getEmployee', 'getHistory']) assert.throws(() => service[method](randomUUID()), code('NOT_FOUND'))
-  assert.throws(() => service.updateEmployee(randomUUID(), details(input)), code('NOT_FOUND'))
-  const unavailable = new PersonnelService({ getDatabase() { throw new Error('private path') } }, () => false)
-  assert.throws(() => unavailable.listEmployees(), code('STORAGE_UNAVAILABLE'))
+test('restoring a v4 test image applies v5 without altering the source image', async t => {
+  const f = fixture(t)
+  const { ids } = await legacy(f)
+  const before = checksum(readFileSync(f.file))
+  const storage = new Storage()
+  const backup = new BackupService(storage)
+  f.handles.push({ close: () => { backup.stop(); backup.invalidateSelections(); storage.close() } })
+  await storage.initializeSafely(() => join(f.root, 'restore', 'active.db'))
+  assert.equal(storage.getStatus().state, 'ready')
+  const selected = await backup.chooseRestore(async () => f.file)
+  assert.equal(selected.schemaVersion, 4)
+  assert.deepEqual(await backup.confirmRestore(selected.token, async () => true), { restored: true })
+  assert.equal(storage.getStatus().schemaVersion, 5)
+  const db = storage.getDatabase()
+  assert.equal(db.prepare('SELECT count(*) AS n FROM employees').get().n, 0)
+  assert.equal(tables(db).includes('employee_positions'), false)
+  assert.equal(db.prepare('SELECT id FROM departments').get().id, ids.department)
+  assert.equal(db.prepare('SELECT id FROM positions').get().id, ids.position)
+  assert.equal(checksum(readFileSync(f.file)), before)
+  integrity(db)
 })
