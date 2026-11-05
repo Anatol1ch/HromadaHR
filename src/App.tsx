@@ -2,6 +2,7 @@ import StartupScreen from './components/StartupScreen'
 import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
+import LeaveWorkspace from './components/leave/LeaveWorkspace'
 import { useEffect, useRef, useState } from 'react'
 import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
@@ -25,9 +26,8 @@ const sections = [
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
-const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'settings'>, string> = {
+const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'leave' | 'settings'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
-  leave: 'Тут буде облік відпусток і їхніх залишків. Ведення та розрахунок відпусток ще не доступні.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
 }
@@ -62,7 +62,7 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
       <div className="workspace-shortcuts">{([
         { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
-        { id: 'leave', title: 'Відпустки', text: 'Облік відпусток', icon: CalendarDays, available: false },
+        { id: 'leave', title: 'Відпустки', text: 'Облік залишків відпусток', icon: CalendarDays, available: true },
         { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: false },
         { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
       ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
@@ -195,7 +195,8 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'leave' ?
+          <LeaveWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>

@@ -39,7 +39,7 @@ export default function EmployeeActionDialog({ id, kind, navigationGuard, onClos
   const content = <div ref={owner}>
     {loading ? <DataState kind="loading" compact message="Завантаження актуальних відомостей…"/> : data && <>
       <p><strong>{fullName(data)}</strong></p>
-      <p>Особову картку буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p>
+      <p>Особову картку та підтверджені періоди відпусток буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p>
     </>}
     {error && <Alert variant="error" action={!data ? <button type="button" onClick={() => setRetry(value => value + 1)}>Повторити</button> : undefined}>{error}</Alert>}
   </div>

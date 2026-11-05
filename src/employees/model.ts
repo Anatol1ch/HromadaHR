@@ -53,6 +53,7 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'HIRE_DATE_HAS_LEAVE_PERIODS': return 'Дату прийняття не можна змінити, поки є підтверджені періоди відпусток.'
     case 'BUSY': return 'Зараз триває інша операція зі сховищем. Зачекайте й повторіть спробу.'
     case 'CONFLICT': return 'Виник конфлікт даних. Перевірте відомості та повторіть спробу.'
     case 'NOT_FOUND': return 'Запис більше не знайдено. Поверніться до реєстру та оновіть дані.'

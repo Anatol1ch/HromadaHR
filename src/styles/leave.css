@@ -1,0 +1,7 @@
+.leave-layout { display: grid; gap: 12px; min-width: 0; }
+.leave-layout p { margin: 0; }
+.leave-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.leave-select { width: min(100%, 25rem); }
+.leave-dates { display: grid; gap: 6px; min-width: 11rem; }
+.leave-dates label { display: grid; gap: 4px; }
+.leave-layout td > input { width: 100%; min-width: 5rem; }

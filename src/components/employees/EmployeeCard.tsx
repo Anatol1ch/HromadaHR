@@ -1,6 +1,8 @@
 import Modal from '../Modal'
 import { navigateTabs } from '../../lib/tabNavigation'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type RefObject } from 'react'
+import type { NavigationGuard } from './useUnsavedChanges'
+import LeaveBalances from '../leave/LeaveBalances'
 import { BriefcaseBusiness, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
@@ -8,8 +10,9 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
-export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision }: {
+export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision, navigationGuard }: {
   id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
+  navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
   const [data, setData] = useState<EmployeeData | null>(null)
@@ -94,7 +97,8 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
               {fields.map(([field, value]) => <div key={field}><dt>{field}</dt><dd>{value}</dd></div>)}
             </dl>
           </section>)}
-        </div> : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
+        </div> : index === 1 ? (tab === 1 && <LeaveBalances employeeId={id} hireDate={employee.hireDate} navigationGuard={navigationGuard} />)
+          : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
       </div>)}
     </article>
   </Modal>

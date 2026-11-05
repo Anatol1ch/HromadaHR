@@ -58,7 +58,7 @@ export default function EmployeesWorkspace({ navigationGuard }: { navigationGuar
       onOpen={employee => { rememberOpener(); dispatch({ type: 'card', id: employee.id }) }}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/>
-    {workspace.cardId && <EmployeeCard key={workspace.cardId} id={workspace.cardId} revision={workspace.revision}
+    {workspace.cardId && <EmployeeCard key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
       onLoaded={updateFromCard}
       onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}

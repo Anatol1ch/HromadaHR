@@ -415,3 +415,7 @@ Main listCopies/selectCopy не приймають path; UUID вибору пр�
 AID source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupManagement.tsx повторно звірено read-only для summary/card/table патернів. У HR адаптовано чинні dashboard-panel/semantic tokens/controls: цілісний верхній card із title+badge, lastSuccess та м'яким inline same-volume warning ліворуч і єдиною primary-дією праворуч; responsive перенос. Шляхи — read-only controls з окремими квадратними Open та secondary Change, назви — основне/додаткове місце, остання копія одним рядком. Видимий zoom/polling/CSS вилучено; Main zoom незмінний.
 
 Нові copy rows відображають один SHA-256-знімок і 2/1 із 2, legacy не групуються за часом. Operations — один новий запис циклу з результатами двох місць; partial попадає до чинного фільтра Помилки, repair позначено доповненням дубліката. Старі події читаються, 5/усі збережено. Slot-based folder IPC, opaque copy ID, picker/Modal/native confirmation/protection/rollback збережені. Серверний AID backend/auth не переносилися. GUI-чекліст і фактичні програмні перевірки — HANDOFF 3.4.3.8, вручну ще не прийнято.
+
+## 4.2 — Залишки відпусток
+
+За SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb звірено src/RecipientRegistry.tsx та src/AidRegistry.tsx. Спільна панель HR повторно використовує DictionaryTable, Select, Modal, ConfirmDialog, DateField, спільні стани й повідомлення. Адаптація полягає в компактному редагуванні кількох періодів у таблиці та використанні вже перенесеного захисту чернетки.
