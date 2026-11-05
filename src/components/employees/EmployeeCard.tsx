@@ -38,8 +38,8 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
   if (error || !data) return <Modal title="Особова картка" size="large" onClose={onClose}><Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error || 'Картка недоступна.'}</Alert>{cardFooter}</Modal>
   const employee = data
   const sections = [
-    { title: 'Персональні відомості', fields: [['Прізвище', employee.lastName], ['Ім’я', employee.firstName], ['По батькові', employee.middleName ?? 'Не зазначено'], ['Дата народження', displayDate(employee.birthDate)], ['Тип працівника', employeeTypeLabels[employee.employeeType]]] },
-    { title: 'Кадрові відомості', fields: [['Дата прийняття', displayDate(employee.hireDate)], ['Посада', employee.position.name], ['Підрозділ', employee.department.name]] },
+    { title: 'Персональні відомості', personal: true, fields: [['Прізвище', employee.lastName], ['Ім’я', employee.firstName], ['По батькові', employee.middleName ?? 'Не зазначено'], ['Дата народження', displayDate(employee.birthDate)], ['Тип працівника', employeeTypeLabels[employee.employeeType]]] },
+    { title: 'Кадрові відомості', fields: [['Підрозділ', employee.department.name], ['Посада', employee.position.name], ['Дата прийняття', displayDate(employee.hireDate)]] },
   ]
   return <Modal title="Особова картка" size="large" className="employee-card-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} onClose={onClose}>
     <article className="recipient-details employee-card">
@@ -58,7 +58,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
       </div>
       {tabs.map((label, index) => <div key={label} role="tabpanel" id={`employee-panel-${index}`} aria-labelledby={`employee-tab-${index}`} hidden={tab !== index} tabIndex={0}>
         {index !== 0 ? <DataState kind="planned" message="Функціональність буде додано пізніше" compact/> : <>
-          {sections.map(section => <section className="recipient-detail-section" key={section.title}><h3>{section.title}</h3><div className="recipient-detail-grid">
+          {sections.map(section => <section className="recipient-detail-section" key={section.title}><h3>{section.title}</h3><div className={section.personal ? "recipient-detail-grid employee-personal-grid" : "recipient-detail-grid"}>
             {section.fields.map(([field, value]) => <div className="recipient-detail-item" key={field}><span>{field}</span><strong>{value}</strong></div>)}
           </div></section>)}
         </>}

@@ -58,10 +58,10 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
     setDraft(null); focusSelect(draft)
     notifySystemToast('success', 'Запис створено', 'Новий запис створено та вибрано.')
   }
-  return <div className="recipient-field employee-field-full employee-directory-fields" ref={root}>
+  return <div className="recipient-field employee-directory-fields" ref={root}>
     {loading && <DataState kind="loading" compact message="Завантаження довідників…" />}
     {error && <Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити завантаження</button>}>{error}</Alert>}
-    <div className="recipient-form-grid">
+    <div className="employee-directory-grid">
       {(['department', 'position'] as const).map(kind => {
         const key = kind === 'department' ? 'departmentId' : 'positionId'
         return <div className="recipient-field employee-field" key={kind} data-directory={kind}>

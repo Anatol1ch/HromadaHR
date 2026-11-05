@@ -88,10 +88,10 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={busy}>
       <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Персональні відомості</legend>
-        <div className="recipient-form-grid">
+        <div className="employee-form-grid employee-personal-grid">
           {textField('lastName', 'Прізвище', true)}{textField('firstName', 'Ім’я', true)}{textField('middleName', 'По батькові')}
           {textField('birthDate', 'Дата народження')}
-          <div className="recipient-field employee-field employee-field-wide"><span>Тип працівника *</span>
+          <div className="recipient-field employee-field"><span>Тип працівника *</span>
             <Select label="Тип працівника" required disabled={busy} value={values.employeeType} error={errors.employeeType}
               options={Object.entries(employeeTypeLabels).map(([value, label]) => ({ value, label }))} onChange={value => change('employeeType', value as FormValues['employeeType'])} />
           </div>
@@ -99,10 +99,10 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       </fieldset>
       <fieldset className="recipient-fieldset" disabled={busy}>
         <legend>Кадрові відомості</legend>
-        <div className="recipient-form-grid">
+        <div className="employee-form-grid">
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
-          <div className="employee-field-full employee-date-row">{textField('hireDate', 'Дата прийняття', true)}</div>
+          {textField('hireDate', 'Дата прийняття', true)}
         </div>
       </fieldset>
       <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
