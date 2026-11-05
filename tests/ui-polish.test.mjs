@@ -1,22 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { assignmentInput, creationInput, emptyValues, personalDetails, valuesForEmployee, validateEmployee } from '../src/employees/model.ts'
 import { backupOverview } from '../src/backup/presentation.ts'
-import { assignmentInput as assignmentSchema, createEmployee, employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
-
-const positionId = '11111111-1111-4111-8111-111111111111'
-const departmentId = '22222222-2222-4222-8222-222222222222'
-const fields = { ...emptyValues, lastName: 'Синтетичний', firstName: 'Приклад', startDate: '2026-01-01', positionId, departmentId }
-
-test('new employee omits notes and creates an unclassified initial assignment', () => {
-  const payload = creationInput(fields)
-  assert.equal('note' in payload, false)
-  assert.equal(payload.category, null)
-  assert.equal(createEmployee.safeParse(payload).success, true)
-  assert.equal(createEmployee.safeParse({ ...payload, note: 'removed' }).success, false)
-  assert.equal(employeeDetails.safeParse({ ...personalDetails(fields), note: null }).success, false)
-})
 
 function target(change = {}) {
   return { slot: 1, path: null, available: false, autoDay: null, lastAttempt: null, lastSuccess: null, lastKind: null, error: null, fileName: null, ...change }

@@ -12,7 +12,7 @@ import type { EmployeeCard } from '../../../shared/personnel'
 import Alert from '../Alert'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
-import { creationInput, employeeTypeLabels, emptyValues, personalDetails,
+import { employeeInput, employeeTypeLabels, emptyValues,
   personnelMessage, validateEmployee, valuesForEmployee } from '../../employees/model'
 import type { FormErrors, FormValues } from '../../employees/model'
 
@@ -34,7 +34,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const form = useRef<HTMLFormElement>(null)
   const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({})
   const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial)
-  const busy = saving || (!employee && directory.pending)
+  const busy = saving || directory.pending
 
   useEffect(() => {
     alive.current = true
@@ -49,9 +49,9 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (inFlight.current || (!employee && (directory.loading || directory.error))) return
-    if (!employee && directory.draft) { setError('Завершіть або скасуйте додавання запису довідника.'); return }
-    const nextErrors = validateEmployee(values, !!employee)
+    if (inFlight.current || directory.loading || directory.error) return
+    if (directory.draft) { setError('Завершіть або скасуйте додавання запису довідника.'); return }
+    const nextErrors = validateEmployee(values)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors); setError('Перевірте позначені поля.')
       requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current) })
@@ -60,8 +60,8 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
-      const result = employee ? await window.hromadaHR.personnel.updateEmployee(employee.id, personalDetails(values)) :
-        await window.hromadaHR.personnel.createEmployee(creationInput(values))
+      const result = employee ? await window.hromadaHR.personnel.updateEmployee(employee.id, employeeInput(values)) :
+        await window.hromadaHR.personnel.createEmployee(employeeInput(values))
       if (!alive.current) return
       if (!result.ok) {
         setError(result.error.code === 'UNAVAILABLE' ? 'Результат збереження не підтверджено. Перед повторною спробою перевірте запис у реєстрі.' : personnelMessage(result.error.code))
@@ -72,8 +72,8 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     } catch { if (alive.current) setError('Не вдалося підтвердити збереження. Введені дані залишилися у формі; перевірте реєстр перед повторною спробою.') }
     finally { inFlight.current = false; if (alive.current) setSaving(false) }
   }
-  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'startDate', label: string, required = false) {
-    const isDate = key === 'birthDate' || key === 'startDate'
+  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'hireDate', label: string, required = false) {
+    const isDate = key === 'birthDate' || key === 'hireDate'
     return <div className="recipient-field employee-field">
       <label htmlFor={`employee-${key}`}>{label}{required && <span aria-hidden="true"> *</span>}</label>
       {isDate ? <DateField id={`employee-${key}`} required={required} disabled={busy} value={values[key]} error={errors[key]}
@@ -83,7 +83,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
-  return <Modal title={employee ? 'Редагувати персональні відомості' : 'Додати працівника'} description="Поля зі знаком * обов’язкові. Решту можна заповнити пізніше." size="large" className="employee-form-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={busy} onClose={close}>
+  return <Modal title={employee ? 'Редагувати працівника' : 'Додати працівника'} description="Поля зі знаком * обов’язкові. Решту можна заповнити пізніше." size="large" className="employee-form-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={busy} onClose={close}>
     {error && <Alert variant="error">{error}</Alert>}
     <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={busy}>
       <fieldset className="recipient-fieldset" disabled={busy}>
@@ -97,17 +97,17 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
           </div>
         </div>
       </fieldset>
-      {employee ? <p className="employee-hint">Кадрові призначення змінюються окремо в історії особової картки.</p> : <fieldset className="recipient-fieldset" disabled={busy}>
-        <legend>Початкове призначення</legend>
+      <fieldset className="recipient-fieldset" disabled={busy}>
+        <legend>Кадрові відомості</legend>
         <div className="recipient-form-grid">
           <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
             onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
-          <div className="employee-field-full employee-date-row">{textField('startDate', 'Дата прийняття', true)}</div>
+          <div className="employee-field-full employee-date-row">{textField('hireDate', 'Дата прийняття', true)}</div>
         </div>
-      </fieldset>}
+      </fieldset>
       <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
         <button type="button" className="secondary-button" disabled={busy} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
-        <button type="submit" className="primary-button" disabled={busy || (!employee && (directory.loading || !!directory.error || directory.draft))} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
+        <button type="submit" className="primary-button" disabled={busy || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
       </div></div>
     </form>
   </Modal>

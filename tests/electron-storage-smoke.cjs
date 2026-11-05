@@ -30,17 +30,17 @@ app.whenReady().then(async () => {
   assert.equal(resumed, 1)
   const file = join(root, 'data', 'smoke.db')
   const first = await openStorageSafely(file)
-  let source, employeeId, assignmentInput
+  let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 4)
+    assert.equal(first.schemaVersion, 5)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
-    const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false, () => '2026-11-02')
+    const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
     const department = personnel.createDepartment({ name: 'Тестовий відділ' })
     const position = personnel.createPosition({ name: 'Тестова посада' })
-    assignmentInput = { departmentId: department.id, positionId: position.id, category: 'Інша', startDate: '2026-02-01' }
-    employeeId = personnel.createEmployee({ ...assignmentInput, category: null, startDate: '2026-01-01', lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, employeeType: 'staff' }).id
-    personnel.createAssignment(employeeId, assignmentInput)
+    input = { departmentId: department.id, positionId: position.id, hireDate: '2026-01-01',
+      lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, employeeType: 'staff' }
+    employeeId = personnel.createEmployee(input).id
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
@@ -49,12 +49,10 @@ app.whenReady().then(async () => {
   try {
     assert.equal(second.created, false)
     assert.equal(second.database.prepare('SELECT value FROM test_smoke').get().value, 'persisted')
-    const personnel = new PersonnelService({ getDatabase: () => second.database }, () => false, () => '2026-11-02')
-    const latest = personnel.getHistory(employeeId)[1]
-    personnel.updateAssignment(latest.id, { ...assignmentInput, category: 'Виправлена' })
-    personnel.deleteAssignment(latest.id)
+    const personnel = new PersonnelService({ getDatabase: () => second.database }, () => false)
+    assert.equal(personnel.updateEmployee(employeeId, { ...input, hireDate: '2026-02-01' }).hireDate, '2026-02-01')
     personnel.deleteEmployee(employeeId)
-    assert.equal(second.database.prepare('SELECT count(*) n FROM employee_positions').get().n, 0)
+    assert.equal(second.database.prepare('SELECT count(*) n FROM employees').get().n, 0)
   } finally { second.close() }
   // Real Electron loads Koffi and exercises exclusive Win32 preservation,
   // handle-based rename, online staging and emergency SQLite reopen.
@@ -68,7 +66,7 @@ app.whenReady().then(async () => {
     await service.confirmRestore(selection.token, async () => true)
     assert.equal(storage.getDatabase().prepare('SELECT value FROM test_smoke').get().value, 'persisted')
     const personnel = new PersonnelService(storage, () => service.isBusy())
-    assert.equal(personnel.getHistory(employeeId).length, 2)
+    assert.equal(personnel.getEmployee(employeeId).hireDate, '2026-01-01')
     const protection = join(root, 'data', 'protection')
     const raw = readdirSync(protection).find(name => name.startsWith('raw-'))
     assert.equal(readFileSync(join(protection, raw, 'database.db'), 'utf8'), 'damaged Electron fixture')

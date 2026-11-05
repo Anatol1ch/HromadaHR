@@ -14,7 +14,7 @@ export default function EmployeeActionDialog({ id, kind, navigationGuard, onClos
   id: string; kind: 'edit' | 'delete'; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: (employee: EmployeeData) => void; onDeleted: (id: string) => void
 }) {
-  const [data, setData] = useState<{ employee: EmployeeData; historyCount: number } | null>(null)
+  const [data, setData] = useState<EmployeeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
@@ -26,25 +26,24 @@ export default function EmployeeActionDialog({ id, kind, navigationGuard, onClos
     let alive = true
     setLoading(true); setError('')
     const api = window.hromadaHR.personnel
-    void Promise.all([api.getEmployee(id), api.getHistory(id)]).then(([employee, history]) => {
+    void api.getEmployee(id).then(employee => {
       if (!alive) return
       if (!employee.ok) setError(personnelMessage(employee.error.code))
-      else if (!history.ok) setError(personnelMessage(history.error.code))
-      else setData({ employee: employee.data, historyCount: history.data.length })
+      else setData(employee.data)
     }).catch(() => { if (alive) setError('Не вдалося завантажити актуальні відомості. Повторіть спробу.') })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [id, retry])
   const close = () => requestClose(onClose)
-  if (kind === 'edit' && data && !loading && !error) return <EmployeeForm employee={data.employee} navigationGuard={navigationGuard} onCancel={onClose} onSaved={onSaved}/>
+  if (kind === 'edit' && data && !loading && !error) return <EmployeeForm employee={data} navigationGuard={navigationGuard} onCancel={onClose} onSaved={onSaved}/>
   const content = <div ref={owner}>
     {loading ? <DataState kind="loading" compact message="Завантаження актуальних відомостей…"/> : data && <>
-      <p><strong>{fullName(data.employee)}</strong></p><p>Записів історії: <strong>{data.historyCount}</strong>.</p>
-      <p>Особову картку й усі її призначення буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p>
+      <p><strong>{fullName(data)}</strong></p>
+      <p>Особову картку буде видалено незворотно. Посади й підрозділи залишаться у довідниках.</p>
     </>}
     {error && <Alert variant="error" action={!data ? <button type="button" onClick={() => setRetry(value => value + 1)}>Повторити</button> : undefined}>{error}</Alert>}
   </div>
-  if (kind === 'edit') return <Modal title="Редагувати персональні відомості" size="large" onClose={close}>{content}</Modal>
+  if (kind === 'edit') return <Modal title="Редагувати працівника" size="large" onClose={close}>{content}</Modal>
   return <ConfirmDialog title="Видалити працівника назавжди?" message={content} confirmLabel="Видалити назавжди" busyLabel="Видалення…"
     confirmDisabled={loading || !data || pending} onCancel={close} onConfirm={async () => {
       if (!data || loading || inFlight.current) return

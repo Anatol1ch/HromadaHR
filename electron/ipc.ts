@@ -80,24 +80,16 @@ export function registerIpcHandlers(
     z.strictObject({ token, fileName: z.string(), schemaVersion: z.number().int().positive() }).nullable(), backup.chooseRestore)
   register(ipcChannels.backupConfirmRestore, z.tuple([token]), z.strictObject({ restored: z.boolean() }), ([value]) => backup.confirmRestore(value))
 
-  register(ipcChannels.personnelCreateAssignment, z.tuple([personnelSchemas.id, personnelSchemas.assignmentInput]), personnelSchemas.employeeCard,
-    ([id, input]) => personnel.createAssignment(id, input))
-  register(ipcChannels.personnelUpdateAssignment, z.tuple([personnelSchemas.id, personnelSchemas.assignmentInput]), personnelSchemas.employeeCard,
-    ([id, input]) => personnel.updateAssignment(id, input))
-  register(ipcChannels.personnelDeleteAssignment, z.tuple([personnelSchemas.id]), personnelSchemas.employeeCard,
-    ([id]) => personnel.deleteAssignment(id))
   register(ipcChannels.personnelDeleteEmployee, z.tuple([personnelSchemas.id]), z.null(),
     ([id]) => personnel.deleteEmployee(id))
   register(ipcChannels.personnelListEmployees, z.tuple([]), personnelSchemas.employeeCard.array(),
     (_args) => personnel.listEmployees())
   register(ipcChannels.personnelGetEmployee, z.tuple([personnelSchemas.id]), personnelSchemas.employeeCard,
     ([id]) => personnel.getEmployee(id))
-  register(ipcChannels.personnelCreateEmployee, z.tuple([personnelSchemas.createEmployee]), personnelSchemas.employeeCard,
+  register(ipcChannels.personnelCreateEmployee, z.tuple([personnelSchemas.employeeDetails]), personnelSchemas.employeeCard,
     ([input]) => personnel.createEmployee(input))
   register(ipcChannels.personnelUpdateEmployee, z.tuple([personnelSchemas.id, personnelSchemas.employeeDetails]), personnelSchemas.employeeCard,
     ([id, input]) => personnel.updateEmployee(id, input))
-  register(ipcChannels.personnelGetHistory, z.tuple([personnelSchemas.id]), personnelSchemas.assignment.array(),
-    ([id]) => personnel.getHistory(id))
   register(ipcChannels.personnelListDepartments, z.tuple([]), personnelSchemas.department.array(),
     (_args) => personnel.listDepartments())
   register(ipcChannels.personnelCreateDepartment, z.tuple([personnelSchemas.departmentInput]), personnelSchemas.department,

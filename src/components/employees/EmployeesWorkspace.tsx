@@ -7,7 +7,6 @@ import { notifySystemToast } from '../SystemToastHost'
 import EmployeeRegistry from './EmployeeRegistry'
 import EmployeeCard from './EmployeeCard'
 import EmployeeForm from './EmployeeForm'
-import AssignmentForm from './AssignmentForm'
 import EmployeeActionDialog from './EmployeeActionDialog'
 import type { NavigationGuard } from './useUnsavedChanges'
 
@@ -40,15 +39,14 @@ export default function EmployeesWorkspace({ navigationGuard }: { navigationGuar
   function saved(employee: EmployeeData) {
     const created = workspace.form?.kind === 'create'
     setEmployees(current => mergeEmployee(current, employee))
-    notifySystemToast('success', 'Збережено', created ? 'Працівника створено. Початкове призначення збережено.' :
-      workspace.form?.kind === 'assignment' ? 'Історію призначень оновлено.' : 'Персональні відомості оновлено.')
+    notifySystemToast('success', 'Збережено', created ? 'Працівника створено.' : 'Відомості працівника оновлено.')
     dispatch({ type: 'saved', employee, created })
     if (!created && !workspace.cardId) restoreOpener()
   }
   function deleted(id: string) {
     setEmployees(current => current.filter(employee => employee.id !== id))
     dispatch({ type: 'deleted', id })
-    notifySystemToast('success', 'Працівника видалено', 'Особову картку та всю історію призначень видалено.')
+    notifySystemToast('success', 'Працівника видалено', 'Особову картку видалено.')
     restoreOpener()
   }
   return <div className="employees-workspace page-transition">
@@ -61,14 +59,11 @@ export default function EmployeesWorkspace({ navigationGuard }: { navigationGuar
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/>
     {workspace.cardId && <EmployeeCard key={workspace.cardId} id={workspace.cardId} revision={workspace.revision}
-      navigationGuard={navigationGuard} onLoaded={updateFromCard}
+      onLoaded={updateFromCard}
       onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}
-      onAssign={(employee, assignment) => dispatch({ type: 'form', form: { kind: 'assignment', employee, assignment } })}
       onDelete={id => dispatch({ type: 'action', action: { kind: 'delete', id } })}/>}
-    {workspace.form?.kind === 'assignment' ? <AssignmentForm employee={workspace.form.employee} assignment={workspace.form.assignment}
-      navigationGuard={navigationGuard} onCancel={() => dispatch({ type: 'form', form: null })} onSaved={saved}/> :
-      workspace.form && <EmployeeForm employee={workspace.form.kind === 'edit' ? workspace.form.employee : undefined}
+    {workspace.form && <EmployeeForm employee={workspace.form.kind === 'edit' ? workspace.form.employee : undefined}
         navigationGuard={navigationGuard} onSaved={saved} onCancel={() => { dispatch({ type: 'form', form: null }); if (!workspace.cardId) restoreOpener() }}/>}
     {workspace.action && <EmployeeActionDialog key={workspace.action.id + workspace.action.kind} {...workspace.action} navigationGuard={navigationGuard}
       onClose={() => { dispatch({ type: 'action', action: null }); if (!workspace.cardId) restoreOpener() }} onSaved={saved} onDeleted={deleted}/>}

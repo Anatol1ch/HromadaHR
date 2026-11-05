@@ -17,13 +17,13 @@ export const nextSort = (current: EmployeeSort, key: SortKey): EmployeeSort => (
 export const collator = new Intl.Collator('uk', { sensitivity: 'base' })
 export function filterEmployees(rows: EmployeeCard[], filter: Pick<RegistryState, 'query' | 'departmentId' | 'positionId'>) {
   const terms = normalizeText(filter.query).split(' ').filter(Boolean)
-  return rows.filter(row => (!filter.departmentId || row.currentAssignment.departmentId === filter.departmentId) &&
-    (!filter.positionId || row.currentAssignment.positionId === filter.positionId) &&
+  return rows.filter(row => (!filter.departmentId || row.departmentId === filter.departmentId) &&
+    (!filter.positionId || row.positionId === filter.positionId) &&
     terms.every(term => normalizeText(fullName(row)).includes(term)))
 }
 export function sortEmployees(rows: EmployeeCard[], sort: EmployeeSort) {
-  const value = (row: EmployeeCard) => sort.key === 'position' ? row.currentAssignment.position.name :
-    sort.key === 'department' ? row.currentAssignment.department.name : sort.key === 'hireDate' ?
+  const value = (row: EmployeeCard) => sort.key === 'position' ? row.position.name :
+    sort.key === 'department' ? row.department.name : sort.key === 'hireDate' ?
       (isIsoCalendarDate(row.hireDate) ? row.hireDate : '') : fullName(row)
   return [...rows].sort((a, b) => {
     const primary = sort.key === 'hireDate' ? (value(a) < value(b) ? -1 : value(a) > value(b) ? 1 : 0) : collator.compare(value(a), value(b))
@@ -42,7 +42,7 @@ export function employeeCounts(rows: EmployeeCard[]) {
     staff: rows.filter(row => row.employeeType === 'staff').length }
 }
 export function registryOptions(rows: EmployeeCard[], field: 'department' | 'position', selected: string) {
-  const entries = [...new Map(rows.map(row => [row.currentAssignment[field].id, row.currentAssignment[field]])).values()]
+  const entries = [...new Map(rows.map(row => [row[field].id, row[field]])).values()]
     .sort((a, b) => collator.compare(a.name, b.name) || a.id.localeCompare(b.id))
   const options = [{ value: '', label: field === 'department' ? 'Усі підрозділи' : 'Усі посади' },
     ...entries.map(entry => ({ value: entry.id, label: entry.name }))]

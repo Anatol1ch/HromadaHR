@@ -16,13 +16,13 @@
 | KeyboardNavigation, `src/lib/keyboardNavigation.ts`, `tabNavigation.ts` | S1 | Адаптувати Enter/Tab/Ctrl+Enter/focus; без password та адресних hooks | Інтегровано |
 | Налаштування, «Про програму»: `src/SettingsPage.tsx`, `src/styles.css` | S1 | Адаптувати секційну навігацію й about-картки; замість account/server — чинний BackupSettings; без updates runtime | Інтегровано в продовженні 3.4.1; основні GUI-сценарії переглядав користувач; повне формальне приймання не підтверджено |
 | «Потрібна допомога?»: `src/App.tsx` help-card / support-contact-card | S1 | Адаптувати кнопку й Modal підтримки; контакти з джерела; чотири дозволені ID через захищений Main IPC та окреме копіювання | Інтегровано в продовженні 3.4.1; ручне GUI-приймання ще не виконано |
-| Кадрові реєстр/форми/історія/модальна картка: `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx`, модальні форми | S1 | Адаптувати RecipientFormModal/RecipientDetails, DecisionFormModal і registry-row-actions; без допомог/виплат | Реалізовано 3.4.2; на 3.4.2.2 — дві групи DictionaryTable, спільні filters/незалежні sorts; note вилучено, category read-only; GUI-приймання відкрите |
+| Кадрові реєстр/форми/історія/модальна картка: `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx`, модальні форми | S1 | Адаптувати RecipientFormModal/RecipientDetails, DecisionFormModal і registry-row-actions; без допомог/виплат | Реалізовано 3.4.2; на 3.4.2.2 — дві групи DictionaryTable, спільні filters/незалежні sorts; на 3.5 картка містить актуальні поля, а спільна форма створює й редагує працівника |
 | Стартовий екран/анімації: `src/App.tsx` StartupScreen, `src/lib/startup-timing.ts`, `src/styles.css`, `src/main.tsx` | S1 | Адаптувати заставку, helper і boundary до HR/UsersRound/сиреневих токенів та SQLite; без auth/welcome/network/update gates | Реалізовано 3.4.3–3.4.3.1; мінімум 3500 мс, раннє Main-вікно/одна ініціалізація, reduced-motion, RecoveryScreen при помилці |
 | Резервування й відновлення: server-manager/src/BackupManagement.tsx, server-manager/electron/main.ts | S1 | Адаптувати сумісні summary/cards/table/ID-action/open-folder патерни; зберегти власний локальний SQLite/recovery, без серверної архівної/auth логіки | Реалізовано до 3.4.3.8: один SHA-256-образ/два місця, каталог/журнал, захищений restore; runtime HR розширено цільово |
 | Автоматичні оновлення | S1 лише для UI `src/SettingsPage.tsx`; технічний механізм не перевірено | Відкласти до відповідного етапу; не переносити клієнт-серверні залежності | Не реалізовано |
 | Інсталятор, пакування, релізи та інші технічні механізми | Не визначено, цільова оцінка ще не проводилася | Відкласти; на початку відповідного завдання перевірити актуальне джерело й зафіксувати SHA | Не реалізовано |
 
-Детальна provenance-таблиця UI-файлів, відмінності від оригіналу та ручне приймання: [UI-TRANSFER.md](UI-TRANSFER.md). Політика сама по собі не дозволяє змінювати SQLite/кадрову модель чи Electron security. Фактично схема — v4 (note вилучено окремим завданням), 13 кадрових IPC; backup-контракти розширювалися лише погодженими цільовими завданнями.
+Детальна provenance-таблиця UI-файлів, відмінності від оригіналу та ручне приймання: [UI-TRANSFER.md](UI-TRANSFER.md). Політика сама по собі не дозволяє змінювати SQLite/кадрову модель чи Electron security. Фактично схема — v5, дев’ять кадрових IPC; backup-контракти розширювалися лише погодженими цільовими завданнями.
 
 ## Уточнення 3.4.2.1
 
@@ -88,3 +88,7 @@ S1: повторно цільово звірено src/SettingsPage.tsx (cards/h
 
 
 3.4.3.8: source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupManagement.tsx (summary/cards/table) повторно цільово перевірено. Адаптовано композицію чинними HR card/controls, із сиреневою палітрою, inline warning, однією primary та logical rows. Власний SQLite backup розширено до одного образу/двох публікацій, без копіювання серверного AID алгоритму/auth. Реалізовано; цільова перевірка/Windows GUI-приймання — HANDOFF 3.4.3.8.
+
+### Спрощення реєстру 3.5
+
+За S1 цільово звірено `src/RecipientRegistry.tsx` для поточних полів форми й модальної композиції. Повторно використано вже перенесені Modal, ConfirmDialog, DateField, Select, DictionaryTable та сповіщення. Предметні поля джерела відрізняються, тому модель v5 і її дев’ять IPC належать HromadaHR.
