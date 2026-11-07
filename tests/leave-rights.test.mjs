@@ -132,4 +132,3 @@ test('v10 refuses DDL without protection and rolls back a failed migration',asyn
   assert.equal(db.prepare("SELECT 1 FROM sqlite_schema WHERE name='employee_leave_rights'").get(),undefined)
   db.close()
 })
-
