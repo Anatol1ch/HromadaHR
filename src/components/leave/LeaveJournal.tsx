@@ -1,3 +1,4 @@
+import { specialLeaveLimit } from '../../../shared/leave'
 import { Pencil, Ban } from 'lucide-react'
 import type { RefObject } from 'react'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
@@ -37,7 +38,7 @@ export default function LeaveJournal({ records, employees, compact = false, navi
     ]} empty={visible.length ? undefined : 'Зареєстрованих відпусток за вибраними умовами немає.'}>
       {visible.map(record => <tr key={record.id}>
         {employees && <td>{employees.get(record.employeeId) ?? 'Працівник недоступний'}</td>}
-        <td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small className="leave-period-note" role="status">Розподіл потребує перевірки: є період після завершення відпустки.</small>}{record.status === 'cancelled' && <details><summary>Скасовано</summary><p>{record.cancelReason ?? 'Причина не зазначена у старому записі.'}</p><small>{formatDateTime(record.cancelledAt)}</small></details>}</td>
+        <td>{leaveLabels[record.leaveType]}{specialLeaveLimit(record.leaveType) !== null && <small className="leave-period-note">Рік надання: {record.startDate.slice(0,4)}</small>}{record.grantBasis && <details><summary>Підстава надання</summary><p>{record.grantBasis}</p></details>}{record.allocationWarning && <small className="leave-period-note" role="status">Розподіл потребує перевірки: є період після завершення відпустки.</small>}{record.status === 'cancelled' && <details><summary>Скасовано</summary><p>{record.cancelReason ?? 'Причина не зазначена у старому записі.'}</p><small>{formatDateTime(record.cancelledAt)}</small></details>}</td>
         <td>{formatDate(record.startDate)}–{formatDate(record.endDate)}{record.durationExplanation && <small className="leave-period-note">{record.durationExplanation}</small>}</td>
         <td>{record.usedDays}</td><td>{record.orderNumber ?? '—'}{record.orderDate && <small className="leave-period-note">{formatDate(record.orderDate)}</small>}</td>
         <td>{record.status === 'active' && <div className="registry-row-actions">

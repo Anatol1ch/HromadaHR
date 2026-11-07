@@ -108,7 +108,7 @@ export function registerIpcHandlers(
   register(ipcChannels.leaveCancel, z.tuple([leaveSchemas.id, leaveSchemas.revision, leaveSchemas.cancelReason]),
     leaveSchemas.record, ([id, revision, reason]) => leave.cancelLeave(id, revision, reason))
   register(ipcChannels.leaveProposeEditAllocation,
-    z.tuple([leaveSchemas.id, leaveSchemas.revision, leaveSchemas.leaveType, leaveSchemas.registration.shape.usedDays, leaveSchemas.calendarDate, leaveSchemas.calendarDate]),
+    z.tuple([leaveSchemas.id, leaveSchemas.revision, leaveSchemas.periodLeaveType, leaveSchemas.registration.shape.usedDays, leaveSchemas.calendarDate, leaveSchemas.calendarDate]),
     leaveSchemas.allocationProposal, ([id, revision, type, days, start, end]) => leave.proposeEditAllocation(id, revision, type, days, start, end))
   register(ipcChannels.leaveRegister, z.tuple([leaveSchemas.registration]), leaveSchemas.record,
     ([input]) => leave.registerLeave(input))
@@ -116,11 +116,11 @@ export function registerIpcHandlers(
     ([employeeId]) => leave.listRecords(employeeId))
   register(ipcChannels.leaveGetBalances, z.tuple([leaveSchemas.id]), leaveSchemas.balance.array(),
     ([employeeId]) => leave.getBalances(employeeId))
-  register(ipcChannels.leaveProposeAllocation, z.tuple([leaveSchemas.id, leaveSchemas.leaveType, leaveSchemas.registration.shape.usedDays, leaveSchemas.calendarDate, leaveSchemas.calendarDate]),
+  register(ipcChannels.leaveProposeAllocation, z.tuple([leaveSchemas.id, leaveSchemas.periodLeaveType, leaveSchemas.registration.shape.usedDays, leaveSchemas.calendarDate, leaveSchemas.calendarDate]),
     leaveSchemas.allocationProposal, ([employeeId, type, days, start, end]) => leave.proposeAllocation(employeeId, type, days, start, end))
   register(ipcChannels.leaveListPeriods, z.tuple([personnelSchemas.id]), leaveSchemas.confirmedPeriod.array(),
     ([employeeId]) => leave.listPeriods(employeeId))
-  register(ipcChannels.leaveProposePeriods, z.tuple([personnelSchemas.id, leaveSchemas.calendarDate, leaveSchemas.leaveType]),
+  register(ipcChannels.leaveProposePeriods, z.tuple([personnelSchemas.id, leaveSchemas.calendarDate, leaveSchemas.periodLeaveType]),
     leaveSchemas.proposedPeriod.array(), ([employeeId, throughDate, leaveType]) => leave.proposePeriods(employeeId, throughDate, leaveType))
   register(ipcChannels.leaveSavePeriods, z.tuple([personnelSchemas.id, leaveSchemas.periodsInput]), leaveSchemas.confirmedPeriod.array(),
     ([employeeId, periods]) => leave.savePeriods(employeeId, periods))

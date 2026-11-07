@@ -1,4 +1,4 @@
-import type { LeaveAccountingBasis, LeaveType, ProposedLeavePeriod } from '../../shared/leave.js'
+import type { LeaveAccountingBasis, PeriodLeaveType, ProposedLeavePeriod } from '../../shared/leave.js'
 
 export const ELECTRONIC_ACCOUNTING_START = '2027-01-01'
 
@@ -36,7 +36,7 @@ export function accountingBasisForPeriod(periodStart: string): LeaveAccountingBa
   return periodStart < ELECTRONIC_ACCOUNTING_START ? 'initial_balance' : 'confirmed_entitlement'
 }
 
-export function proposedPeriods(leaveType: LeaveType, hireDate: string, throughDate: string): ProposedLeavePeriod[] {
+export function proposedPeriods(leaveType: PeriodLeaveType, hireDate: string, throughDate: string): ProposedLeavePeriod[] {
   if (!isCalendarDate(hireDate) || !isCalendarDate(throughDate) || throughDate < hireDate || leaveType === 'oms_service_additional') return []
   const result: ProposedLeavePeriod[] = []
   if (leaveType === 'children_social_additional') {
@@ -60,7 +60,7 @@ export function proposedPeriods(leaveType: LeaveType, hireDate: string, throughD
   return result
 }
 
-export function isCanonicalPeriod(leaveType: LeaveType, hireDate: string, periodStart: string, periodEnd: string) {
+export function isCanonicalPeriod(leaveType: PeriodLeaveType, hireDate: string, periodStart: string, periodEnd: string) {
   if (!isCalendarDate(hireDate) || !isCalendarDate(periodStart) || !isCalendarDate(periodEnd)) return false
   if (leaveType === 'oms_service_additional') return periodStart <= periodEnd
   if (leaveType === 'children_social_additional') {

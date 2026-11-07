@@ -33,7 +33,7 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 8)
+    assert.equal(first.schemaVersion, 9)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
@@ -55,6 +55,20 @@ app.whenReady().then(async () => {
       usedDays: 1, orderNumber: null, orderDate: null, durationExplanation: 'Уточнення',
       allocations: [{ periodId: period.id, days: 1 }] })
     leave.cancelLeave(corrected.id, corrected.revision, 'Скасовано кадровиком')
+    const eventInput = { requestId: require('node:crypto').randomUUID(), employeeId, leaveType: 'study_leave',
+      startDate: '2027-05-01', endDate: '2027-05-03', usedDays: 3, orderNumber: null, orderDate: null,
+      durationExplanation: null, allocations: [], grantBasis: 'Довідка-виклик № 5' }
+    const study = leave.registerLeave(eventInput)
+    assert.deepEqual(study.allocations, [])
+    const { requestId: studyRequestId, employeeId: studyEmployeeId, ...editableStudy } = eventInput
+    const changedStudy = leave.updateLeave({ ...editableStudy, id: study.id,
+      expectedRevision: study.revision, grantBasis: 'Довідка-виклик № 6' })
+    leave.cancelLeave(changedStudy.id, changedStudy.revision, 'Помилка')
+    leave.registerLeave({ ...eventInput, requestId: require('node:crypto').randomUUID(), leaveType: 'veteran_special_leave',
+      startDate: '2027-06-01', endDate: '2027-06-14', usedDays: 14, grantBasis: 'Статус перевірено' })
+    leave.registerLeave({ ...eventInput, requestId: require('node:crypto').randomUUID(), leaveType: 'chernobyl_special_leave',
+      startDate: '2027-07-01', endDate: '2027-07-16', usedDays: 16, grantBasis: 'Категорію перевірено' })
+    assert.equal(leave.getBalances(employeeId)[0].availableDays, 5)
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
@@ -86,10 +100,17 @@ app.whenReady().then(async () => {
     assert.equal(personnel.getEmployee(employeeId).hireDate, '2026-01-01')
     assert.equal(leave.listPeriods(employeeId)[0].confirmedDays, 5)
     assert.equal(leave.getBalances(employeeId)[0].availableDays, 5)
-    assert.equal(leave.listRecords(employeeId).length, 1)
-    assert.equal(leave.listRecords(employeeId)[0].status, 'cancelled')
-    assert.equal(leave.listRecords(employeeId)[0].revision, 3)
-    assert.equal(leave.listRecords(employeeId)[0].allocations[0].days, 1)
+    assert.equal(leave.listRecords(employeeId).length, 4)
+    const annual = leave.listRecords(employeeId).find(record => record.leaveType === 'annual_main')
+    const study = leave.listRecords(employeeId).find(record => record.leaveType === 'study_leave')
+    assert.equal(study.status, 'cancelled')
+    assert.equal(study.grantBasis, 'Довідка-виклик № 6')
+    assert.deepEqual(study.allocations, [])
+    assert.deepEqual(storage.getDatabase().pragma('foreign_key_check'), [])
+    assert.deepEqual(storage.getDatabase().pragma('integrity_check'), [{ integrity_check: 'ok' }])
+    assert.equal(annual.status, 'cancelled')
+    assert.equal(annual.revision, 3)
+    assert.equal(annual.allocations[0].days, 1)
     const protection = join(root, 'data', 'protection')
     const raw = readdirSync(protection).find(name => name.startsWith('raw-'))
     assert.equal(readFileSync(join(protection, raw, 'database.db'), 'utf8'), 'damaged Electron fixture')

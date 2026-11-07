@@ -1,10 +1,10 @@
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import LeaveJournal from './LeaveJournal'
-import { leaveLabels as labels, leaveOptions as options } from './presentation'
+import { leaveLabels as labels, periodLeaveOptions as options } from './presentation'
 import type { PeriodBalance, LeaveRecord } from '../../../shared/leave'
 import { Fragment, useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { type LeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
+import { type PeriodLeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import { todayIsoDate } from '../../lib/dates'
 import ConfirmDialog from '../ConfirmDialog'
@@ -32,7 +32,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   employeeId: string; hireDate: string; navigationGuard: RefObject<NavigationGuard>
   employeeName?: string; onRegistered?: () => void; showJournal?: boolean; refreshRevision?: number
 }) {
-  const [type, setType] = useState<LeaveType>('annual_main')
+  const [type, setType] = useState<PeriodLeaveType>('annual_main')
   const groupId = useId()
   const [revision, setRevision] = useState(0)
   const [registering, setRegistering] = useState(false)
@@ -119,7 +119,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     </div>}
     <div className="leave-toolbar">
       <div className="leave-select"><Select label="Вид відпустки" value={type} options={options} advanceOnSelect={false}
-        onChange={value => { setState(undefined); setType(value as LeaveType) }} /></div>
+        onChange={value => { setState(undefined); setType(value as PeriodLeaveType) }} /></div>
       <button className="primary-button" type="button" disabled={!periods} onClick={() => setRegistering(true)}>Зареєструвати відпустку</button>
       <button className="secondary-button" type="button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')}
         onClick={() => setEditing(true)}>

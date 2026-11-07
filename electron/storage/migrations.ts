@@ -1,3 +1,4 @@
+import { specialLeavesSql } from './special-leaves-migration.js'
 import { leaveCorrectionsSql } from './leave-corrections-migration.js'
 import { leaveRegistrationSql } from './leave-registration-migration.js'
 import { personnelSql } from './personnel-migration.js'
@@ -124,6 +125,11 @@ END;`,
   name: 'leave_corrections',
   requiresBackup: true,
   sql: leaveCorrectionsSql,
+}, {
+  version: 9,
+  name: 'special_leaves',
+  requiresBackup: true,
+  sql: specialLeavesSql,
 }]
 
 function checksum(migration: Migration) {

@@ -112,3 +112,7 @@ Read-only SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Цільово звір�
 ## 4.4 — Дії корекції
 
 Read-only джерело SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, src/RecipientRegistry.tsx (beginEdit, expectedUpdatedAt, іконкові дії) та src/AidRegistry.tsx (оновлення реєстру й форми). У HR повторно використано чинні Modal/ConfirmDialog/ValidatedTextarea і форму реєстрації. expectedUpdatedAt адаптовано до предметної revision, запитів updateLeave/cancelLeave та перевірки фактичного результату. Серверні механізми джерела не переносилися.
+
+## 4.5 — Подієві відпустки
+
+Цільово перевірено src/RecipientRegistry.tsx (RecipientFormModal, Select умовних полів, recipient-field/fieldset, editing/expectedUpdatedAt) і src/components/ValidatedInput.tsx у read-only HromadaAID за S1 = 33eca10733caaf73b1a99e75a24ff35e706a0afb. Рішення: повторно використати вже адаптовані Modal/Select/DateField/ValidatedTextarea/ConfirmDialog, умовне компонування чинної LeaveRegistrationForm, наявний refresh/revision і дії журналу. Реального leave-модуля в цільовому переліку src AID не виявлено; загальний аудит і перенесення матеріальних допомог не проводилися. Облікові перевірки, SQLite/IPC та v9 залишаються власною Main-only реалізацією HR. Нових залежностей, дизайну чи runtime-зв’язку з AID немає.

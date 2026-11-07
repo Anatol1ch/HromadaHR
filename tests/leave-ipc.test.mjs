@@ -146,4 +146,31 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,30)
   assert.equal((await api.leave.deletePeriod(period.id)).error.code,'PERIOD_IN_USE')
 
+  const studyInput={...registration,requestId:'22222222-2222-4222-8222-222222222222',leaveType:'study_leave',
+    allocations:[],grantBasis:'Довідка-виклик'}
+  for(const badEvent of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}])
+    assert.equal((await handlers.get(ipcChannels.leaveRegister)(badEvent,studyInput)).error.code,'FORBIDDEN')
+  assert.equal((await api.leave.registerLeave({...studyInput,grantBasis:null})).error.code,'GRANT_BASIS_REQUIRED')
+  assert.equal((await api.leave.registerLeave({...studyInput,grantBasis:42})).error.code,'INVALID_ARGUMENTS')
+  assert.equal((await api.leave.registerLeave({...studyInput,grantBasis:'a'.repeat(1001)})).error.code,'INVALID_ARGUMENTS')
+  const study=await api.leave.registerLeave(studyInput)
+  assert.equal(study.ok,true);assert.equal(study.data.grantBasis,'Довідка-виклик');assert.deepEqual(study.data.allocations,[])
+  assert.equal((await api.leave.registerLeave(studyInput)).data.id,study.data.id)
+  const studyUpdate={...correction,id:study.data.id,expectedRevision:1,leaveType:'study_leave',allocations:[],grantBasis:'Уточнена довідка'}
+  assert.equal((await api.leave.updateLeave(studyUpdate)).data.revision,2)
+  assert.equal((await api.leave.getRecord(study.data.id)).data.grantBasis,'Уточнена довідка')
+  assert.equal((await api.leave.cancelLeave(study.data.id,2,'Помилка')).data.status,'cancelled')
+  for(const type of ['study_leave','veteran_special_leave','chernobyl_special_leave']) {
+    assert.equal((await api.leave.savePeriods(employee.id,[{...value,leaveType:type}])).error.code,'INVALID_ARGUMENTS')
+    assert.equal((await api.leave.proposePeriods(employee.id,'2027-01-01',type)).error.code,'INVALID_ARGUMENTS')
+    assert.equal((await api.leave.proposeAllocation(employee.id,type,14,'2027-05-01','2027-05-14')).error.code,'INVALID_ARGUMENTS')
+    assert.equal((await api.leave.proposeEditAllocation(study.data.id,2,type,14,'2027-05-01','2027-05-14')).error.code,'INVALID_ARGUMENTS')
+  }
+  for(const [type,days,month] of [['veteran_special_leave',14,'06'],['chernobyl_special_leave',16,'08']]) {
+    const input={...studyInput,requestId:month==='06'?'33333333-3333-4333-8333-333333333333':'44444444-4444-4444-8444-444444444444',
+      leaveType:type,startDate:`2027-${month}-01`,endDate:`2027-${month}-${days}`,usedDays:days}
+    assert.equal((await api.leave.registerLeave(input)).ok,true)
+    assert.equal((await api.leave.registerLeave({...input,requestId:'55555555-5555-4555-8555-555555555555',startDate:'2027-10-01',endDate:`2027-10-${days}`})).error.code,'SPECIAL_YEAR_CONFLICT')
+  }
+  assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,30)
 })

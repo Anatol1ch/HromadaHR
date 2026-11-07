@@ -1,9 +1,10 @@
+import { isPeriodLeave, specialLeaveLimit } from '../../shared/leave.js'
 import { calendarDays, fifoAllocation } from '../../shared/leave-calculations.js'
 import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance } from '../../shared/leave.js'
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
-import type { ConfirmedLeavePeriod, LeaveErrorCode, LeavePeriodInput, LeaveType, ProposedLeavePeriod } from '../../shared/leave.js'
+import type { ConfirmedLeavePeriod, LeaveErrorCode, LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from '../../shared/leave.js'
 import * as schemas from './schemas.js'
 import { accountingBasisForPeriod, isCanonicalPeriod, proposedPeriods } from './periods.js'
 
@@ -11,7 +12,7 @@ export class LeaveError extends Error {
   constructor(readonly code: LeaveErrorCode) { super(code) }
 }
 
-type LeaveRow = { id: string; employeeId: string; leaveType: LeaveType; periodStart: string; periodEnd: string;
+type LeaveRow = { id: string; employeeId: string; leaveType: PeriodLeaveType; periodStart: string; periodEnd: string;
   accountingBasis: 'initial_balance' | 'confirmed_entitlement'; confirmedDays: number; referenceEntitlementDays: number | null }
 
 function toPeriod(row: LeaveRow): ConfirmedLeavePeriod { return { ...row, status: 'confirmed' } }
@@ -57,10 +58,10 @@ export class LeaveService {
     })
   }
 
-  proposePeriods = (employeeId: string, throughDate: string, leaveType: LeaveType): ProposedLeavePeriod[] => {
+  proposePeriods = (employeeId: string, throughDate: string, leaveType: PeriodLeaveType): ProposedLeavePeriod[] => {
     this.parse(schemas.id, employeeId)
     const date = this.parse(schemas.calendarDate, throughDate)
-    const type = this.parse(schemas.leaveType, leaveType)
+    const type = this.parse(schemas.periodLeaveType, leaveType)
     return this.run(db => {
       const employee = this.employee(db, employeeId)
       if (Number(date.slice(0, 4)) - Number(employee.hireDate.slice(0, 4)) > 199) throw new LeaveError('INVALID_ARGUMENTS')
@@ -99,7 +100,7 @@ export class LeaveService {
         ON CONFLICT(employee_id, leave_type, period_start) DO UPDATE SET period_end=excluded.period_end,
         accounting_basis=excluded.accounting_basis, confirmed_days=excluded.confirmed_days,
         reference_entitlement_days=excluded.reference_entitlement_days`)
-      const read = db.prepare<[string, LeaveType, string], LeaveRow>(`SELECT id, employee_id AS employeeId,
+      const read = db.prepare<[string, PeriodLeaveType, string], LeaveRow>(`SELECT id, employee_id AS employeeId,
         leave_type AS leaveType, period_start AS periodStart, period_end AS periodEnd,
         accounting_basis AS accountingBasis, confirmed_days AS confirmedDays,
         reference_entitlement_days AS referenceEntitlementDays
@@ -144,7 +145,7 @@ export class LeaveService {
     })
   }
 
-  private allocationProposal(db: Database.Database, employeeId: string, type: LeaveType, days: number,
+  private allocationProposal(db: Database.Database, employeeId: string, type: PeriodLeaveType, days: number,
     startDate: string, endDate: string, excludeId: string | null = null) {
     this.checkDates(this.employee(db, employeeId).hireDate, startDate, endDate)
     const balances = this.balances(db, employeeId, excludeId)
@@ -152,19 +153,19 @@ export class LeaveService {
     return { balances, ...fifoAllocation(balances.filter(period => period.periodStart <= startDate), days) }
   }
 
-  proposeAllocation = (employeeId: string, leaveType: LeaveType, days: number, startDate: string, endDate: string) => {
+  proposeAllocation = (employeeId: string, leaveType: PeriodLeaveType, days: number, startDate: string, endDate: string) => {
     this.parse(schemas.id, employeeId)
-    const type = this.parse(schemas.leaveType, leaveType)
+    const type = this.parse(schemas.periodLeaveType, leaveType)
     const duration = this.parse(schemas.registration.shape.usedDays, days)
     const start = this.parse(schemas.calendarDate, startDate)
     const end = this.parse(schemas.calendarDate, endDate)
     return this.run(db => this.allocationProposal(db, employeeId, type, duration, start, end))
   }
 
-  proposeEditAllocation = (id: string, expectedRevision: number, leaveType: LeaveType, days: number, startDate: string, endDate: string) => {
+  proposeEditAllocation = (id: string, expectedRevision: number, leaveType: PeriodLeaveType, days: number, startDate: string, endDate: string) => {
     this.parse(schemas.id, id)
     this.parse(schemas.revision, expectedRevision)
-    const type = this.parse(schemas.leaveType, leaveType)
+    const type = this.parse(schemas.periodLeaveType, leaveType)
     const duration = this.parse(schemas.registration.shape.usedDays, days)
     const start = this.parse(schemas.calendarDate, startDate)
     const end = this.parse(schemas.calendarDate, endDate)
@@ -179,7 +180,7 @@ export class LeaveService {
     const rows = db.prepare<[string | null, string | null], Omit<LeaveRecord, 'allocations' | 'allocationWarning'> & { allocationWarning: number }>(`SELECT id, employee_id AS employeeId,
       leave_type AS leaveType, start_date AS startDate, end_date AS endDate, used_days AS usedDays,
       order_number AS orderNumber, order_date AS orderDate, duration_explanation AS durationExplanation,
-      status, revision, cancelled_at AS cancelledAt, cancel_reason AS cancelReason, created_at AS createdAt,
+      grant_basis AS grantBasis, status, revision, cancelled_at AS cancelledAt, cancel_reason AS cancelReason, created_at AS createdAt,
       EXISTS(SELECT 1 FROM leave_allocations a JOIN leave_period_balances p ON p.id=a.period_id
         WHERE a.record_id=leave_records.id AND p.period_start>leave_records.end_date) AS allocationWarning
       FROM leave_records WHERE (? IS NULL OR employee_id=?)
@@ -199,7 +200,8 @@ export class LeaveService {
 
   registerLeave = (input: LeaveRegistration): LeaveRecord => {
     const value = this.parse(schemas.registration, input)
-    const canonical = { ...value, allocations: [...value.allocations].sort((a, b) => a.periodId.localeCompare(b.periodId)) }
+    const { grantBasis, ...legacyValue } = value
+    const canonical = { ...legacyValue, ...(grantBasis === null ? {} : { grantBasis }), allocations: [...value.allocations].sort((a, b) => a.periodId.localeCompare(b.periodId)) }
     const requestJson = JSON.stringify(canonical)
     return this.run(db => db.transaction(() => {
       const existing = db.prepare<[string], { id: string; requestJson: string; employeeId: string }>(
@@ -211,9 +213,9 @@ export class LeaveService {
       this.validateRegistration(db, value)
       const id = randomUUID()
       db.prepare(`INSERT INTO leave_records(id,request_id,request_json,employee_id,leave_type,start_date,end_date,
-        used_days,order_number,order_date,duration_explanation,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+        used_days,order_number,order_date,duration_explanation,created_at,grant_basis) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(id, value.requestId, requestJson, value.employeeId, value.leaveType, value.startDate, value.endDate,
-          value.usedDays, value.orderNumber, value.orderDate, value.durationExplanation, new Date().toISOString())
+          value.usedDays, value.orderNumber, value.orderDate, value.durationExplanation, new Date().toISOString(), value.grantBasis)
       this.insertAllocations(db, id, value.allocations)
       return this.records(db, value.employeeId).find(record => record.id === id)!
     }).immediate())
@@ -232,6 +234,18 @@ export class LeaveService {
       (value.usedDays !== length && !value.durationExplanation)) throw new LeaveError('INVALID_ARGUMENTS')
     if (db.prepare(`SELECT 1 FROM leave_records WHERE employee_id=? AND status='active'
       AND start_date<=? AND end_date>=? AND (? IS NULL OR id!=?) LIMIT 1`).get(value.employeeId, value.endDate, value.startDate, excludeId, excludeId)) throw new LeaveError('LEAVE_OVERLAP')
+    if (!isPeriodLeave(value.leaveType)) {
+      if (!value.grantBasis?.trim()) throw new LeaveError('GRANT_BASIS_REQUIRED')
+      if (value.allocations.length) throw new LeaveError('INVALID_ARGUMENTS')
+      const limit = specialLeaveLimit(value.leaveType)
+      if (limit !== null) {
+        if (value.usedDays > limit || (value.usedDays < limit && !value.durationExplanation)) throw new LeaveError('SPECIAL_DURATION')
+        if (db.prepare(`SELECT 1 FROM leave_records WHERE employee_id=? AND leave_type=? AND status='active'
+          AND substr(start_date,1,4)=? AND (? IS NULL OR id!=?) LIMIT 1`)
+          .get(value.employeeId, value.leaveType, value.startDate.slice(0,4), excludeId, excludeId)) throw new LeaveError('SPECIAL_YEAR_CONFLICT')
+      }
+      return
+    }
     const balances = new Map(this.balances(db, value.employeeId, excludeId).map(period => [period.id, period]))
     const allocated = new Set<string>()
     let total = 0
@@ -276,9 +290,9 @@ export class LeaveService {
       this.validateRegistration(db, { ...value, employeeId: record.employeeId }, record.id)
       db.prepare('DELETE FROM leave_allocations WHERE record_id=?').run(record.id)
       db.prepare(`UPDATE leave_records SET leave_type=?,start_date=?,end_date=?,used_days=?,order_number=?,
-        order_date=?,duration_explanation=?,revision=revision+1 WHERE id=? AND revision=?`)
+        order_date=?,duration_explanation=?,grant_basis=?,revision=revision+1 WHERE id=? AND revision=?`)
         .run(value.leaveType, value.startDate, value.endDate, value.usedDays, value.orderNumber,
-          value.orderDate, value.durationExplanation, record.id, value.expectedRevision)
+          value.orderDate, value.durationExplanation, value.grantBasis, record.id, value.expectedRevision)
       this.insertAllocations(db, record.id, value.allocations)
       return this.currentRecord(db, record.id)
     }).immediate())

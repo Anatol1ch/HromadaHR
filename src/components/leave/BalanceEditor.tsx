@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Check, Plus, X } from 'lucide-react'
-import type { LeaveType } from '../../../shared/leave'
+import type { PeriodLeaveType } from '../../../shared/leave'
 import { formatDate, parseDateInput } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
@@ -15,7 +15,7 @@ import { buildChanges, cutoff, type Draft, type Period } from './draft'
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
 export default function BalanceEditor({ employeeId, periods, type, typeLabel, navigationGuard, onClose, onSaved }: {
-  employeeId: string; periods: Period[]; type: LeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
+  employeeId: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
 }) {
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))

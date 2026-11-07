@@ -3,7 +3,7 @@ import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
 import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, EmployeeDetails, Department, Position } from './personnel.js'
-import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, LeaveType, ProposedLeavePeriod } from './leave.js'
+import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from './leave.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
@@ -53,11 +53,11 @@ export interface IpcOperations {
   [ipcChannels.leaveGetRecord]: { args: [string]; result: LeaveRecord }
   [ipcChannels.leaveUpdate]: { args: [LeaveUpdate]; result: LeaveRecord }
   [ipcChannels.leaveCancel]: { args: [string, number, string]; result: LeaveRecord }
-  [ipcChannels.leaveProposeEditAllocation]: { args: [string, number, LeaveType, number, string, string]; result: AllocationProposal }
+  [ipcChannels.leaveProposeEditAllocation]: { args: [string, number, PeriodLeaveType, number, string, string]; result: AllocationProposal }
   [ipcChannels.leaveRegister]: { args: [LeaveRegistration]; result: LeaveRecord }
   [ipcChannels.leaveListRecords]: { args: [string | null]; result: LeaveRecord[] }
   [ipcChannels.leaveGetBalances]: { args: [string]; result: PeriodBalance[] }
-  [ipcChannels.leaveProposeAllocation]: { args: [string, LeaveType, number, string, string]; result: AllocationProposal }
+  [ipcChannels.leaveProposeAllocation]: { args: [string, PeriodLeaveType, number, string, string]; result: AllocationProposal }
   [ipcChannels.backupListCopies]: { args: []; result: AvailableBackups }
   [ipcChannels.backupSelectCopy]: { args: [string]; result: RestoreSelection }
   [ipcChannels.backupOpenFolder]: { args: [BackupSlot]; result: null }
@@ -75,7 +75,7 @@ export interface IpcOperations {
   [ipcChannels.personnelListPositions]: { args: []; result: Position[] }
   [ipcChannels.personnelCreatePosition]: { args: [Omit<Position, 'id'>]; result: Position }
   [ipcChannels.leaveListPeriods]: { args: [string]; result: ConfirmedLeavePeriod[] }
-  [ipcChannels.leaveProposePeriods]: { args: [string, string, LeaveType]; result: ProposedLeavePeriod[] }
+  [ipcChannels.leaveProposePeriods]: { args: [string, string, PeriodLeaveType]; result: ProposedLeavePeriod[] }
   [ipcChannels.leaveSavePeriods]: { args: [string, LeavePeriodInput[]]; result: ConfirmedLeavePeriod[] }
   [ipcChannels.leaveDeletePeriod]: { args: [string]; result: null }
   [ipcChannels.systemGetInfo]: { args: []; result: SystemInfo }

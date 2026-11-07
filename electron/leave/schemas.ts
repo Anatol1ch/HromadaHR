@@ -1,12 +1,13 @@
 import { z } from 'zod'
-import { leaveTypes } from '../../shared/leave.js'
+import { leaveTypes, periodLeaveTypes } from '../../shared/leave.js'
 import { isCalendarDate } from './periods.js'
 
 export const id = z.string().uuid()
+export const periodLeaveType = z.enum(periodLeaveTypes)
 export const leaveType = z.enum(leaveTypes)
 export const calendarDate = z.string().refine(isCalendarDate)
 export const periodInput = z.strictObject({
-  leaveType,
+  leaveType: periodLeaveType,
   periodStart: calendarDate,
   periodEnd: calendarDate,
   accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']),
@@ -15,7 +16,7 @@ export const periodInput = z.strictObject({
 })
 export const periodsInput = z.array(periodInput).min(1).max(200)
 export const confirmedPeriod = periodInput.extend({ id, employeeId: id, status: z.literal('confirmed') })
-export const proposedPeriod = z.strictObject({ leaveType, periodStart: calendarDate, periodEnd: calendarDate,
+export const proposedPeriod = z.strictObject({ leaveType: periodLeaveType, periodStart: calendarDate, periodEnd: calendarDate,
   accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']), status: z.literal('proposed') })
 export const allocation = z.strictObject({ periodId: id, days: z.number().int().positive().max(3652059) })
 export const registration = z.strictObject({
@@ -24,9 +25,11 @@ export const registration = z.strictObject({
   orderNumber: z.string().trim().min(1).max(100).nullable(),
   orderDate: calendarDate.nullable(),
   durationExplanation: z.string().trim().min(1).max(1000).nullable(),
-  allocations: z.array(allocation).min(1).max(200),
+  allocations: z.array(allocation).max(200),
+  grantBasis: z.string().trim().min(1).max(1000).nullable().optional().default(null),
 })
 export const record = registration.omit({ requestId: true }).extend({
+  grantBasis: z.string().min(1).max(1000).nullable(),
   revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), cancelledAt: z.iso.datetime().nullable(),
   cancelReason: z.string().min(1).max(1000).nullable(), allocationWarning: z.boolean(),
   id, status: z.enum(['active', 'cancelled']), createdAt: z.iso.datetime(),

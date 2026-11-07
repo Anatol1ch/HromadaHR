@@ -431,3 +431,7 @@ AID source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupMa
 ## 4.4 — Корекція й скасування
 
 За SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb звірено src/RecipientRegistry.tsx (актуальне читання перед beginEdit, optimistic expectedUpdatedAt, Pencil) та src/AidRegistry.tsx (дії рядка й refresh). HR використовує власну revision і ту саму LeaveRegistrationForm у двох режимах. ConfirmDialog скасування містить контекст, причину та попередження щодо виданого документа. Скасовані записи показують причину/час без дій редагування. Візуальне приймання, клавіатура, фокус і масштабування залишаються ручним чеклістом HANDOFF.
+
+## 4.5 — Підстава подієвої реєстрації
+
+Джерело: src/RecipientRegistry.tsx / RecipientFormModal і src/components/ValidatedInput.tsx HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Адаптація: умовний набір полів за Select у тій самій формі, recipient-field + ValidatedTextarea для короткої підстави, Alert для меж спеціального виду. Існуючі Modal, DateField, ConfirmDialog, Toast, dirty/busy і readback лишаються HR-патернами 4.3–4.4. Журнал відображає шість видів, підставу та рік спеціального надання; таблиця залишків — лише три періодні. Нового редизайну немає. Візуальне приймання, фокус/Tab/Escape, масштабування й перезапуск — невиконаний ручний чекліст HANDOFF 4.5.

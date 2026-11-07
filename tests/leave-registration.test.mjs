@@ -121,7 +121,7 @@ test('employee deletion cascades registrations and allocations atomically',async
   assert.equal(f.personnel.getEmployee(other.id).id,other.id)
   assert.deepEqual(f.connection.database.pragma('foreign_key_check'),[])
 })
-test('v6 to v8 preserves balances and fails closed without protective snapshot',async t=>{
+test('v6 to v9 preserves balances and fails closed without protective snapshot',async t=>{
   const f=await fixture(t,migrations.slice(0,6))
   const db=f.connection.database
   db.prepare(`INSERT INTO leave_period_balances VALUES (?,?,?,?,?,?,?,?)`).run(randomUUID(),f.employee.id,'annual_main','2024-01-01','2024-12-31','initial_balance',7,null)
@@ -143,7 +143,7 @@ test('v6 to v8 preserves balances and fails closed without protective snapshot',
   unchanged.close()
   const updated=await openStorageSafely(f.file)
   f.handles.push(updated)
-  assert.equal(updated.schemaVersion,8)
+  assert.equal(updated.schemaVersion,9)
   assert.equal(updated.database.prepare('SELECT confirmed_days FROM leave_period_balances').get().confirmed_days,7)
   assert.deepEqual(updated.database.prepare('SELECT * FROM schema_migrations WHERE version<=6 ORDER BY version').all(),ledger)
   assert.ok(readdirSync(protection).some(name=>name.includes('protect-migration-v7-')))

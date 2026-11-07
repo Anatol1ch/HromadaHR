@@ -53,6 +53,9 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'SPECIAL_YEAR_CONFLICT': return 'За цей рік початку вже є активне надання цього спеціального виду. Виправте або скасуйте помилкову реєстрацію.'
+    case 'SPECIAL_DURATION': return 'Перевищено тривалість спеціального виду або немає пояснення меншої тривалості.'
+    case 'GRANT_BASIS_REQUIRED': return 'Для подієвої відпустки зазначте документальну підставу надання.'
     case 'STALE_REVISION': return 'Запис уже змінено. Чернетку збережено. Закрийте форму й відкрийте актуальну відпустку.'
     case 'LEAVE_CANCELLED': return 'Реєстрацію скасовано. Її звичайне редагування недоступне.'
     case 'INVALID_PERIOD': return 'Обраний період починається після завершення відпустки. Змініть розподіл.'
