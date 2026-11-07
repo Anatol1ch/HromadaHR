@@ -128,3 +128,7 @@ Read-only джерело SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, src/Recip
 ## 4.6.4 — Журнал за кадровим реєстром
 
 Прочитано src/RecipientRegistry.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb; джерело read-only. Використано надійніші чинні HR-компоненти EmployeeRegistry/EmployeeGroupTable, а не серверні запити AID. Адаптації toolbar/filter/sort/table, секцій картки й модалок зафіксовано в UI-TRANSFER. Ручні права — мінімальне розширення Main/SQLite HR, жодного перенесення фінансової моделі AID.
+
+## 4.6.5
+
+Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: звірено три горизонтальні секції. Застосовано чинні HR-контроли, інформаційні секції особової картки та реєстр; специфічні акаунтні/серверні функції AID не переносилися. Адаптації й ручне приймання — UI-TRANSFER/HANDOFF 4.6.5.

@@ -166,3 +166,26 @@
 @container leave-workspace (max-width:46rem) { .leave-balance-workspace { grid-template-columns:minmax(0,1fr); } .leave-person-list { max-height:14rem; } }
 @container (max-width:30rem) { .leave-rights-overview { grid-template-columns:minmax(0,1fr); } .leave-rights-panel .employee-group-heading { flex-wrap:wrap; } }
 @container leave-modal (max-width:30rem) { .leave-editor-table .leave-dates { grid-template-columns:minmax(0,1fr); } }
+
+/* 4.6.5: individual overview blocks, compact selectors, and information sections. */
+.leave-overview .leave-rights-overview { gap:var(--space-3); }
+.leave-overview .leave-rights-overview > .employee-card-section { padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
+.leave-overview .leave-rights-overview strong { font-size:1.875rem; line-height:1.2; }
+.leave-registry .employee-actions-heading { text-align:center; }
+.leave-register-table .registry-row-actions { justify-content:center; }
+.leave-register-table td:last-child { white-space:nowrap; }
+.leave-employee-context { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); }
+.leave-kind-nav { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.leave-kind-nav button { flex:1 1 10rem; min-height:var(--control-height); padding:10px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); cursor:pointer; }
+.leave-kind-nav button[aria-pressed="true"] { border-color:var(--tab-active-border); background:var(--tab-active-background); color:var(--tab-active-text); }
+.leave-selected-summary { display:grid; gap:5px; }
+.leave-selected-summary strong { font-size:1.75rem; font-variant-numeric:tabular-nums; }
+.leave-selected-summary span,.leave-selected-summary small { color:var(--color-text-secondary); }
+.leave-form-section,.leave-allocation-section,.leave-order-section,.leave-info-section { display:grid; gap:var(--space-2); min-width:0; padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); }
+.leave-form-section > h3,.leave-info-section > h3 { margin:0; font-size:1rem; }
+.leave-record-card { display:grid; gap:var(--space-3); min-width:0; }
+.leave-info-section dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); margin:0; }
+.leave-info-section dt { color:var(--color-text-secondary); font-size:.8125rem; }
+.leave-info-section dd { margin:4px 0 0; overflow-wrap:anywhere; }
+.leave-cancellation-info { background:var(--surface-panel); }
+@container leave-modal (max-width:28rem) { .leave-info-section dl { grid-template-columns:minmax(0,1fr); } .leave-form-section,.leave-info-section,.leave-order-section,.leave-allocation-section { padding:var(--space-2); } }

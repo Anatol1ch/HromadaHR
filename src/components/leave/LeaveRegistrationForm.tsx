@@ -164,7 +164,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   return <Modal title={record ? 'Редагувати відпустку' : 'Зареєструвати відпустку'} description={employeePicker ? undefined : employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={owner} className="leave-layout leave-registration" onSubmit={prepare} onInvalidCapture={()=>setAttempted(true)}>
       {record?.allocationWarning && <Alert variant="warning">Попередній розподіл містить період, що почався після завершення відпустки. Виправте розподіл вручну.</Alert>}
-      <h3>Відомості про відпустку</h3>{employeePicker}<p className="leave-muted">Облік відпусток із 01.01.2027.</p>
+      <section className="leave-form-section"><h3>Відомості про відпустку</h3>{employeePicker}<p className="leave-muted">Облік відпусток із 01.01.2027.</p>
       {start && start < '2027-01-01' && <Alert variant="error">Дата початку має бути від 01.01.2027. Перехідні відпустки потребують окремої перевірки залишків.</Alert>}
       {record?.allocationWarning && record.allocations.length > 0 && <details><summary>Поточний збережений розподіл</summary><ul>
         {record.allocations.map(allocation => {
@@ -189,7 +189,6 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         <label className="recipient-field">Кількість днів<ValidatedInput inputMode="numeric" required disabled={busy || !!uncertain} value={daysText}
           onChange={event => setOverride({ range, text: event.target.value })} />{attempted && (days < 1 || days > length) && <small className="recipient-field-error">Введіть ціле число в межах інтервалу.</small>}</label>
       </div>
-      <p className="leave-muted">Календарна тривалість включно з обома датами – {length || '–'} днів. <HelpTip label="Тривалість відпустки" text="Програма рахує календарні дні включно з обома датами. Остаточну тривалість підтверджує кадровик; зменшення потребує пояснення." /></p>
       {length > 0 && (days < 1 || days > length) && <Alert variant="warning">Введіть додатну цілу тривалість у межах календарного інтервалу.</Alert>}
       {days > 0 && needsExplanation && <label className="recipient-field">Пояснення уточненої тривалості<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
         value={explanation} onChange={event => setExplanation(event.target.value)} /></label>}
@@ -203,6 +202,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         {limit !== null && days > 0 && days < limit && <Alert variant="warning">Менша тривалість потребує пояснення. Система не встановлює права на використання решти окремою частиною.</Alert>}
         {limit !== null && days > limit && <Alert variant="warning">Для цього виду допустимо не більше {limit} календарних днів.</Alert>}
       </>}
+      </section>
       {periodic && current?.error && <Alert variant="error" action={<button type="button" disabled={busy || !!uncertain} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{current.error}</Alert>}
       {periodic && start && start >= '2027-01-01' && start >= hireDate && end && end >= start && days > 0 && days <= length && days <= 3652059 && !current && <p role="status">Отримання доступних днів…</p>}
       {periodic && current?.value && <section className="leave-allocation-section"><div className="leave-section-heading"><h3>Розподіл днів</h3><HelpTip label="Як розподіляються дні" text="Програма спочатку використовує найстаріші доступні залишки. За потреби розподіл можна змінити." /></div>
@@ -231,7 +231,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
           pending.current = true; setBusy(true)
           try { await verify(uncertain) } finally { pending.current = false; if (alive.current) setBusy(false) }
         }}>Перевірити фактичний результат</button>}
-        <div className="recipient-form-actions leave-editor-actions"><span>{periodic ? 'Розподіл і тривалість підтверджує кадровик.' : 'Підставу й тривалість підтверджує кадровик.'}</span><div>
+        <div className="recipient-form-actions leave-editor-actions"><div>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>Скасувати</button>
           <button type="submit" className="primary-button" onClick={()=>setAttempted(true)} disabled={busy || !!uncertain || stale}>{record ? 'Зберегти зміни' : 'Зареєструвати'}</button>
         </div></div>

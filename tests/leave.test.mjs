@@ -46,10 +46,10 @@ test('working-year periods use clamped calendar-year arithmetic and retain the 2
   assert.deepEqual(proposedPeriods('annual_main', '2023-06-15', '2027-06-15').map(({ periodStart, periodEnd, accountingBasis }) => [periodStart, periodEnd, accountingBasis]), [
     ['2023-06-15', '2024-06-14', 'initial_balance'], ['2024-06-15', '2025-06-14', 'initial_balance'],
     ['2025-06-15', '2026-06-14', 'initial_balance'], ['2026-06-15', '2027-06-14', 'initial_balance'],
-    ['2027-06-15', '2028-06-14', 'confirmed_entitlement'],
+    ['2027-06-15', '2028-06-14', 'confirmed_entitlement'], ['2028-06-15', '2029-06-14', 'confirmed_entitlement'],
   ])
   assert.deepEqual(proposedPeriods('annual_main', '2024-02-29', '2026-03-01').map(({ periodStart, periodEnd }) => [periodStart, periodEnd]), [
-    ['2024-02-29', '2025-02-27'], ['2025-02-28', '2026-02-27'], ['2026-02-28', '2027-02-27'],
+    ['2024-02-29', '2025-02-27'], ['2025-02-28', '2026-02-27'], ['2026-02-28', '2027-02-27'], ['2027-02-28', '2028-02-27'],
   ])
   assert.deepEqual(proposedPeriods('children_social_additional', '2026-08-12', '2028-01-01').map(({ periodStart, periodEnd, accountingBasis }) => [periodStart, periodEnd, accountingBasis]), [
     ['2026-01-01', '2026-12-31', 'initial_balance'], ['2027-01-01', '2027-12-31', 'confirmed_entitlement'],
@@ -199,4 +199,40 @@ test('service respects current storage connection and backup busy guard', async 
   busy = false
   assert.deepEqual(service.listPeriods(person.id), [])
   assert.throws(() => service.proposePeriods(person.id, '9999-12-31', 'annual_main'), code('INVALID_ARGUMENTS'))
+})
+
+
+test('exactly one next annual proposal is canonical, unpersisted and cannot be spent before its dates',async t=>{
+  const f=fixture(t),connection=await f.open()
+  const {employee:person}=await employee(connection)
+  const leave=new LeaveService({getDatabase:()=>connection.database},()=>false)
+  const proposals=leave.proposePeriods(person.id,'2027-01-01','annual_main')
+  const future=proposals.at(-1)
+  assert.equal(future.periodStart,'2027-06-15')
+  assert.equal(proposals.filter(p=>p.periodStart>'2027-01-01').length,1)
+  assert.equal(Object.hasOwn(future,'confirmedDays'),false)
+  assert.deepEqual(leave.listPeriods(person.id),[])
+  leave.savePeriods(person.id,[annual(future.periodStart,future.periodEnd,20)])
+  const period=leave.getBalances(person.id)[0]
+  const input={requestId:randomUUID(),employeeId:person.id,leaveType:'annual_main',startDate:'2027-04-01',endDate:'2027-04-02',usedDays:2,orderNumber:null,orderDate:null,durationExplanation:null,allocations:[{periodId:period.id,days:2}]}
+  assert.throws(()=>leave.registerLeave(input),code('INVALID_PERIOD'))
+  const record=leave.registerLeave({...input,startDate:'2027-07-01',endDate:'2027-07-02'})
+  assert.equal(leave.getBalances(person.id)[0].availableDays,18)
+  leave.cancelLeave(record.id,record.revision,'Тест')
+  assert.equal(leave.getBalances(person.id)[0].availableDays,20)
+})
+
+test('next-year proposals preserve anniversary, leap-day clamp and nonannual policies',()=>{
+  for(const through of ['2026-12-31','2027-01-01','2027-06-14','2027-06-15','2028-02-29']){
+    const proposals=proposedPeriods('annual_main','2023-06-15',through)
+    assert.equal(proposals.filter(p=>p.periodStart>through).length,1)
+    assert.equal(proposals.length,new Set(proposals.map(p=>p.periodStart)).size)
+  }
+  const leap=proposedPeriods('annual_main','2024-02-29','2028-02-28')
+  assert.equal(leap.at(-1).periodStart,'2029-02-28')
+  assert.equal(leap.at(-2).periodStart,'2028-02-28')
+  assert.equal(proposedPeriods('annual_main','2024-02-29','2027-02-27').at(-1).periodStart,'2027-02-28')
+  assert.deepEqual(proposedPeriods('annual_main','2028-01-01','2027-01-01'),[])
+  assert.deepEqual(proposedPeriods('oms_service_additional','2023-01-01','2027-01-01'),[])
+  assert.equal(proposedPeriods('children_social_additional','2023-06-15','2027-01-01').at(-1).periodStart,'2027-01-01')
 })

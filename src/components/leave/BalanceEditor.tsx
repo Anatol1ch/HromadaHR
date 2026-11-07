@@ -1,3 +1,4 @@
+import useAccountingDate from './useAccountingDate'
 import { serviceYearDrafts } from './registry'
 import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
@@ -20,6 +21,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
 }) {
+  const {today}=useAccountingDate()
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
   const [rows, setRows] = useState(initial.current)
   const [fromYear,setFromYear] = useState('2027')
@@ -85,7 +87,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
           const basis = 'period' in row ? row.period.accountingBasis : manualStart ? manualStart < cutoff ? 'initial_balance' : 'confirmed_entitlement' : null
           return <tr key={'period' in row ? row.period.periodStart : row.id}>
-            <td>{'period' in row ? <span className="leave-period">{periodLabel(row.period)}</span> : <div className="leave-dates">
+            <td>{'period' in row ? <span className="leave-period">{periodLabel(row.period)}{row.period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</span> : <div className="leave-dates">
               <label className="recipient-field">Початок<DateField disabled={busy} value={row.startIso} onChange={startIso => update(index, current => 'start' in current ? { ...current, startIso } : current)} onDraftChange={start => update(index, current => 'start' in current ? { ...current, start } : current)} /></label>
               <label className="recipient-field">Завершення<DateField disabled={busy} value={row.endIso} onChange={endIso => update(index, current => 'end' in current ? { ...current, endIso } : current)} onDraftChange={end => update(index, current => 'end' in current ? { ...current, end } : current)} /></label>
             </div>}

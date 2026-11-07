@@ -10,7 +10,7 @@ import Select from '../Select'
 import HelpTip from './HelpTip'
 import LeaveRecordAction from './LeaveRecordAction'
 import { leaveLabels, leaveGroupOptions } from './presentation'
-import { journalRows, emptyLeaveFilters, personName, type LeaveSortKey } from './registry'
+import { recordCountLabel, journalRows, emptyLeaveFilters, personName, type LeaveSortKey } from './registry'
 export default function LeaveJournal({records,employeeRows=[],employees, navigationGuard,onChanged,onRegister,onBalances,active=true}: {
   records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; onBalances?:(id:string)=>void; active?:boolean
 }) {
@@ -41,9 +41,9 @@ export default function LeaveJournal({records,employeeRows=[],employees, navigat
       <button type="button" className="secondary-button aid-sort-reset" disabled={sort.key==='startDate'&&sort.direction==='desc'} onClick={()=>setSort({key:'startDate',direction:'desc'})}><ListRestart size={17}/>Скинути сортування</button>
       {onRegister&&<button type="button" className="primary-button" onClick={onRegister}><Plus size={18}/>Зареєструвати відпустку</button>}
     </div><div id={panelId} className="aid-filter-panel" hidden={!open}><div className="aid-filter-grid">{fields.map(field=><div key={field.key} className="employee-field"><span>{field.label}</span><Select label={field.label} searchable={field.key==='employee'} value={filters[field.key]} options={[{value:'',label:'Усі'},...field.options]} advanceOnSelect={false} onChange={value=>setFilters(current=>({...current,[field.key]:value}))}/></div>)}</div></div></section>
-    <section className="dashboard-panel employee-register-panel"><header className="employee-group-heading"><h2>Журнал відпусток</h2><span>Записів: {visible.length} із {records.length}</span></header>
-    <p className="leave-muted">Підрозділ і посада наведені за поточними кадровими відомостями.</p>
-    <DictionaryTable label="Журнал відпусток" className="hr-employee-table leave-register-table" filtered={!!count||!!filters.query} columns={[...columns.map(c=>sortable(c.key,c.label)),{label:'Розпорядження'},sortable('status','Статус'),{label:'Дії'}]} empty={visible.length?undefined:'Зареєстрованих відпусток не знайдено.'}>
+    <section className="dashboard-panel employee-register-panel"><header className="employee-group-heading"><h2>Журнал відпусток</h2><span>{recordCountLabel(visible.length,records.length,!!count||!!filters.query.trim())}</span></header>
+
+    <DictionaryTable label="Журнал відпусток" className="hr-employee-table leave-register-table" filtered={!!count||!!filters.query} columns={[...columns.map(c=>sortable(c.key,c.label)),{label:'Розпорядження'},sortable('status','Статус'),{label:'Дії',className:'employee-actions-heading'}]} empty={visible.length?undefined:'Зареєстрованих відпусток не знайдено.'}>
       {visible.map(record=>{const person=people.get(record.employeeId);return <tr key={record.id} className={record.status==='cancelled'?'leave-cancelled-row':''}>
         <td><strong className="employee-name">{person?personName(person):employees?.get(record.employeeId)??'Не зазначено'}</strong></td><td>{person?.department.name??'Не зазначено'}</td><td>{person?.position.name??'Не зазначено'}</td><td>{leaveLabels[record.leaveType]}{record.allocationWarning&&<small role="status">Розподіл потребує перевірки</small>}</td><td>{formatDate(record.startDate)}</td><td>{formatDate(record.endDate)}</td><td>{record.usedDays}</td><td>{record.orderNumber??'Не зазначено'}{record.orderDate&&<small>{formatDate(record.orderDate)}</small>}</td><td>{record.status==='active'?'Зареєстровано':'Скасовано'}</td>
         <td><div className="registry-row-actions"><HelpTip label="Переглянути відпустку" text="Переглянути" icon={<Eye size={17}/>} onClick={()=>setAction({id:record.id,kind:'view'})}/>{record.status==='active'&&<><HelpTip label="Редагувати відпустку" text="Редагувати" icon={<Pencil size={16}/>} onClick={()=>setAction({id:record.id,kind:'edit'})}/><HelpTip label="Скасувати реєстрацію" text="Скасувати реєстрацію" icon={<Ban size={16}/>} onClick={()=>setAction({id:record.id,kind:'cancel'})}/></>}</div></td>

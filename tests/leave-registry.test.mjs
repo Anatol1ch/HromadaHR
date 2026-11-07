@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { journalRows, emptyLeaveFilters, serviceYearDrafts } from '../src/components/leave/registry.ts'
+import { recordCountLabel, journalRows, emptyLeaveFilters, serviceYearDrafts } from '../src/components/leave/registry.ts'
 import { buildChanges } from '../src/components/leave/draft.ts'
 const employees=[{id:'a',lastName:'Іваненко',firstName:'Олена',middleName:null,department:{id:'d',name:'Відділ'},position:{id:'p',name:'Начальник'}},{id:'b',lastName:'Петренко',firstName:'Андрій',middleName:null,department:{id:'e',name:'Сектор'},position:{id:'q',name:'Спеціаліст'}}]
 const records=[{id:'1',employeeId:'a',leaveType:'veteran_special_leave',startDate:'2027-12-25',endDate:'2028-01-07',usedDays:14,orderNumber:'42',status:'active'},{id:'2',employeeId:'b',leaveType:'annual_main',startDate:'2027-04-01',endDate:'2027-04-16',usedDays:16,orderNumber:'55',status:'cancelled'},{id:'3',employeeId:'a',leaveType:'chernobyl_special_leave',startDate:'2028-07-01',endDate:'2028-07-16',usedDays:16,orderNumber:null,status:'active'}]
@@ -23,4 +23,12 @@ test('OMS year proposals remain editable empty drafts until days are explicitly 
  const rows=serviceYearDrafts(2027,2027).map((p,id)=>({id,start:'01.01.2027',end:'31.12.2027',startIso:p.start,endIso:p.end,days:''}))
  assert.throws(()=>buildChanges(rows))
  rows[0].days='0';assert.equal(buildChanges(rows)[0].confirmedDays,0);assert.equal(buildChanges(rows)[0].leaveType,'oms_service_additional')
+})
+
+test('journal count uses compact Ukrainian forms and a separate filtered counter',()=>{
+ assert.equal(recordCountLabel(1,1,false),'1 запис')
+ assert.equal(recordCountLabel(2,2,false),'2 записи')
+ assert.equal(recordCountLabel(11,11,false),'11 записів')
+ assert.equal(recordCountLabel(21,21,false),'21 запис')
+ assert.equal(recordCountLabel(1,12,true),'Знайдено: 1 із 12')
 })

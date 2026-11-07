@@ -57,6 +57,10 @@ export function proposedPeriods(leaveType: PeriodLeaveType, hireDate: string, th
       accountingBasis: accountingBasisForPeriod(start), status: 'proposed' })
     start = nextStart
   }
+  // One unconfirmed next working year; the anniversary policy stays unchanged.
+  const futureEnd = addCalendarYear(start)
+  if (futureEnd) result.push({ leaveType, periodStart: start, periodEnd: previousDate(futureEnd),
+    accountingBasis: accountingBasisForPeriod(start), status: 'proposed' })
   return result
 }
 

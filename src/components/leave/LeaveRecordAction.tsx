@@ -1,3 +1,4 @@
+import DictionaryTable from '../DictionaryTable'
 import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { LeaveRecord, PeriodBalance } from '../../../shared/leave'
@@ -52,13 +53,19 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
       <DataState kind="loading" message="Завантаження актуальних відомостей…" />}
   </Modal>
-  if (kind === 'view') return <Modal title="Відомості про відпустку" description={fullName(data.employee)} onClose={onClose} size="wide" className="leave-editor-modal"><div className="leave-layout">
-    <h3>{leaveLabels[data.record.leaveType]}</h3><p>{formatDate(data.record.startDate)}–{formatDate(data.record.endDate)} · {data.record.usedDays} днів · {data.record.status === 'active' ? 'Зареєстровано' : 'Скасовано'}</p>
-    <p>Поточні відомості: {data.employee.position.name} · {data.employee.department.name}</p><p>Розпорядження: {data.record.orderNumber ?? 'Не зазначено'} · {formatDate(data.record.orderDate)}</p>
-    <p>Підстава: {data.record.grantBasis ?? 'Не зазначено'}</p><p>Пояснення тривалості: {data.record.durationExplanation ?? 'Не зазначено'}</p>
-    {data.record.status === 'cancelled' && <p>Причина скасування: {data.record.cancelReason ?? 'Не зазначено'} · {formatDateTime(data.record.cancelledAt)}</p>}
-    {data.record.allocations.length > 0 && <ul>{data.record.allocations.map(a=>{const p=data.balances.find(p=>p.id===a.periodId);return <li key={a.periodId}>{p?formatDate(p.periodStart)+'–'+formatDate(p.periodEnd):'Період недоступний'}: {a.days} днів</li>})}</ul>}
-    <button type="button" className="secondary-button" onClick={onClose}>Закрити</button></div></Modal>
+  if (kind === 'view') return <Modal title={leaveLabels[data.record.leaveType]} description={data.record.status==='active'?'Зареєстровано':'Скасовано'} onClose={onClose} size="wide" className="leave-editor-modal">
+    <div className="leave-record-card">
+      {data.record.allocationWarning&&<Alert variant="warning">Старий розподіл містить період після завершення відпустки. Потрібна перевірка кадровика.</Alert>}
+      <section className="leave-info-section"><h3>Основні відомості</h3><dl><div><dt>Працівник</dt><dd>{fullName(data.employee)}<small className="leave-period-note">Поточні відомості: {data.employee.position.name} · {data.employee.department.name}</small></dd></div><div><dt>Дні</dt><dd><strong>{data.record.usedDays}</strong></dd></div><div><dt>Початок</dt><dd>{formatDate(data.record.startDate)}</dd></div><div><dt>Завершення</dt><dd>{formatDate(data.record.endDate)}</dd></div></dl>
+        {data.record.durationExplanation&&<p>Уточнення тривалості: {data.record.durationExplanation}</p>}
+      </section>
+      {(data.record.orderNumber||data.record.orderDate)&&<section className="leave-info-section"><h3>Розпорядження</h3><dl>{data.record.orderNumber&&<div><dt>Номер</dt><dd>{data.record.orderNumber}</dd></div>}{data.record.orderDate&&<div><dt>Дата</dt><dd>{formatDate(data.record.orderDate)}</dd></div>}</dl></section>}
+      {data.record.grantBasis&&<section className="leave-info-section"><h3>Підстава надання</h3><p>{data.record.grantBasis}</p></section>}
+      {data.record.allocations.length>0&&<section className="leave-info-section"><h3>Розподіл днів</h3><DictionaryTable label="Розподіл днів відпустки" className="leave-table" columns={[{label:'Період'},{label:'Днів',width:'6rem'}]}>{data.record.allocations.map(a=>{const period=data.balances.find(p=>p.id===a.periodId);return <tr key={a.periodId}><td>{period?formatDate(period.periodStart)+'–'+formatDate(period.periodEnd):'Відомості про період недоступні'}</td><td>{a.days}</td></tr>})}</DictionaryTable></section>}
+      {data.record.status==='cancelled'&&<section className="leave-info-section leave-cancellation-info"><h3>Скасування реєстрації</h3><p>{data.record.cancelReason??'Причину не внесено у старому записі.'}</p>{data.record.cancelledAt&&<p>{formatDateTime(data.record.cancelledAt)}</p>}</section>}
+      <div className="leave-editor-footer"><button type="button" className="secondary-button" onClick={onClose}>Закрити</button></div>
+    </div>
+  </Modal>
   if (data.record.status === 'cancelled') return <Modal title="Реєстрацію вже скасовано" onClose={refreshAndClose}>
     <p>{data.record.cancelReason ?? 'Причину не зазначено у старому записі.'}</p>
     <p>{formatDateTime(data.record.cancelledAt)}</p>

@@ -1,4 +1,3 @@
-import { isPeriodLeave, type PeriodLeaveType } from '../../../shared/leave'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { EmployeeLeaveRight, LeaveRightInput, LeaveRecord } from '../../../shared/leave'
 import { leaveOptions } from './presentation'
@@ -8,7 +7,7 @@ import { formatDateTime } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-export default function LeaveRights({employeeId,records,navigationGuard,onPeriods}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>;onPeriods:(type:PeriodLeaveType)=>void}) {
+export default function LeaveRights({employeeId,records,navigationGuard}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>}) {
   const [saved,setSaved]=useState<EmployeeLeaveRight[]>()
   const [draft,setDraft]=useState<Record<string,string>>({})
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[retry,setRetry]=useState(0)
@@ -23,7 +22,7 @@ export default function LeaveRights({employeeId,records,navigationGuard,onPeriod
     {error&&<Alert variant="error" action={!saved&&<button type="button" onClick={()=>{setError('');setRetry(v=>v+1)}}>Повторити</button>}>{error}</Alert>}
     <div className="leave-rights-list">{leaveOptions.map(option=>{const right=saved?.find(r=>r.leaveType===option.value);return <div key={option.value}><span>{option.label}{right&&<small>Перевірено {formatDateTime(right.checkedAt)}</small>}</span>
       <Select label={'Право: '+option.label} value={draft[option.value]??''} options={[{value:'',label:'Не перевірено'},{value:'has_right',label:'Право підтверджено'},{value:'no_right',label:'Права немає'}]} disabled={!saved||busy} onChange={value=>setDraft(current=>({...current,[option.value]:value}))} advanceOnSelect={false}/>
-      {isPeriodLeave(option.value)&&<button type="button" className="secondary-button" onClick={()=>{if(isPeriodLeave(option.value))onPeriods(option.value)}}>Періоди та залишки</button>}
+
       {draft[option.value]==='no_right'&&records.some(r=>r.employeeId===employeeId&&r.leaveType===option.value)&&<p className="leave-right-warning">Є попередні реєстрації цього виду. Перевірте відповідність поточного стану; історію не змінено.</p>}</div>})}</div>
   </section>
 }

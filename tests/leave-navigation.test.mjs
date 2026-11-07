@@ -30,3 +30,15 @@ test('employee-card leave boundary mounts the read-only module without mutation 
   assert.ok(workspace.replace(/\s/g,'').includes("section==='balances'&&employee"))
   assert.ok(workspace.replace(/\s/g,'').includes('navigationGuard.current(()=>setSection(value))'))
 })
+
+
+test('three sections share employee context; general registration starts empty and read-only card remains separate',()=>{
+  const source=readFileSync(new URL('../src/components/leave/LeaveWorkspace.tsx',import.meta.url),'utf8').replace(/\s/g,'')
+  assert.ok(source.includes("['journal','balances','rights']"))
+  assert.ok(source.includes("setCreateEmployee('');setCreating(true)"))
+  assert.ok(source.includes("section==='rights'&&employee?<LeaveRights"))
+  assert.ok(source.includes("section==='balances'&&employee?<LeaveBalances"))
+  assert.ok(source.includes('navigationGuard.current(()=>setSection(value))'))
+  const rights=readFileSync(new URL('../src/components/leave/LeaveRights.tsx',import.meta.url),'utf8')
+  assert.doesNotMatch(rights,/Періоди та залишки|onPeriods/)
+})
