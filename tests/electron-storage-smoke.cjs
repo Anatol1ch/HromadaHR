@@ -33,7 +33,7 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 7)
+    assert.equal(first.schemaVersion, 8)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
@@ -47,9 +47,14 @@ app.whenReady().then(async () => {
     ])
     const leave = new LeaveService({ getDatabase: () => first.database }, () => false)
     const period = leave.getBalances(employeeId)[0]
-    leave.registerLeave({ requestId: require('node:crypto').randomUUID(), employeeId, leaveType: 'annual_main',
+    const registration = leave.registerLeave({ requestId: require('node:crypto').randomUUID(), employeeId, leaveType: 'annual_main',
       startDate: '2027-04-05', endDate: '2027-04-06', usedDays: 2, orderNumber: null, orderDate: null,
       durationExplanation: null, allocations: [{periodId: period.id, days: 2}] })
+    const corrected = leave.updateLeave({ id: registration.id, expectedRevision: registration.revision,
+      leaveType: registration.leaveType, startDate: registration.startDate, endDate: registration.endDate,
+      usedDays: 1, orderNumber: null, orderDate: null, durationExplanation: 'Уточнення',
+      allocations: [{ periodId: period.id, days: 1 }] })
+    leave.cancelLeave(corrected.id, corrected.revision, 'Скасовано кадровиком')
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
@@ -80,8 +85,11 @@ app.whenReady().then(async () => {
     const leave = new LeaveService(storage, () => service.isBusy())
     assert.equal(personnel.getEmployee(employeeId).hireDate, '2026-01-01')
     assert.equal(leave.listPeriods(employeeId)[0].confirmedDays, 5)
-    assert.equal(leave.getBalances(employeeId)[0].availableDays, 3)
+    assert.equal(leave.getBalances(employeeId)[0].availableDays, 5)
     assert.equal(leave.listRecords(employeeId).length, 1)
+    assert.equal(leave.listRecords(employeeId)[0].status, 'cancelled')
+    assert.equal(leave.listRecords(employeeId)[0].revision, 3)
+    assert.equal(leave.listRecords(employeeId)[0].allocations[0].days, 1)
     const protection = join(root, 'data', 'protection')
     const raw = readdirSync(protection).find(name => name.startsWith('raw-'))
     assert.equal(readFileSync(join(protection, raw, 'database.db'), 'utf8'), 'damaged Electron fixture')

@@ -28,9 +28,9 @@ const dayLabel = (days: bigint) => {
   return category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
 }
 
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true, refreshRevision = 0 }: {
   employeeId: string; hireDate: string; navigationGuard: RefObject<NavigationGuard>
-  employeeName?: string; onRegistered?: () => void; showJournal?: boolean
+  employeeName?: string; onRegistered?: () => void; showJournal?: boolean; refreshRevision?: number
 }) {
   const [type, setType] = useState<LeaveType>('annual_main')
   const groupId = useId()
@@ -41,7 +41,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const [deleteError, setDeleteError] = useState('')
   const [manualProposals, setManualProposals] = useState<ProposedLeavePeriod[]>([])
   const [state, setState] = useState<{ key: string; periods?: Period[]; balances?: PeriodBalance[]; records?: LeaveRecord[]; error?: string }>()
-  const key = JSON.stringify([employeeId, hireDate, type, revision])
+  const key = JSON.stringify([employeeId, hireDate, type, revision, refreshRevision])
   const data = state?.key === key ? state : undefined
   const periods = data?.periods && (type === 'oms_service_additional' ?
     [...data.periods, ...manualProposals.filter(proposal => !data.periods?.some(period => period.periodStart === proposal.periodStart))]
@@ -150,7 +150,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         </Fragment>
       })}
     </DictionaryTable>
-    {showJournal && data?.records && <LeaveJournal records={data.records} compact />}
+    {showJournal && data?.records && <LeaveJournal records={data.records} compact navigationGuard={navigationGuard} onChanged={refresh} />}
     {registering && <LeaveRegistrationForm employeeId={employeeId} employeeName={employeeName} hireDate={hireDate} initialType={type} navigationGuard={navigationGuard}
       onClose={() => setRegistering(false)} onBalances={selectedType => { setRegistering(false); setType(selectedType); setState(undefined); setEditing(true); refresh() }}
       onSaved={() => { setRegistering(false); refresh(); onRegistered?.(); notifySystemToast('success', 'Відпустку зареєстровано', 'Залишки оновлено.') }} />}

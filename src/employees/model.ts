@@ -53,9 +53,13 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'STALE_REVISION': return 'Запис уже змінено. Чернетку збережено. Закрийте форму й відкрийте актуальну відпустку.'
+    case 'LEAVE_CANCELLED': return 'Реєстрацію скасовано. Її звичайне редагування недоступне.'
+    case 'INVALID_PERIOD': return 'Обраний період починається після завершення відпустки. Змініть розподіл.'
+
     case 'INSUFFICIENT_DAYS': return 'Недостатньо підтверджених днів. Оновіть розподіл або внесіть підтверджені права.'
     case 'LEAVE_OVERLAP': return 'На ці дати вже зареєстровано чинну відпустку працівника.'
-    case 'PERIOD_IN_USE': return 'Із цього періоду вже використано дні. Його не можна вилучити або зменшити нижче використаного.'
+    case 'PERIOD_IN_USE': return 'Період пов’язаний із зареєстрованими або скасованими відпустками. Вилучення заблоковано. Підтверджені дні можна виправити до величини не нижчої за чинне використання.'
     case 'TRANSITION_LEAVE': return 'Відпустка з початком до 01.01.2027 потребує окремої перевірки початкових залишків.'
 
     case 'HIRE_DATE_HAS_LEAVE_PERIODS': return 'Дату прийняття не можна змінити, поки є підтверджені періоди відпусток.'

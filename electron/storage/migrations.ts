@@ -1,3 +1,4 @@
+import { leaveCorrectionsSql } from './leave-corrections-migration.js'
 import { leaveRegistrationSql } from './leave-registration-migration.js'
 import { personnelSql } from './personnel-migration.js'
 import { createHash } from 'node:crypto'
@@ -118,6 +119,11 @@ END;`,
   name: 'leave_registration',
   requiresBackup: true,
   sql: leaveRegistrationSql,
+}, {
+  version: 8,
+  name: 'leave_corrections',
+  requiresBackup: true,
+  sql: leaveCorrectionsSql,
 }]
 
 function checksum(migration: Migration) {

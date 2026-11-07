@@ -47,7 +47,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
       confirmRestore: () => ({}), retryStorage: () => ({}) }, () => {}, personnel, leave)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   const api = preload(async (channel, ...args) => handlers.get(channel)(event, ...args))
-  assert.deepEqual(Object.keys(api.leave).sort(), ['deletePeriod', 'getBalances', 'listPeriods', 'listRecords', 'proposeAllocation', 'proposePeriods', 'registerLeave', 'savePeriods'])
+  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getRecord', 'listPeriods', 'listRecords', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'updateLeave'])
   const proposal = await api.leave.proposePeriods(employee.id, '2028-01-01', 'annual_main')
   assert.equal(proposal.ok, true)
   assert.equal(proposal.data[0].status, 'proposed')
@@ -86,7 +86,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
     [ipcChannels.leaveRegister, [registration]],
     [ipcChannels.leaveListRecords, [null]],
     [ipcChannels.leaveGetBalances, [employee.id]],
-    [ipcChannels.leaveProposeAllocation, [employee.id, 'annual_main', 16]],
+    [ipcChannels.leaveProposeAllocation, [employee.id, 'annual_main', 16, '2027-04-05', '2027-04-20']],
   ]
   for (const [channel, args] of operations) {
     const handler = handlers.get(channel)
@@ -104,12 +104,46 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   assert.equal((await api.leave.registerLeave(registration)).data.id,created.data.id)
   assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,14)
   assert.equal((await api.leave.listRecords(null)).data.length,1)
-  assert.equal((await api.leave.proposeAllocation(employee.id,'annual_main',16)).data.shortfall,2)
+  assert.equal((await api.leave.proposeAllocation(employee.id,'annual_main',16,'2027-04-05','2027-04-20')).data.shortfall,2)
   assert.equal((await api.leave.deletePeriod(period.id)).error.code,'PERIOD_IN_USE')
   const handler = handlers.get(ipcChannels.leaveListRecords)
   const real = leave.listRecords
   leave.listRecords = () => [{ path: 'private path' }]
   assert.deepEqual(await handler(event,null),{ok:false,error:{code:'INTERNAL_ERROR'}})
   leave.listRecords = real
+
+
+  const correction = { id: created.data.id, expectedRevision: created.data.revision, leaveType: 'annual_main',
+    startDate: registration.startDate, endDate: registration.endDate, usedDays: 12, orderNumber: null, orderDate: null,
+    durationExplanation: 'Уточнення', allocations: [{ periodId: period.id, days: 12 }] }
+  const correctionOperations = [
+    [ipcChannels.leaveGetRecord, [created.data.id]], [ipcChannels.leaveUpdate, [correction]],
+    [ipcChannels.leaveCancel, [created.data.id,1,'Причина']],
+    [ipcChannels.leaveProposeEditAllocation, [created.data.id,1,'annual_main',12,registration.startDate,registration.endDate]],
+  ]
+  for (const [channel,args] of correctionOperations) {
+    const handler = handlers.get(channel)
+    for (const badEvent of [{ ...event, sender: {} }, { ...event, senderFrame: null }, { ...event, senderFrame: {url} }])
+      assert.equal((await handler(badEvent,...args)).error.code,'FORBIDDEN')
+    contents.mainFrame.url='https://foreign.test/'
+    assert.equal((await handler(event,...args)).error.code,'FORBIDDEN')
+    contents.mainFrame.url=url
+    assert.equal((await handler(event,...args,{path:'secret'})).error.code,'INVALID_ARGUMENTS')
+  }
+  assert.equal((await api.leave.updateLeave({...correction,employeeId:employee.id})).error.code,'INVALID_ARGUMENTS')
+  assert.equal((await api.leave.updateLeave({...correction,requestId:registration.requestId})).error.code,'INVALID_ARGUMENTS')
+  assert.equal((await api.leave.cancelLeave(created.data.id,0,'Причина')).error.code,'INVALID_ARGUMENTS')
+  assert.equal((await api.leave.proposeAllocation(employee.id,'annual_main',12)).error.code,'INVALID_ARGUMENTS')
+  assert.equal((await api.leave.proposeEditAllocation(created.data.id,1,'annual_main',12,registration.startDate,registration.endDate)).data.balances[0].availableDays,30)
+  const changed=await api.leave.updateLeave(correction)
+  assert.equal(changed.ok,true);assert.equal(changed.data.revision,2)
+  assert.equal((await api.leave.getRecord(created.data.id)).data.usedDays,12)
+  assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,18)
+  assert.equal((await api.leave.updateLeave(correction)).error.code,'STALE_REVISION')
+  const cancelled=await api.leave.cancelLeave(created.data.id,2,'Причина')
+  assert.equal(cancelled.ok,true);assert.equal(cancelled.data.status,'cancelled')
+  assert.equal((await api.leave.cancelLeave(created.data.id,2,'Повтор')).data.revision,3)
+  assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,30)
+  assert.equal((await api.leave.deletePeriod(period.id)).error.code,'PERIOD_IN_USE')
 
 })

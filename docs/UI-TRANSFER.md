@@ -427,3 +427,7 @@ AID source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupMa
 ## 4.3 — Форма реєстрації та журнал
 
 Джерело src/AidRegistry.tsx HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Використано патерни Modal wide, форми recipient-field/recipient-form-actions, DateField/Select/ValidatedInput і явне підтвердження через ConfirmDialog. HR додає компактну таблицю розподілів і залишків та журнал, зберігаючи композицію 4.2.1. Ручне GUI-приймання за чеклістом HANDOFF очікується.
+
+## 4.4 — Корекція й скасування
+
+За SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb звірено src/RecipientRegistry.tsx (актуальне читання перед beginEdit, optimistic expectedUpdatedAt, Pencil) та src/AidRegistry.tsx (дії рядка й refresh). HR використовує власну revision і ту саму LeaveRegistrationForm у двох режимах. ConfirmDialog скасування містить контекст, причину та попередження щодо виданого документа. Скасовані записи показують причину/час без дій редагування. Візуальне приймання, клавіатура, фокус і масштабування залишаються ручним чеклістом HANDOFF.

@@ -27,13 +27,17 @@ export interface ProposedLeavePeriod {
   status: 'proposed'
 }
 
-export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE'
+export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD'
 
 export interface LeaveApi {
+  getRecord: (id: string) => Promise<IpcResult<LeaveRecord>>
+  updateLeave: (input: LeaveUpdate) => Promise<IpcResult<LeaveRecord>>
+  cancelLeave: (id: string, expectedRevision: number, reason: string) => Promise<IpcResult<LeaveRecord>>
+  proposeEditAllocation: (id: string, expectedRevision: number, leaveType: LeaveType, days: number, startDate: string, endDate: string) => Promise<IpcResult<AllocationProposal>>
   registerLeave: (input: LeaveRegistration) => Promise<IpcResult<LeaveRecord>>
   listRecords: (employeeId: string | null) => Promise<IpcResult<LeaveRecord[]>>
   getBalances: (employeeId: string) => Promise<IpcResult<PeriodBalance[]>>
-  proposeAllocation: (employeeId: string, leaveType: LeaveType, days: number) => Promise<IpcResult<AllocationProposal>>
+  proposeAllocation: (employeeId: string, leaveType: LeaveType, days: number, startDate: string, endDate: string) => Promise<IpcResult<AllocationProposal>>
 
   listPeriods: (employeeId: string) => Promise<IpcResult<ConfirmedLeavePeriod[]>>
   proposePeriods: (employeeId: string, throughDate: string, leaveType: LeaveType) => Promise<IpcResult<ProposedLeavePeriod[]>>
@@ -59,10 +63,19 @@ export interface LeaveRegistration {
 export interface LeaveRecord extends Omit<LeaveRegistration, 'requestId'> {
   id: string
   status: 'active' | 'cancelled'
+  revision: number
+  cancelledAt: string | null
+  cancelReason: string | null
+  allocationWarning: boolean
   createdAt: string
 }
 export interface AllocationProposal {
   balances: PeriodBalance[]
   allocations: import('./leave-calculations.js').DayAllocation[]
   shortfall: number
+}
+
+export interface LeaveUpdate extends Omit<LeaveRegistration, 'requestId' | 'employeeId'> {
+  id: string
+  expectedRevision: number
 }

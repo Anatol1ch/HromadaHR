@@ -27,6 +27,8 @@ export const registration = z.strictObject({
   allocations: z.array(allocation).min(1).max(200),
 })
 export const record = registration.omit({ requestId: true }).extend({
+  revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER), cancelledAt: z.iso.datetime().nullable(),
+  cancelReason: z.string().min(1).max(1000).nullable(), allocationWarning: z.boolean(),
   id, status: z.enum(['active', 'cancelled']), createdAt: z.iso.datetime(),
 })
 export const balance = confirmedPeriod.extend({
@@ -36,3 +38,7 @@ export const balance = confirmedPeriod.extend({
 export const allocationProposal = z.strictObject({
   balances: z.array(balance), allocations: z.array(allocation), shortfall: z.number().int().nonnegative(),
 })
+
+export const revision = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
+export const cancelReason = z.string().trim().min(1).max(1000)
+export const leaveUpdate = registration.omit({ requestId: true, employeeId: true }).extend({ id, expectedRevision: revision })

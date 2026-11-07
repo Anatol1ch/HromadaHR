@@ -54,10 +54,10 @@ export default function LeaveWorkspace({ navigationGuard }: { navigationGuard: R
       {employees && employees.length > 0 && !employee && !error &&
         <DataState kind="empty" message="Оберіть працівника" description="Тут з’являться його облікові періоди та підтверджені залишки." />}
       {employee && <LeaveBalances key={employee.id} employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
-        showJournal={false} onRegistered={() => setRecordsRevision(value => value + 1)} />}
+        showJournal={false} refreshRevision={recordsRevision} onRegistered={() => setRecordsRevision(value => value + 1)} />}
       {recordsError ? <Alert variant="error" action={<button type="button" onClick={() => setRecordsRevision(value => value + 1)}>Повторити</button>}>{recordsError}</Alert> :
         records && employees ? <LeaveJournal records={selected ? records.filter(record => record.employeeId === selected) : records}
-          employees={new Map(employees.map(person => [person.id, fullName(person)]))} /> :
+          navigationGuard={navigationGuard} onChanged={() => setRecordsRevision(value => value + 1)} employees={new Map(employees.map(person => [person.id, fullName(person)]))} /> :
           <DataState kind="loading" message="Завантаження реєстру відпусток…" />}
     </section>
   </div>

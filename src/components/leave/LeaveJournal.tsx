@@ -1,13 +1,19 @@
+import { Pencil, Ban } from 'lucide-react'
+import type { RefObject } from 'react'
+import type { NavigationGuard } from '../employees/useUnsavedChanges'
+import LeaveRecordAction from './LeaveRecordAction'
 import { useState } from 'react'
 import type { LeaveRecord } from '../../../shared/leave'
-import { formatDate } from '../../lib/dates'
+import { formatDate, formatDateTime } from '../../lib/dates'
 import DictionaryTable from '../DictionaryTable'
 import Select from '../Select'
 import { leaveLabels, leaveOptions, overlapsYear } from './presentation'
 
-export default function LeaveJournal({ records, employees, compact = false }: {
+export default function LeaveJournal({ records, employees, compact = false, navigationGuard, onChanged }: {
+  navigationGuard: RefObject<NavigationGuard>; onChanged: () => void
   records: LeaveRecord[]; employees?: Map<string, string>; compact?: boolean
 }) {
+  const [action, setAction] = useState<{ id: string; kind: 'edit' | 'cancel' } | null>(null)
   const [type, setType] = useState('')
   const [year, setYear] = useState('')
   const years = [...new Set(records.flatMap(record => {
@@ -27,14 +33,21 @@ export default function LeaveJournal({ records, employees, compact = false }: {
     </div>}
     <DictionaryTable label="Зареєстровані відпустки" className="leave-table leave-journal" columns={[
       ...(employees ? [{ label: 'Працівник' }] : []), { label: 'Вид' }, { label: 'Період' },
-      { label: 'Днів', width: '4.5rem' }, { label: 'Розпорядження' },
+      { label: 'Днів', width: '4.5rem' }, { label: 'Розпорядження' }, { label: 'Дії', width: '6rem' },
     ]} empty={visible.length ? undefined : 'Зареєстрованих відпусток за вибраними умовами немає.'}>
       {visible.map(record => <tr key={record.id}>
         {employees && <td>{employees.get(record.employeeId) ?? 'Працівник недоступний'}</td>}
-        <td>{leaveLabels[record.leaveType]}{record.status === 'cancelled' && <small className="leave-period-note">Скасовано</small>}</td>
+        <td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small className="leave-period-note" role="status">Розподіл потребує перевірки: є період після завершення відпустки.</small>}{record.status === 'cancelled' && <details><summary>Скасовано</summary><p>{record.cancelReason ?? 'Причина не зазначена у старому записі.'}</p><small>{formatDateTime(record.cancelledAt)}</small></details>}</td>
         <td>{formatDate(record.startDate)}–{formatDate(record.endDate)}{record.durationExplanation && <small className="leave-period-note">{record.durationExplanation}</small>}</td>
         <td>{record.usedDays}</td><td>{record.orderNumber ?? '—'}{record.orderDate && <small className="leave-period-note">{formatDate(record.orderDate)}</small>}</td>
+        <td>{record.status === 'active' && <div className="registry-row-actions">
+          <button type="button" className="table-action leave-icon-action" title="Редагувати" aria-label={'Редагувати відпустку від ' + formatDate(record.startDate)}
+            onClick={() => setAction({ id: record.id, kind: 'edit' })}><Pencil size={16} aria-hidden="true" /></button>
+          <button type="button" className="table-action leave-icon-action leave-remove" title="Скасувати реєстрацію" aria-label={'Скасувати реєстрацію від ' + formatDate(record.startDate)}
+            onClick={() => setAction({ id: record.id, kind: 'cancel' })}><Ban size={16} aria-hidden="true" /></button>
+        </div>}</td>
       </tr>)}
     </DictionaryTable>
+    {action && <LeaveRecordAction key={action.id + action.kind} {...action} navigationGuard={navigationGuard} onClose={() => setAction(null)} onChanged={onChanged} />}
   </section>
 }

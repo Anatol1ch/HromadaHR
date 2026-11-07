@@ -1,4 +1,4 @@
-import type { LeaveRegistration, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
+import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
@@ -7,6 +7,8 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
+  leaveProposeEditAllocation: 'leave:proposeEditAllocation',
   leaveRegister: 'leave:registerLeave', leaveListRecords: 'leave:listRecords',
   leaveGetBalances: 'leave:getBalances', leaveProposeAllocation: 'leave:proposeAllocation',
   personnelDeleteEmployee: 'personnel:deleteEmployee',
@@ -48,10 +50,14 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.leaveGetRecord]: { args: [string]; result: LeaveRecord }
+  [ipcChannels.leaveUpdate]: { args: [LeaveUpdate]; result: LeaveRecord }
+  [ipcChannels.leaveCancel]: { args: [string, number, string]; result: LeaveRecord }
+  [ipcChannels.leaveProposeEditAllocation]: { args: [string, number, LeaveType, number, string, string]; result: AllocationProposal }
   [ipcChannels.leaveRegister]: { args: [LeaveRegistration]; result: LeaveRecord }
   [ipcChannels.leaveListRecords]: { args: [string | null]; result: LeaveRecord[] }
   [ipcChannels.leaveGetBalances]: { args: [string]; result: PeriodBalance[] }
-  [ipcChannels.leaveProposeAllocation]: { args: [string, LeaveType, number]; result: AllocationProposal }
+  [ipcChannels.leaveProposeAllocation]: { args: [string, LeaveType, number, string, string]; result: AllocationProposal }
   [ipcChannels.backupListCopies]: { args: []; result: AvailableBackups }
   [ipcChannels.backupSelectCopy]: { args: [string]; result: RestoreSelection }
   [ipcChannels.backupOpenFolder]: { args: [BackupSlot]; result: null }

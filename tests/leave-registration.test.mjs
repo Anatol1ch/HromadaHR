@@ -45,7 +45,7 @@ test('calendar arithmetic includes endpoints, leap day and year boundaries', () 
 test('FIFO, manual allocation, idempotency and available values survive reopen and restore', async t => {
   const f = await fixture(t)
   const periods = f.leave.savePeriods(f.employee.id,[f.period('2024-01-01',5),f.period('2025-01-01',12),f.period('2026-01-01',18)])
-  const proposal = f.leave.proposeAllocation(f.employee.id,'annual_main',16)
+  const proposal = f.leave.proposeAllocation(f.employee.id,'annual_main',16,'2027-04-05','2027-04-20')
   assert.deepEqual(proposal.allocations, [{periodId:periods[0].id,days:5},{periodId:periods[1].id,days:11}])
   const requestId = randomUUID()
   const allocation = [{periodId:periods[1].id,days:10},{periodId:periods[2].id,days:6}]
@@ -121,7 +121,7 @@ test('employee deletion cascades registrations and allocations atomically',async
   assert.equal(f.personnel.getEmployee(other.id).id,other.id)
   assert.deepEqual(f.connection.database.pragma('foreign_key_check'),[])
 })
-test('v6 to v7 preserves balances and fails closed without protective snapshot',async t=>{
+test('v6 to v8 preserves balances and fails closed without protective snapshot',async t=>{
   const f=await fixture(t,migrations.slice(0,6))
   const db=f.connection.database
   db.prepare(`INSERT INTO leave_period_balances VALUES (?,?,?,?,?,?,?,?)`).run(randomUUID(),f.employee.id,'annual_main','2024-01-01','2024-12-31','initial_balance',7,null)
@@ -143,7 +143,7 @@ test('v6 to v7 preserves balances and fails closed without protective snapshot',
   unchanged.close()
   const updated=await openStorageSafely(f.file)
   f.handles.push(updated)
-  assert.equal(updated.schemaVersion,7)
+  assert.equal(updated.schemaVersion,8)
   assert.equal(updated.database.prepare('SELECT confirmed_days FROM leave_period_balances').get().confirmed_days,7)
   assert.deepEqual(updated.database.prepare('SELECT * FROM schema_migrations WHERE version<=6 ORDER BY version').all(),ledger)
   assert.ok(readdirSync(protection).some(name=>name.includes('protect-migration-v7-')))
@@ -152,7 +152,7 @@ test('v6 to v7 preserves balances and fails closed without protective snapshot',
 test('stale availability cannot overspend; cancelled records do not consume days or block dates', async t => {
   const f = await fixture(t)
   const [period] = f.leave.savePeriods(f.employee.id,[f.period('2024-01-01',30)])
-  const stale = f.leave.proposeAllocation(f.employee.id,'annual_main',16)
+  const stale = f.leave.proposeAllocation(f.employee.id,'annual_main',16,'2027-04-05','2027-04-20')
   const record = f.register(stale.allocations)
   assert.throws(() => f.register(stale.allocations,{startDate:'2027-05-05',endDate:'2027-05-20'}), code('INSUFFICIENT_DAYS'))
   assert.throws(() => f.register([{periodId:period.id,days:17}],{usedDays:17,startDate:'2027-06-01',endDate:'2027-06-16'}),code('INVALID_ARGUMENTS'))
