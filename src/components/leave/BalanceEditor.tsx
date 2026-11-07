@@ -1,3 +1,4 @@
+import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Check, Plus, X } from 'lucide-react'
 import type { PeriodLeaveType } from '../../../shared/leave'
@@ -67,9 +68,9 @@ export default function BalanceEditor({ employeeId, periods, type, typeLabel, na
     }
   }
 
-  return <Modal title="Залишки за періодами" description={typeLabel} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
+  return <Modal title={"Залишки — " + typeLabel} description="Початкові залишки станом на 01.01.2027; за новими періодами — дні підтвердженого права." size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
-      <p className="leave-muted">Порожнє поле нового періоду означає «Не внесено». 0 підтверджує відсутність залишку.</p>
+      <p className="leave-muted">Перенесіть залишки зі зошита за кожним періодом. Порожньо — не внесено; 0 — залишку немає. <HelpTip label="Як заповнювати залишки" text="Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право — воно не нараховується автоматично." /></p>
       <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
         columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-days-column' }]}
         empty={rows.length ? undefined : 'Немає періодів для введення.'}>

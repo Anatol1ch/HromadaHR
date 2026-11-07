@@ -72,3 +72,32 @@
 .leave-layout .leave-journal { min-width: 36rem; }
 .leave-registration .leave-table { min-width: 25rem; }
 .leave-layout > h3 { margin-block: var(--space-3) 0; font-size: 1rem; }
+
+/* 4.6.2: results first; details stay within their own scroll area. */
+.leave-section-heading { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); }
+.leave-section-heading h3 { margin:0; font-size:1rem; }
+.leave-section-heading > .primary-button, .leave-section-heading > .secondary-button { margin-inline-start:auto; }
+.leave-balance-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-2); }
+.leave-balance-choice { display:grid; align-content:start; gap:8px; text-align:left; padding:16px; min-width:0; border:1px solid var(--border-surface); border-radius:10px; background:var(--surface-card); color:var(--color-text); cursor:pointer; }
+.leave-balance-choice[aria-pressed="true"] { border-color:var(--accent); box-shadow:inset 0 -3px var(--accent); }
+.leave-balance-choice > span { font-size:.8125rem; color:var(--color-text-secondary); }
+.leave-balance-choice > strong { font-size:1.125rem; line-height:1.35; font-variant-numeric:tabular-nums; }
+.leave-balance-choice small { font-size:.75rem; line-height:1.4; }
+.leave-incomplete { color:var(--color-text-warning, var(--color-text-secondary)); }
+.leave-disclosure { min-width:0; padding-block:8px; border-block:1px solid var(--border-surface); }
+.leave-disclosure > summary { padding:8px 0; cursor:pointer; font-weight:600; }
+.leave-disclosure[open] > summary { margin-bottom:8px; }
+.leave-journal-filters { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.leave-journal-filters .leave-select { flex:1 1 12rem; max-width:22rem; }
+.leave-workspace > .page-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); }
+.leave-workspace .leave-layout { margin-block:var(--space-2); }
+.leave-status { white-space:nowrap; font-size:.8125rem; color:var(--color-text-secondary); }
+.leave-allocation-section { display:grid; gap:var(--space-2); min-width:0; padding-block:var(--space-3); border-top:1px solid var(--border-surface); }
+.leave-help { display:inline-flex; vertical-align:middle; }
+.leave-help button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:0; border-radius:6px; color:var(--color-text-secondary); background:transparent; cursor:help; }
+.leave-help button:hover { background:var(--surface-panel); }
+.leave-tooltip { position:fixed; transform:translateY(-100%); z-index:100000; max-width:min(280px,calc(100vw - 16px)); padding:10px 12px; border:1px solid var(--border-surface); border-radius:8px; background:var(--surface-card); color:var(--color-text); box-shadow:var(--shadow-modal); font-size:.8125rem; line-height:1.5; pointer-events:none; }
+.leave-balance-choice:focus-visible, .leave-help button:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+@container (max-width: 42rem) { .leave-balance-grid { grid-template-columns:minmax(0,1fr); } .leave-section-heading > .primary-button { margin-inline-start:0; } }
+
+.leave-help button.leave-help-action { width:36px; height:36px; cursor:pointer; }

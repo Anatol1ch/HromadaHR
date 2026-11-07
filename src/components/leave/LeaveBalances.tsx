@@ -1,23 +1,25 @@
+import { isPeriodLeave } from '../../../shared/leave'
+import HelpTip from './HelpTip'
+import { balanceSummary } from './summary'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import LeaveJournal from './LeaveJournal'
 import { leaveLabels as labels, periodLeaveOptions as options } from './presentation'
 import type { PeriodBalance, LeaveRecord } from '../../../shared/leave'
 import { Fragment, useEffect, useId, useRef, useState, type RefObject } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { type PeriodLeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import { todayIsoDate } from '../../lib/dates'
 import ConfirmDialog from '../ConfirmDialog'
 import DictionaryTable from '../DictionaryTable'
-import Select from '../Select'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import BalanceEditor, { periodLabel } from './BalanceEditor'
 import { cutoff, type Period } from './draft'
 
 const columns = [{ label: 'Обліковий період' },
-  { label: 'Підтверджено', width: '8rem', className: 'leave-days-column' }, { label: 'Використано', width: '6rem', className: 'leave-days-column' },
-  { label: 'Доступно', width: '6rem', className: 'leave-days-column' }, { label: 'Дії', width: '3.5rem' }]
+  { label: 'Внесено днів', width: '8rem', className: 'leave-days-column' }, { label: 'Враховано у відпустках', width: '6rem', className: 'leave-days-column' },
+  { label: 'Залишилося', width: '6rem', className: 'leave-days-column' }, { label: 'Дії', width: '3.5rem' }]
 const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
@@ -28,10 +30,11 @@ const dayLabel = (days: bigint) => {
   return category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
 }
 
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true, refreshRevision = 0 }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true, refreshRevision = 0, showRegister = true }: {
   employeeId: string; hireDate: string; navigationGuard: RefObject<NavigationGuard>
-  employeeName?: string; onRegistered?: () => void; showJournal?: boolean; refreshRevision?: number
+  employeeName?: string; onRegistered?: () => void; showJournal?: boolean; refreshRevision?: number; showRegister?: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
   const [type, setType] = useState<PeriodLeaveType>('annual_main')
   const groupId = useId()
   const [revision, setRevision] = useState(0)
@@ -40,12 +43,13 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const [deleting, setDeleting] = useState<ConfirmedLeavePeriod | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const [manualProposals, setManualProposals] = useState<ProposedLeavePeriod[]>([])
-  const [state, setState] = useState<{ key: string; periods?: Period[]; balances?: PeriodBalance[]; records?: LeaveRecord[]; error?: string }>()
-  const key = JSON.stringify([employeeId, hireDate, type, revision, refreshRevision])
+  const [state, setState] = useState<{ key: string; periods?: Period[]; balances?: PeriodBalance[]; records?: LeaveRecord[]; proposals?: ProposedLeavePeriod[]; error?: string }>()
+  const key = JSON.stringify([employeeId, hireDate, revision, refreshRevision])
   const data = state?.key === key ? state : undefined
-  const periods = data?.periods && (type === 'oms_service_additional' ?
-    [...data.periods, ...manualProposals.filter(proposal => !data.periods?.some(period => period.periodStart === proposal.periodStart))]
-      .sort((a, b) => a.periodStart.localeCompare(b.periodStart)) : data.periods)
+  const selectedPeriods = data?.periods?.filter(period => period.leaveType === type)
+  const periods = selectedPeriods && (type === 'oms_service_additional' ?
+    [...selectedPeriods, ...manualProposals.filter(proposal => !selectedPeriods.some(period => period.periodStart === proposal.periodStart))]
+      .sort((a, b) => a.periodStart.localeCompare(b.periodStart)) : selectedPeriods)
   const owner = useRef<HTMLElement>(null)
   const pending = useRef(false)
   const alive = useRef(false)
@@ -60,32 +64,29 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
       try {
         const [saved, proposals, balances, records] = await Promise.all([
           api.listPeriods(employeeId),
-          api.proposePeriods(employeeId, today > cutoff ? today : cutoff, type),
+          Promise.all(options.map(option => api.proposePeriods(employeeId, today > cutoff ? today : cutoff, option.value))),
           api.getBalances(employeeId),
           showJournal ? api.listRecords(employeeId) : Promise.resolve({ ok: true as const, data: [] as LeaveRecord[] }),
         ])
         if (!active) return
         if (!saved.ok) { setState({ key, error: personnelMessage(saved.error.code) }); return }
-        if (!proposals.ok) { setState({ key, error: personnelMessage(proposals.error.code) }); return }
+        const failed = proposals.find(result => !result.ok)
+        if (failed && !failed.ok) { setState({ key, error: personnelMessage(failed.error.code) }); return }
+        const proposed = proposals.flatMap(result => result.ok ? result.data : [])
         if (!balances.ok) { setState({ key, error: personnelMessage(balances.error.code) }); return }
         if (!records.ok) { setState({ key, error: personnelMessage(records.error.code) }); return }
-        const merged = new Map<string, Period>(proposals.data.map(period => [period.periodStart, period]))
-        for (const period of saved.data) if (period.leaveType === type) merged.set(period.periodStart, period)
-        setState({ key, balances: balances.data, records: records.data, periods: [...merged.values()].sort((a, b) => a.periodStart.localeCompare(b.periodStart)) })
+        const merged = new Map<string, Period>(proposed.map(period => [period.leaveType + period.periodStart, period]))
+        for (const period of saved.data) merged.set(period.leaveType + period.periodStart, period)
+        setState({ key, proposals: proposed, balances: balances.data, records: records.data, periods: [...merged.values()].sort((a, b) => a.periodStart.localeCompare(b.periodStart)) })
       } catch {
         if (active) setState({ key, error: 'Не вдалося завантажити залишки.' })
       }
     }
     void load()
     return () => { active = false }
-  }, [employeeId, key, type, showJournal])
+  }, [employeeId, key, showJournal])
 
-  const confirmed = periods?.filter(period => period.status === 'confirmed') ?? []
-  const sum = confirmed.reduce((total, period) => total + BigInt(period.confirmedDays), 0n)
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
-  const used = (data?.balances ?? []).filter(period => period.leaveType === type)
-    .reduce((total, period) => total + BigInt(period.usedDays), 0n)
-  const available = sum - used
   const refresh = () => setRevision(value => value + 1)
 
   async function remove(period: ConfirmedLeavePeriod) {
@@ -110,23 +111,20 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   }
 
   return <section ref={owner} className="leave-layout" aria-label="Залишки відпусток">
-    {periods && <div className="leave-summary" aria-live="polite">
-      <strong>{confirmed.length ? available.toLocaleString('uk-UA') + ' ' + dayLabel(available) : 'Залишки не внесено'}</strong>
-      {confirmed.length > 0 && <span>Підтверджені періоди: {confirmed.length} з {periods.length}</span>}
-      <span>Підтверджено {sum.toLocaleString('uk-UA')} · використано {used.toLocaleString('uk-UA')}</span>
-      <p>{confirmed.length > 0 && confirmed.length < periods.length ? 'Сума може бути неповною. ' : ''}
-        Доступно за відомими підтвердженими періодами.</p>
-    </div>}
-    <div className="leave-toolbar">
-      <div className="leave-select"><Select label="Вид відпустки" value={type} options={options} advanceOnSelect={false}
-        onChange={value => { setState(undefined); setType(value as PeriodLeaveType) }} /></div>
-      <button className="primary-button" type="button" disabled={!periods} onClick={() => setRegistering(true)}>Зареєструвати відпустку</button>
-      <button className="secondary-button" type="button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')}
-        onClick={() => setEditing(true)}>
-        {confirmed.length ? <Pencil size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-        {confirmed.length ? 'Редагувати залишки' : 'Внести залишки'}
+    <div className="leave-section-heading"><h3>Залишки відпусток</h3><HelpTip label="Як обчислюється залишок" text="Кількість днів після врахування зареєстрованих відпусток, зокрема майбутніх. Для навчальних і спеціальних видів накопичення не ведеться." />
+      {showRegister && <button className="primary-button" type="button" onClick={() => setRegistering(true)}>Зареєструвати відпустку</button>}</div>
+    <div className="leave-balance-grid">{options.map(option => {
+      const summary = balanceSummary(option.value, data?.balances ?? [], data?.proposals ?? [])
+      return <button type="button" key={option.value} className="leave-balance-choice" aria-pressed={type === option.value} onClick={() => { setType(option.value); setExpanded(true) }}>
+        <span>{option.label}</span><strong>{!data ? 'Завантаження…' : data.error ? 'Дані недоступні' : !summary.count ? 'Не внесено' : (summary.incomplete || option.value === 'oms_service_additional' ? 'Відомий залишок — ' : 'Залишилося ') + summary.remaining.toLocaleString('uk-UA') + ' ' + dayLabel(summary.remaining)}</strong>
+        {summary.count > 0 && <small>Внесено {summary.entered.toLocaleString('uk-UA')} · Враховано у відпустках {summary.accounted.toLocaleString('uk-UA')}</small>}
+        {summary.incomplete && <small className="leave-incomplete">Залишки внесено не за всі періоди</small>}
       </button>
-    </div>
+    })}</div>
+    <div className="leave-section-heading"><span>{labels[type]}</span><button type="button" className="secondary-button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')} onClick={() => setEditing(true)}>Внести або змінити залишки</button>
+      <HelpTip label="Внесення залишків" text="Перенесіть залишки зі старого обліку. Минулі відпустки повторно реєструвати не потрібно. Невнесені дані відрізняються від підтвердженого нуля." /></div>
+    {data?.error && <p role="alert">{data.error} <button type="button" onClick={refresh}>Повторити</button></p>}
+    <details className="leave-disclosure" open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}><summary>Детально за періодами</summary><HelpTip label="Що таке обліковий період" text="Основна відпустка обліковується за робочими роками від прийняття, соціальна на дітей — за календарними. Періоди за стаж ОМС задає кадровик." />
     <DictionaryTable label="Залишки за періодами" className="leave-table" columns={columns} loading={!data}
       empty={!periods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined} error={data?.error} onRetry={refresh}>
       {groups.map(group => {
@@ -150,10 +148,11 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         </Fragment>
       })}
     </DictionaryTable>
-    {showJournal && data?.records && <LeaveJournal records={data.records} compact navigationGuard={navigationGuard} onChanged={refresh} />}
+    </details>
+    {showJournal && data?.records && <LeaveJournal records={data.records} onRegister={() => setRegistering(true)} navigationGuard={navigationGuard} onChanged={refresh} />}
     {registering && <LeaveRegistrationForm employeeId={employeeId} employeeName={employeeName} hireDate={hireDate} initialType={type} navigationGuard={navigationGuard}
       onClose={() => setRegistering(false)} onBalances={selectedType => { setRegistering(false); setType(selectedType); setState(undefined); setEditing(true); refresh() }}
-      onSaved={() => { setRegistering(false); refresh(); onRegistered?.(); notifySystemToast('success', 'Відпустку зареєстровано', 'Залишки оновлено.') }} />}
+      onSaved={savedType => { setRegistering(false); refresh(); onRegistered?.(); notifySystemToast('success', 'Відпустку зареєстровано', isPeriodLeave(savedType) ? 'Залишки оновлено.' : 'Журнал оновлено.') }} />}
     {editing && periods && <BalanceEditor employeeId={employeeId} periods={periods} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard}
       onClose={() => setEditing(false)} onSaved={() => {
         setEditing(false)

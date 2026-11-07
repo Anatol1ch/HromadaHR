@@ -1,3 +1,6 @@
+import Modal from '../Modal'
+import LeaveRegistrationForm from './LeaveRegistrationForm'
+import { notifySystemToast } from '../SystemToastHost'
 import LeaveJournal from './LeaveJournal'
 import type { LeaveRecord } from '../../../shared/leave'
 import { useEffect, useState, type RefObject } from 'react'
@@ -14,6 +17,8 @@ export default function LeaveWorkspace({ navigationGuard }: { navigationGuard: R
   const [records, setRecords] = useState<LeaveRecord[] | null>(null)
   const [recordsError, setRecordsError] = useState('')
   const [recordsRevision, setRecordsRevision] = useState(0)
+  const [creating, setCreating] = useState(false)
+  const [createEmployee, setCreateEmployee] = useState('')
   const [selected, setSelected] = useState('')
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -38,7 +43,7 @@ export default function LeaveWorkspace({ navigationGuard }: { navigationGuard: R
   }, [recordsRevision])
   const employee = employees?.find(item => item.id === selected)
   return <div className="page-transition leave-workspace">
-    <div className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Відпустки</h1></div></div>
+    <div className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Відпустки</h1></div><button type="button" className="primary-button" onClick={() => { setCreateEmployee(selected); setCreating(true) }}>Зареєструвати відпустку</button></div>
     <section className="leave-layout" aria-label="Облік залишків">
       {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRevision(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
         !employees ? <DataState kind="loading" message="Завантаження працівників…" /> :
@@ -51,14 +56,23 @@ export default function LeaveWorkspace({ navigationGuard }: { navigationGuard: R
             <p>{employee.position.name} · {employee.department.name}</p>
           </div>}
         </div>}
-      {employees && employees.length > 0 && !employee && !error &&
-        <DataState kind="empty" message="Оберіть працівника" description="Тут з’являться його облікові періоди та підтверджені залишки." />}
-      {employee && <LeaveBalances key={employee.id} employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
-        showJournal={false} refreshRevision={recordsRevision} onRegistered={() => setRecordsRevision(value => value + 1)} />}
+
       {recordsError ? <Alert variant="error" action={<button type="button" onClick={() => setRecordsRevision(value => value + 1)}>Повторити</button>}>{recordsError}</Alert> :
         records && employees ? <LeaveJournal records={selected ? records.filter(record => record.employeeId === selected) : records}
           navigationGuard={navigationGuard} onChanged={() => setRecordsRevision(value => value + 1)} employees={new Map(employees.map(person => [person.id, fullName(person)]))} /> :
           <DataState kind="loading" message="Завантаження реєстру відпусток…" />}
+      {employee && <LeaveBalances key={employee.id} employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
+        showJournal={false} showRegister={false} refreshRevision={recordsRevision} onRegistered={() => setRecordsRevision(value => value + 1)} />}
+      {creating && (() => {
+        const person = employees?.find(item => item.id === createEmployee)
+        return person ? <LeaveRegistrationForm key={person.id} employeeId={person.id} employeeName={fullName(person)} hireDate={person.hireDate} initialType="annual_main" navigationGuard={navigationGuard}
+          onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRecordsRevision(value => value + 1); notifySystemToast('success', 'Відпустку зареєстровано', 'Журнал оновлено.') }}
+          onBalances={() => { setCreating(false); setSelected(person.id) }} /> :
+          <Modal title="Зареєструвати відпустку" onClose={() => setCreating(false)}><p>Оберіть працівника для нової відпустки.</p>
+            {error ? <Alert variant="error">{error}</Alert> : !employees ? <DataState kind="loading" message="Завантаження працівників…" /> : !employees.length ? <DataState kind="empty" message="Спочатку додайте працівника до кадрового реєстру." /> :
+            <Select label="Працівник для відпустки" searchable value={createEmployee} onChange={setCreateEmployee} options={employees.map(item => ({value:item.id,label:fullName(item)}))} advanceOnSelect={false} />}
+          </Modal>
+      })()}
     </section>
   </div>
 }

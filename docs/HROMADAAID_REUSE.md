@@ -116,3 +116,7 @@ Read-only джерело SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, src/Recip
 ## 4.5 — Подієві відпустки
 
 Цільово перевірено src/RecipientRegistry.tsx (RecipientFormModal, Select умовних полів, recipient-field/fieldset, editing/expectedUpdatedAt) і src/components/ValidatedInput.tsx у read-only HromadaAID за S1 = 33eca10733caaf73b1a99e75a24ff35e706a0afb. Рішення: повторно використати вже адаптовані Modal/Select/DateField/ValidatedTextarea/ConfirmDialog, умовне компонування чинної LeaveRegistrationForm, наявний refresh/revision і дії журналу. Реального leave-модуля в цільовому переліку src AID не виявлено; загальний аудит і перенесення матеріальних допомог не проводилися. Облікові перевірки, SQLite/IPC та v9 залишаються власною Main-only реалізацією HR. Нових залежностей, дизайну чи runtime-зв’язку з AID немає.
+
+## 4.6.2 — Перекомпонування відпусток
+
+Джерело read-only: src/AidRegistry.tsx, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Цільова оцінка реєстру/фільтрів і вкладеного вибору отримувача; сумісні патерни адаптовано через чинні HR-компоненти. Періодні підсумки, details та короткі пояснення спроєктовано під задачі кадровика; предметні моделі AID не переносилися. Фактичні адаптації й відкладене GUI-приймання — UI-TRANSFER 4.6.2.

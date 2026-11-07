@@ -1,3 +1,4 @@
+import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { LeaveRecord, PeriodBalance } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
@@ -45,7 +46,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   }
   function changed() {
     refreshAndClose()
-    notifySystemToast('success', kind === 'edit' ? 'Відпустку виправлено' : 'Реєстрацію скасовано', 'Журнал і залишки оновлено.')
+    notifySystemToast('success', kind === 'edit' ? 'Відпустку виправлено' : 'Реєстрацію скасовано', data?.record.allocations.length ? (kind === 'edit' ? 'Залишки перераховано.' : 'Списані дні знову доступні.') : 'Журнал оновлено.')
   }
   if (!data || error) return <Modal title="Зареєстрована відпустка" onClose={onClose}>
     {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
@@ -85,7 +86,7 @@ function CancelRegistration({ record, employeeName, navigationGuard, onClose, on
       if (actual.data.status === 'cancelled') { onChanged(); return }
       setUncertain(false)
       setStale(actual.data.revision !== record.revision)
-      setError(actual.data.revision === record.revision ? 'Скасування не підтверджено. Фактична ревізія незмінна. Можна повторити операцію.' :
+      setError(actual.data.revision === record.revision ? 'Скасування не підтверджено. Збережений запис не змінився. Можна повторити операцію.' :
         'Запис уже змінився. Закрийте діалог і відкрийте актуальні відомості.')
     } catch { if (alive.current) setError('Перевірка фактичного запису недоступна. Повторіть перевірку.') }
   }
@@ -107,7 +108,7 @@ function CancelRegistration({ record, employeeName, navigationGuard, onClose, on
   }
   return <ConfirmDialog title="Скасувати реєстрацію відпустки?" confirmLabel="Скасувати реєстрацію"
     message={<div ref={owner} className="leave-layout">
-      <p><strong>{employeeName}</strong></p>
+      <p><strong>{employeeName}</strong> <HelpTip label="Що означає скасування" text="Реєстрація залишається в журналі. Списані за нею дні знову доступні. Скасування запису не скасовує виданий кадровий документ." /></p>
       <p>{leaveLabels[record.leaveType]} · {formatDate(record.startDate)}–{formatDate(record.endDate)} · {record.usedDays} днів</p>
       {(record.orderNumber || record.orderDate) && <Alert variant="warning">Скасування реєстрації в HromadaHR саме собою не скасовує виданий кадровий документ.</Alert>}
       <label className="recipient-field">Причина скасування<ValidatedTextarea required maxLength={1000} value={reason} disabled={busy || uncertain}

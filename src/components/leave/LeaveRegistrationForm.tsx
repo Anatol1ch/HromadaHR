@@ -1,3 +1,5 @@
+import { allocationMessage } from './summary'
+import HelpTip from './HelpTip'
 import { isPeriodLeave, specialLeaveLimit, type PeriodLeaveType } from '../../../shared/leave'
 import type { LeaveRecord, LeaveUpdate, PeriodBalance } from '../../../shared/leave'
 import { matchesUpdate } from './corrections'
@@ -19,7 +21,7 @@ import { leaveLabels, leaveOptions } from './presentation'
 export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onBalances, record, originalBalances }: {
   record?: LeaveRecord; originalBalances?: PeriodBalance[]
   employeeId: string; employeeName?: string; hireDate: string; initialType: LeaveType; navigationGuard: RefObject<NavigationGuard>
-  onClose: () => void; onSaved: () => void; onBalances: (type: PeriodLeaveType) => void
+  onClose: () => void; onSaved: (type: LeaveType) => void; onBalances: (type: PeriodLeaveType) => void
 }) {
   const [type, setType] = useState(record?.leaveType ?? initialType)
   const [dates, setDates] = useState({
@@ -35,6 +37,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   const [orderNumber, setOrderNumber] = useState(record?.orderNumber ?? '')
   const [proposal, setProposal] = useState<{ key: string; value?: AllocationProposal; error?: string }>()
   const [allocations, setAllocations] = useState<Record<string, string>>(Object.fromEntries(record?.allocations.map(item => [item.periodId, String(item.days)]) ?? []))
+  const [manualAllocation, setManualAllocation] = useState(!!record)
   const [stale, setStale] = useState(false)
   const [uncertain, setUncertain] = useState<LeaveUpdate | null>(null)
   const [busy, setBusy] = useState(false)
@@ -73,6 +76,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       if (!result.ok) { setProposal({ key, error: personnelMessage(result.error.code) }); return }
       setProposal({ key, value: result.data })
       const preserve = record && firstProposal.current && !autoRequested.current && type === record.leaveType && start === record.startDate && end === record.endDate && days === record.usedDays
+      setManualAllocation(!!preserve)
       firstProposal.current = false
       if (preserve) setAllocations(Object.fromEntries(record.allocations.map(item => [item.periodId, String(item.days)])))
       else setAllocations(Object.fromEntries(result.data.allocations.map(item => [item.periodId, String(item.days)])))
@@ -120,7 +124,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         return
       }
       if (!alive.current) return
-      if (result.ok) onSaved()
+      if (result.ok) onSaved(result.data.leaveType)
       else { setError(personnelMessage(result.error.code)); setConfirm(null); if (['STALE_REVISION','LEAVE_CANCELLED'].includes(result.error.code)) setStale(true) }
     } catch {
       if (record) {
@@ -137,11 +141,11 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       const actual = await window.hromadaHR.leave.getRecord(update.id)
       if (!alive.current) return
       if (!actual.ok) { setError('Не вдалося перевірити фактичний запис. Чернетку збережено.'); return }
-      if (matchesUpdate(actual.data, update)) { onSaved(); return }
+      if (matchesUpdate(actual.data, update)) { onSaved(actual.data.leaveType); return }
       setUncertain(null)
       setStale(actual.data.revision !== update.expectedRevision || actual.data.status !== 'active')
       setError(actual.data.revision === update.expectedRevision && actual.data.status === 'active'
-        ? 'Зміни не підтверджено. Фактична ревізія незмінна. Можна повторити збереження.'
+        ? 'Зміни не підтверджено. Збережений запис не змінився. Можна повторити збереження.'
         : 'Фактичний запис уже змінився. Чернетку збережено. Закрийте форму та відкрийте актуальний запис.')
     } catch { if (alive.current) setError('Перевірка результату недоступна. Чернетку збережено.') }
   }
@@ -149,7 +153,8 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   return <Modal title={record ? 'Редагувати відпустку' : 'Зареєструвати відпустку'} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={owner} className="leave-layout leave-registration" onSubmit={prepare}>
       {record?.allocationWarning && <Alert variant="warning">Попередній розподіл містить період, що почався після завершення відпустки. Виправте розподіл вручну.</Alert>}
-      <Alert variant="info">Звичайна реєстрація доступна для початку від 01.01.2027. Відпустка, що почалася у 2026 році, потребує окремої перевірки початкових залишків.</Alert>
+      <h3>Основна інформація</h3><p className="leave-muted">Облік відпусток із 01.01.2027.</p>
+      {start && start < '2027-01-01' && <Alert variant="error">Дата початку має бути від 01.01.2027. Перехідні відпустки потребують окремої перевірки залишків.</Alert>}
       {record && record.allocations.length > 0 && <details><summary>Поточний збережений розподіл</summary><ul>
         {record.allocations.map(allocation => {
           const period = originalBalances?.find(item => item.id === allocation.periodId)
@@ -161,7 +166,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       {!periodic && <>
         <label className="recipient-field">Підстава надання<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
           value={grantBasis} onChange={event => setGrantBasis(event.target.value)} /></label>
-        <p className="leave-muted">Право та документи перевіряє кадровик. Накопичуваного залишку немає.</p>
+        <p className="leave-muted">Право та документи перевіряє кадровик. Накопичуваного залишку немає. <HelpTip label="Подієва відпустка" text="Для цього виду не ведеться накопичення днів за робочими роками." /></p>
         {limit !== null && <Alert variant="info">Не більше {limit} календарних днів, одне активне надання за рік початку{start ? ' — ' + start.slice(0,4) : ''}. Невикористані дні не переносяться.
           {type === 'chernobyl_special_leave' && ' Орієнтир: 14 робочих (16 календарних) днів для визначених законом категорій.'}
         </Alert>}
@@ -174,29 +179,31 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
           onChange={startIso => setDates(current => ({ ...current, startIso }))} onDraftChange={start => setDates(current => ({ ...current, start }))} /></label>
         <label className="recipient-field">Завершення<DateField required disabled={busy || !!uncertain} value={dates.endIso}
           onChange={endIso => setDates(current => ({ ...current, endIso }))} onDraftChange={end => setDates(current => ({ ...current, end }))} /></label>
-        <label className="recipient-field">Використані дні<ValidatedInput inputMode="numeric" required disabled={busy || !!uncertain} value={daysText}
+        <label className="recipient-field">Кількість днів<ValidatedInput inputMode="numeric" required disabled={busy || !!uncertain} value={daysText}
           onChange={event => setOverride({ range, text: event.target.value })} /></label>
       </div>
-      <p className="leave-muted">Календарна тривалість включно з обома датами — {length || '—'} днів.</p>
+      <p className="leave-muted">Календарна тривалість включно з обома датами — {length || '—'} днів. <HelpTip label="Тривалість відпустки" text="Програма рахує календарні дні включно з обома датами. Остаточну тривалість підтверджує кадровик; зменшення потребує пояснення." /></p>
       {length > 0 && (days < 1 || days > length) && <Alert variant="warning">Введіть додатну цілу тривалість у межах календарного інтервалу.</Alert>}
       {days > 0 && needsExplanation && <label className="recipient-field">Пояснення уточненої тривалості<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
         value={explanation} onChange={event => setExplanation(event.target.value)} /></label>}
       {periodic && current?.error && <Alert variant="error" action={<button type="button" disabled={busy || !!uncertain} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{current.error}</Alert>}
       {periodic && start && start >= '2027-01-01' && start >= hireDate && end && end >= start && days > 0 && days <= length && days <= 3652059 && !current && <p role="status">Отримання доступних днів…</p>}
-      {periodic && current?.value && <>
-        {current.value.shortfall > 0 && <Alert variant="warning" action={<button type="button" disabled={busy || !!uncertain} onClick={() => close(() => onBalances(type as PeriodLeaveType))}>Внести або виправити права</button>}>
-          Для FIFO на дату початку бракує {current.value.shortfall} днів. Перевірте права або задайте ручний розподіл із допустимих періодів.
+      {periodic && current?.value && <section className="leave-allocation-section"><div className="leave-section-heading"><h3>Списання днів</h3><HelpTip label="Як розподіляються дні" text="Програма спочатку використовує найстаріші доступні залишки. За потреби розподіл можна змінити." /></div>
+        <p role="status">{allocationMessage(days, total, allocationValid, manualAllocation)}</p>
+        {current.value.shortfall > 0 && <Alert variant="warning" action={<button type="button" disabled={busy || !!uncertain} onClick={() => close(() => onBalances(type as PeriodLeaveType))}>Внести або змінити залишки</button>}>
+          Для автоматичного розподілу на дату початку бракує {current.value.shortfall} днів. Перевірте права або задайте ручний розподіл із допустимих періодів.
         </Alert>}
-        <DictionaryTable label="Розподіл використаних днів" className="leave-table" columns={[{ label: 'Обліковий період' }, { label: 'Доступно', width: '6rem' }, { label: 'Списати', width: '7rem' }]}
+        <details className="leave-disclosure"><summary>Переглянути або змінити розподіл</summary><DictionaryTable label="Розподіл використаних днів" className="leave-table" columns={[{ label: 'Обліковий період' }, { label: 'Доступно', width: '6rem' }, { label: 'Списати', width: '7rem' }]}
           empty={available.length ? undefined : 'Немає підтверджених доступних днів.'}>
           {available.map(period => <tr key={period.id}><td>{formatDate(period.periodStart)}–{formatDate(period.periodEnd)}</td><td>{period.availableDays}</td>
             <td><div className="recipient-field leave-days-field"><ValidatedInput aria-label={'Списати за період ' + formatDate(period.periodStart)} inputMode="numeric" disabled={busy || !!uncertain}
-              value={allocations[period.id] ?? '0'} onChange={event => setAllocations(current => ({ ...current, [period.id]: event.target.value }))} /></div></td></tr>)}
+              value={allocations[period.id] ?? '0'} onChange={event => { setManualAllocation(true); setAllocations(current => ({ ...current, [period.id]: event.target.value })) }} /></div></td></tr>)}
         </DictionaryTable>
         <div className="leave-toolbar"><span aria-live="polite">Розподілено {allocationValid ? total : '—'} із {days} днів</span>
           <button type="button" className="secondary-button" disabled={busy || !!uncertain} onClick={() => { autoRequested.current = true; setRetry(value => value + 1) }}>Автоматично розподілити</button></div>
-      </>}
-      <details><summary>Реквізити розпорядження</summary><div className="leave-registration-grid">
+        </details>
+      </section>}
+      <details className="leave-disclosure"><summary>Розпорядження (необов’язково)</summary><HelpTip label="Реквізити розпорядження" text="Номер і дату можна додати пізніше через редагування реєстрації." /><div className="leave-registration-grid">
         <label className="recipient-field">Номер<ValidatedInput maxLength={100} disabled={busy || !!uncertain} value={orderNumber} onChange={event => setOrderNumber(event.target.value)} /></label>
         <label className="recipient-field">Дата<DateField disabled={busy || !!uncertain} value={dates.orderIso}
           onChange={orderIso => setDates(current => ({ ...current, orderIso }))} onDraftChange={order => setDates(current => ({ ...current, order }))} /></label>
@@ -210,12 +217,12 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         }}>Перевірити фактичний результат</button>}
         <div className="recipient-form-actions leave-editor-actions"><span>{periodic ? 'Розподіл і тривалість підтверджує кадровик.' : 'Підставу й тривалість підтверджує кадровик.'}</span><div>
           <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>Скасувати</button>
-          <button type="submit" className="primary-button" disabled={!canSave || busy || !!uncertain || stale}>{record ? 'Зберегти зміни' : 'Зберегти'}</button>
+          <button type="submit" className="primary-button" disabled={!canSave || busy || !!uncertain || stale}>{record ? 'Зберегти зміни' : 'Зареєструвати'}</button>
         </div></div>
       </div>
     </form>
     {confirm && <ConfirmDialog title={record ? "Підтвердити зміни?" : "Підтвердити реєстрацію?"} variant="primary" confirmLabel={record ? "Зберегти зміни" : "Зареєструвати"}
-      message={`${leaveLabels[confirm.leaveType]}, ${formatDate(confirm.startDate)}–${formatDate(confirm.endDate)}. Підтверджую надання на ${confirm.usedDays} днів ${isPeriodLeave(confirm.leaveType) ? 'і зазначений розподіл між обліковими періодами' : 'за введеною документальною підставою'}.`}
+      message={`${leaveLabels[confirm.leaveType]}, ${formatDate(confirm.startDate)}–${formatDate(confirm.endDate)}. Підтверджую надання на ${confirm.usedDays} днів ${isPeriodLeave(confirm.leaveType) ? 'із зазначених залишків' : 'за введеною документальною підставою'}.`}
       onCancel={() => setConfirm(null)} onConfirm={() => save(confirm)} />}
   </Modal>
 }
