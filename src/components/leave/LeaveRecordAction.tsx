@@ -14,9 +14,9 @@ import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsaved
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { leaveLabels } from './presentation'
 
-export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged }: {
+export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, onBalances }: {
   id: string; kind: 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
-  onClose: () => void; onChanged: () => void
+  onClose: () => void; onChanged: () => void; onBalances?: (employeeId: string) => void
 }) {
   const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
   const [error, setError] = useState('')
@@ -59,7 +59,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   </Modal>
   return kind === 'edit' ? <LeaveRegistrationForm employeeId={data.employee.id} employeeName={fullName(data.employee)}
     hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} originalBalances={data.balances} navigationGuard={navigationGuard}
-    onClose={refreshAndClose} onSaved={changed} onBalances={refreshAndClose} /> :
+    onClose={refreshAndClose} onSaved={changed} onBalances={() => { refreshAndClose(); onBalances?.(data.employee.id) }} /> :
     <CancelRegistration record={data.record} employeeName={fullName(data.employee)} navigationGuard={navigationGuard} onClose={refreshAndClose} onChanged={changed} />
 }
 

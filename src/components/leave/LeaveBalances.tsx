@@ -153,7 +153,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     {registering && <LeaveRegistrationForm employeeId={employeeId} employeeName={employeeName} hireDate={hireDate} initialType={type} navigationGuard={navigationGuard}
       onClose={() => setRegistering(false)} onBalances={selectedType => { setRegistering(false); setType(selectedType); setState(undefined); setEditing(true); refresh() }}
       onSaved={savedType => { setRegistering(false); refresh(); onRegistered?.(); notifySystemToast('success', 'Відпустку зареєстровано', isPeriodLeave(savedType) ? 'Залишки оновлено.' : 'Журнал оновлено.') }} />}
-    {editing && periods && <BalanceEditor employeeId={employeeId} periods={periods} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard}
+    {editing && periods && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={periods} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard}
       onClose={() => setEditing(false)} onSaved={() => {
         setEditing(false)
         refresh()

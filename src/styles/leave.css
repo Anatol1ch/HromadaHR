@@ -101,3 +101,28 @@
 @container (max-width: 42rem) { .leave-balance-grid { grid-template-columns:minmax(0,1fr); } .leave-section-heading > .primary-button { margin-inline-start:0; } }
 
 .leave-help button.leave-help-action { width:36px; height:36px; cursor:pointer; }
+
+/* 4.6.3: named modal containers respond to their actual available width. */
+.leave-workspace { width:100%; min-width:0; display:grid; gap:var(--space-3); }
+.leave-workspace [hidden] { display:none !important; }
+.leave-section-nav { flex-wrap:wrap; }
+.leave-section-nav .settings-section-current { flex:1 1 12rem; }
+.leave-overview .leave-balance-choice { cursor:default; }
+.leave-overview .dictionary-table-wrap, .leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
+.leave-editor-modal { width:min(54rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
+.leave-editor-modal .app-modal-content { container:leave-modal / inline-size; min-width:0; overflow-y:auto; overflow-x:hidden; }
+.leave-editor-modal .leave-registration { gap:var(--space-2); }
+.leave-editor-modal .leave-registration h3 { margin:0; font-size:1rem; }
+.leave-editor-modal .leave-registration-grid { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
+.leave-editor-modal .leave-registration-grid .recipient-field { min-width:0; }
+.leave-editor-modal .dictionary-table-wrap { min-width:0; max-width:100%; overflow-x:auto; }
+.leave-editor-modal .leave-editor-footer { padding-top:var(--space-2); border-top:1px solid var(--border-surface); }
+.leave-editor-modal .leave-editor-actions { flex-wrap:wrap; gap:var(--space-2); }
+.leave-editor-modal .leave-editor-actions > div { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-inline-start:auto; }
+.leave-editor-modal .leave-editor-actions button { height:auto; min-height:var(--control-height); white-space:normal; }
+.leave-validation { color:var(--color-text-secondary); font-size:.8125rem; line-height:1.4; }
+@container (max-width:42rem) { .leave-balance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@container (max-width:28rem) { .leave-balance-grid { grid-template-columns:minmax(0,1fr); } .leave-journal-filters .leave-select { flex-basis:100%; max-width:none; } }
+@container leave-modal (max-width:38rem) { .leave-editor-modal .leave-registration-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@container leave-modal (max-width:26rem) { .leave-editor-modal .leave-registration-grid { grid-template-columns:minmax(0,1fr); } .leave-editor-modal .leave-editor-actions > span { flex-basis:100%; } .leave-editor-modal .leave-editor-actions > div { width:100%; } .leave-editor-modal .leave-editor-actions button { flex:1 1 7rem; } .leave-editor-modal .leave-dates { grid-template-columns:minmax(0,1fr) auto; } }
+@media (max-height:38rem) { .leave-editor-modal { max-height:calc(100dvh - 1rem); } .leave-editor-modal .app-modal-header { padding-block:var(--space-2); } }

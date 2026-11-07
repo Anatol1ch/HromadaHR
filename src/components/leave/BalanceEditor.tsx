@@ -15,8 +15,8 @@ import { buildChanges, cutoff, type Draft, type Period } from './draft'
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, periods, type, typeLabel, navigationGuard, onClose, onSaved }: {
-  employeeId: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved }: {
+  employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
 }) {
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
@@ -68,7 +68,7 @@ export default function BalanceEditor({ employeeId, periods, type, typeLabel, na
     }
   }
 
-  return <Modal title={"Залишки — " + typeLabel} description="Початкові залишки станом на 01.01.2027; за новими періодами — дні підтвердженого права." size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
+  return <Modal title={"Залишки — " + typeLabel} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
       <p className="leave-muted">Перенесіть залишки зі зошита за кожним періодом. Порожньо — не внесено; 0 — залишку немає. <HelpTip label="Як заповнювати залишки" text="Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право — воно не нараховується автоматично." /></p>
       <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
