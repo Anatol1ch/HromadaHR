@@ -15,7 +15,7 @@ import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { leaveLabels } from './presentation'
 
 export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, onBalances }: {
-  id: string; kind: 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
+  id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onChanged: () => void; onBalances?: (employeeId: string) => void
 }) {
   const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
@@ -52,6 +52,13 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
       <DataState kind="loading" message="Завантаження актуальних відомостей…" />}
   </Modal>
+  if (kind === 'view') return <Modal title="Відомості про відпустку" description={fullName(data.employee)} onClose={onClose} size="wide" className="leave-editor-modal"><div className="leave-layout">
+    <h3>{leaveLabels[data.record.leaveType]}</h3><p>{formatDate(data.record.startDate)}–{formatDate(data.record.endDate)} · {data.record.usedDays} днів · {data.record.status === 'active' ? 'Зареєстровано' : 'Скасовано'}</p>
+    <p>Поточні відомості: {data.employee.position.name} · {data.employee.department.name}</p><p>Розпорядження: {data.record.orderNumber ?? 'Не зазначено'} · {formatDate(data.record.orderDate)}</p>
+    <p>Підстава: {data.record.grantBasis ?? 'Не зазначено'}</p><p>Пояснення тривалості: {data.record.durationExplanation ?? 'Не зазначено'}</p>
+    {data.record.status === 'cancelled' && <p>Причина скасування: {data.record.cancelReason ?? 'Не зазначено'} · {formatDateTime(data.record.cancelledAt)}</p>}
+    {data.record.allocations.length > 0 && <ul>{data.record.allocations.map(a=>{const p=data.balances.find(p=>p.id===a.periodId);return <li key={a.periodId}>{p?formatDate(p.periodStart)+'–'+formatDate(p.periodEnd):'Період недоступний'}: {a.days} днів</li>})}</ul>}
+    <button type="button" className="secondary-button" onClick={onClose}>Закрити</button></div></Modal>
   if (data.record.status === 'cancelled') return <Modal title="Реєстрацію вже скасовано" onClose={refreshAndClose}>
     <p>{data.record.cancelReason ?? 'Причину не зазначено у старому записі.'}</p>
     <p>{formatDateTime(data.record.cancelledAt)}</p>

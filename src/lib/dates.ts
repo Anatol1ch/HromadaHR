@@ -4,9 +4,9 @@ export function todayIsoDate(): string {
 }
 
 export function formatDate(value: string | null | undefined): string {
-  if (!value) return '—'
+  if (!value) return '–'
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
-  return match && isIsoCalendarDate(match[0]) ? `${match[3]}.${match[2]}.${match[1]}` : '—'
+  return match && isIsoCalendarDate(match[0]) ? `${match[3]}.${match[2]}.${match[1]}` : '–'
 }
 
 export function parseDateInput(value: string): string | null {
@@ -36,9 +36,9 @@ export function isIsoCalendarDate(value: string): boolean {
 
 /** Local timestamp presentation only; stored timestamps and filenames are untouched. */
 export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return '—'
+  if (!value) return '–'
   const date = new Date(value)
-  if (Number.isNaN(date.valueOf())) return '—'
+  if (Number.isNaN(date.valueOf())) return '–'
   const pad = (part: number) => String(part).padStart(2, '0')
   return pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + '.' + String(date.getFullYear()).padStart(4, '0') + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes())
 }

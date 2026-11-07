@@ -1,3 +1,4 @@
+import { serviceYearDrafts } from './registry'
 import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Check, Plus, X } from 'lucide-react'
@@ -21,6 +22,8 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
 }) {
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
   const [rows, setRows] = useState(initial.current)
+  const [fromYear,setFromYear] = useState('2027')
+  const [toYear,setToYear] = useState('2027')
   const [confirmZeros, setConfirmZeros] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -68,11 +71,15 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
     }
   }
 
-  return <Modal title={"Залишки — " + typeLabel} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
+  return <Modal title={"Залишки – " + typeLabel} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
-      <p className="leave-muted">Перенесіть залишки зі зошита за кожним періодом. Порожньо — не внесено; 0 — залишку немає. <HelpTip label="Як заповнювати залишки" text="Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право — воно не нараховується автоматично." /></p>
+      <p className="leave-muted">Перенесіть залишки зі зошита за кожним періодом. Порожньо – не внесено; 0 – залишку немає. <HelpTip label="Як заповнювати залишки" text="Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право – воно не нараховується автоматично." /></p>
+      {type === 'oms_service_additional' && <section className="leave-year-proposals"><p>Календарні інтервали – лише чернетка. Перевірте відповідність стажу та виправте дати перед підтвердженням днів.</p><div className="leave-registration-grid">
+        <label className="recipient-field">З року<ValidatedInput inputMode="numeric" value={fromYear} disabled={busy} onChange={e=>setFromYear(e.target.value)}/></label>
+        <label className="recipient-field">До року<ValidatedInput inputMode="numeric" value={toYear} disabled={busy} onChange={e=>setToYear(e.target.value)}/></label>
+        <button type="button" className="secondary-button" disabled={busy} onClick={()=>{try{const proposals=serviceYearDrafts(Number(fromYear),Number(toYear));const starts=new Set(rows.map(row=>'period' in row?row.period.periodStart:row.startIso));setRows(current=>[...current,...proposals.filter(p=>!starts.has(p.start)).map(p=>({id:nextRowId.current++,start:formatDate(p.start),end:formatDate(p.end),startIso:p.start,endIso:p.end,days:''}))]);setError('')}catch(e){setError(e instanceof Error?e.message:'Перевірте роки.')}}}>Запропонувати періоди</button></div></section>}
       <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
-        columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-days-column' }]}
+        columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-days-column' }, {label:'Дії',width:'3.5rem'}]}
         empty={rows.length ? undefined : 'Немає періодів для введення.'}>
         {rows.map((row, index) => {
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
@@ -81,14 +88,13 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
             <td>{'period' in row ? <span className="leave-period">{periodLabel(row.period)}</span> : <div className="leave-dates">
               <label className="recipient-field">Початок<DateField disabled={busy} value={row.startIso} onChange={startIso => update(index, current => 'start' in current ? { ...current, startIso } : current)} onDraftChange={start => update(index, current => 'start' in current ? { ...current, start } : current)} /></label>
               <label className="recipient-field">Завершення<DateField disabled={busy} value={row.endIso} onChange={endIso => update(index, current => 'end' in current ? { ...current, endIso } : current)} onDraftChange={end => update(index, current => 'end' in current ? { ...current, end } : current)} /></label>
-              <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy}
-                onClick={() => setRows(current => current.filter((_, i) => i !== index))}><X size={16} aria-hidden="true" /></button>
             </div>}
             {basis === 'confirmed_entitlement' && <small className="leave-period-note">Право за новим періодом</small>}
             </td>
             <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
               aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)}
               onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days })) }} /></div></td>
+            <td>{'start' in row && <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy} onClick={() => setRows(current => current.filter((_,i)=>i!==index))}><X size={16} aria-hidden="true" /></button>}</td>
           </tr>
         })}
       </DictionaryTable>

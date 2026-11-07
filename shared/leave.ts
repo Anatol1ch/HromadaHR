@@ -40,7 +40,11 @@ export interface ProposedLeavePeriod {
 
 export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED'
 
+export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
+export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }
 export interface LeaveApi {
+  listRights: (employeeId: string) => Promise<IpcResult<EmployeeLeaveRight[]>>
+  saveRights: (employeeId: string, input: LeaveRightInput[]) => Promise<IpcResult<EmployeeLeaveRight[]>>
   getRecord: (id: string) => Promise<IpcResult<LeaveRecord>>
   updateLeave: (input: LeaveUpdate) => Promise<IpcResult<LeaveRecord>>
   cancelLeave: (id: string, expectedRevision: number, reason: string) => Promise<IpcResult<LeaveRecord>>

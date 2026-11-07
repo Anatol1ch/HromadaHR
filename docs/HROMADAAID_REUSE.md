@@ -124,3 +124,7 @@ Read-only джерело SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, src/Recip
 ## 4.6.3 — Горизонтальні секції
 
 Джерело src/SettingsPage.tsx HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: read-only звірка горизонтальних секцій. Повторно використано чинну HR-адаптацію settings-section-nav/current з локальними вкладками журналу/залишків, без акаунтів чи серверної логіки. Форми використовують уже перенесені Modal/поля/ConfirmDialog і HelpTip HR; адаптивні зміни локальні в leave.css. Стан ручного приймання — HANDOFF 4.6.3.
+
+## 4.6.4 — Журнал за кадровим реєстром
+
+Прочитано src/RecipientRegistry.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb; джерело read-only. Використано надійніші чинні HR-компоненти EmployeeRegistry/EmployeeGroupTable, а не серверні запити AID. Адаптації toolbar/filter/sort/table, секцій картки й модалок зафіксовано в UI-TRANSFER. Ручні права — мінімальне розширення Main/SQLite HR, жодного перенесення фінансової моделі AID.

@@ -8,6 +8,6 @@ export function balanceSummary(type: PeriodLeaveType, balances: PeriodBalance[],
 
 export function allocationMessage(days: number, total: number, valid: boolean, manual: boolean) {
   if (!valid || !Number.isFinite(total)) return 'Перевірте кількість днів у розподілі.'
-  if (total === days) return days + (manual ? ' днів — збережений або ручний розподіл' : ' днів розподілено автоматично')
+  if (total === days) return days + (manual ? ' днів – збережений або ручний розподіл' : ' днів розподілено автоматично')
   return 'Розподілено ' + total + ' із ' + days + ' днів. ' + (total < days ? 'Потрібно розподілити ще ' + (days-total) : 'Приберіть зайві ' + (total-days))
 }

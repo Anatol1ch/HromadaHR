@@ -58,14 +58,14 @@ test('working-year periods use clamped calendar-year arithmetic and retain the 2
   assert.deepEqual(proposedPeriods('oms_service_additional', '2020-01-01', '2028-01-01'), [])
 })
 
-test('v5 to v9 migration keeps live personnel and directories and protects the source image', async t => {
+test('v5 to v10 migration keeps live personnel and directories and protects the source image', async t => {
   const f = fixture(t)
   const old = await f.open(migrations.slice(0, 5))
   const created = await employee(old)
   old.close()
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 9)
+  assert.equal(current.schemaVersion, 10)
   assert.equal(db.prepare('SELECT id FROM employees').get().id, created.employee.id)
   assert.equal(db.prepare('SELECT id FROM departments').get().id, created.department.id)
   assert.equal(db.prepare('SELECT id FROM positions').get().id, created.position.id)
@@ -106,11 +106,11 @@ test('restoring a supported v5 copy migrates the active database and leaves the 
   const backups = new BackupService(storage)
   await storage.initializeSafely(() => join(f.root, 'active', 'hromadahr.db'))
   f.handles.push({ close: () => { backups.stop(); backups.invalidateSelections(); storage.close() } })
-  assert.equal(storage.getStatus().schemaVersion, 9)
+  assert.equal(storage.getStatus().schemaVersion, 10)
   const selected = await backups.chooseRestore(async () => sourceFile)
   assert.equal(selected.schemaVersion, 5)
   assert.deepEqual(await backups.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 9)
+  assert.equal(storage.getStatus().schemaVersion, 10)
   assert.equal(new PersonnelService(storage, () => backups.isBusy()).getEmployee(created.employee.id).id, created.employee.id)
   assert.deepEqual(readFileSync(sourceFile), sourceBytes)
 })

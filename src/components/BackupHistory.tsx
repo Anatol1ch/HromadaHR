@@ -41,7 +41,7 @@ export default function BackupHistory() {
       columns={[{ label: 'Дата й час', width: '24%' }, { label: 'Операція', width: '34%' }, { label: 'Місце', width: '17%' }, { label: 'Результат', width: '25%' }]}>
       {visible.map((event, index) => <tr key={`${event.time}-${event.operation}-${event.slot}-${index}`}>
         <td><time dateTime={event.time}>{formatDateTime(event.time)}</time></td><td>{event.duplicate ? 'Доповнення дубліката' : operations[event.operation]}</td>
-        <td>{event.locations ? `${event.locations.filter(location => location.result === 'success').length} із 2` : event.slot === 1 ? 'Основне місце' : event.slot === 2 ? 'Додаткове місце' : '—'}</td>
+        <td>{event.locations ? `${event.locations.filter(location => location.result === 'success').length} із 2` : event.slot === 1 ? 'Основне місце' : event.slot === 2 ? 'Додаткове місце' : '–'}</td>
         <td><span title={event.code ?? undefined} className={`backup-event-result ${event.result}`}>{event.result === 'success' ? 'Успішно' : event.result === 'partial' ? 'Частково' : event.result === 'cancelled' ? 'Скасовано' : 'Помилка'}</span></td>
       </tr>)}
     </DictionaryTable>}

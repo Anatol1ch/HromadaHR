@@ -1,3 +1,4 @@
+import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
@@ -7,6 +8,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  leaveListRights: 'leave:listRights', leaveSaveRights: 'leave:saveRights',
   leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
   leaveProposeEditAllocation: 'leave:proposeEditAllocation',
   leaveRegister: 'leave:registerLeave', leaveListRecords: 'leave:listRecords',
@@ -50,6 +52,8 @@ export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.leaveListRights]: { args: [string]; result: EmployeeLeaveRight[] }
+  [ipcChannels.leaveSaveRights]: { args: [string, LeaveRightInput[]]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveGetRecord]: { args: [string]; result: LeaveRecord }
   [ipcChannels.leaveUpdate]: { args: [LeaveUpdate]; result: LeaveRecord }
   [ipcChannels.leaveCancel]: { args: [string, number, string]; result: LeaveRecord }

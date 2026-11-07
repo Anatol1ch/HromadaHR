@@ -21,6 +21,8 @@ const api: HromadaHRApi = {
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
   },
   leave: {
+    listRights: id => call(ipcChannels.leaveListRights,id),
+    saveRights: (id,input) => call(ipcChannels.leaveSaveRights,id,input),
     getRecord: id => call(ipcChannels.leaveGetRecord, id),
     updateLeave: input => call(ipcChannels.leaveUpdate, input),
     cancelLeave: (id, revision, reason) => call(ipcChannels.leaveCancel, id, revision, reason),

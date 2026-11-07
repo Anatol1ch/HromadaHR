@@ -33,7 +33,7 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 9)
+    assert.equal(first.schemaVersion, 10)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
@@ -69,6 +69,8 @@ app.whenReady().then(async () => {
     leave.registerLeave({ ...eventInput, requestId: require('node:crypto').randomUUID(), leaveType: 'chernobyl_special_leave',
       startDate: '2027-07-01', endDate: '2027-07-16', usedDays: 16, grantBasis: 'Категорію перевірено' })
     assert.equal(leave.getBalances(employeeId)[0].availableDays, 5)
+    assert.deepEqual(leave.listRights(employeeId), [])
+    leave.saveRights(employeeId,[{leaveType:'annual_main',status:'has_right'},{leaveType:'study_leave',status:'no_right'}])
     const copies = join(root, 'backups')
     mkdirSync(copies)
     source = await snapshot(first.database, copies, 'electron-smoke')
@@ -98,6 +100,8 @@ app.whenReady().then(async () => {
     const personnel = new PersonnelService(storage, () => service.isBusy())
     const leave = new LeaveService(storage, () => service.isBusy())
     assert.equal(personnel.getEmployee(employeeId).hireDate, '2026-01-01')
+    assert.equal(leave.listRights(employeeId).length, 2)
+    assert.equal(leave.listRights(employeeId).find(row=>row.leaveType==='study_leave').status, 'no_right')
     assert.equal(leave.listPeriods(employeeId)[0].confirmedDays, 5)
     assert.equal(leave.getBalances(employeeId)[0].availableDays, 5)
     assert.equal(leave.listRecords(employeeId).length, 4)

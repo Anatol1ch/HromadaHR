@@ -10,8 +10,8 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
-export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision }: {
-  id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
+export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision, onOpenLeave }: {
+  onOpenLeave: (id: string) => void; id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
   navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
@@ -97,7 +97,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
               {fields.map(([field, value]) => <div key={field}><dt>{field}</dt><dd>{value}</dd></div>)}
             </dl>
           </section>)}
-        </div> : index === 1 ? (tab === 1 && <LeaveOverview employeeId={id} revision={revision} />)
+        </div> : index === 1 ? (tab === 1 && <LeaveOverview onOpen={() => onOpenLeave(id)} employeeId={id} revision={revision} />)
           : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
       </div>)}
     </article>

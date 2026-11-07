@@ -45,3 +45,7 @@ export const allocationProposal = z.strictObject({
 export const revision = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 export const cancelReason = z.string().trim().min(1).max(1000)
 export const leaveUpdate = registration.omit({ requestId: true, employeeId: true }).extend({ id, expectedRevision: revision })
+
+export const rightInput = z.strictObject({ leaveType, status: z.enum(['has_right','no_right']).nullable() })
+export const rightsInput = z.array(rightInput).min(1).max(6)
+export const employeeRight = z.strictObject({ employeeId: id, leaveType, status: z.enum(['has_right','no_right']), checkedAt: z.iso.datetime() })

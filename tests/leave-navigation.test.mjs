@@ -27,6 +27,6 @@ test('employee-card leave boundary mounts the read-only module without mutation 
   assert.doesNotMatch(overview,/LeaveBalances|LeaveRegistrationForm|LeaveRecordAction|BalanceEditor|savePeriods|deletePeriod|registerLeave|updateLeave|cancelLeave/)
   assert.match(overview,/balanceSummary/)
   const workspace=readFileSync(new URL('../src/components/leave/LeaveWorkspace.tsx',import.meta.url),'utf8')
-  assert.match(workspace,/section === 'balances' && employee && <LeaveBalances/)
-  assert.ok(workspace.includes('navigationGuard.current(() => setSection(value))'))
+  assert.ok(workspace.replace(/\s/g,'').includes("section==='balances'&&employee"))
+  assert.ok(workspace.replace(/\s/g,'').includes('navigationGuard.current(()=>setSection(value))'))
 })

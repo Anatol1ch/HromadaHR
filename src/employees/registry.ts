@@ -46,6 +46,6 @@ export function registryOptions(rows: EmployeeCard[], field: 'department' | 'pos
     .sort((a, b) => collator.compare(a.name, b.name) || a.id.localeCompare(b.id))
   const options = [{ value: '', label: field === 'department' ? 'Усі підрозділи' : 'Усі посади' },
     ...entries.map(entry => ({ value: entry.id, label: entry.name }))]
-  if (selected && !entries.some(entry => entry.id === selected)) options.push({ value: selected, label: 'Обрано — немає працівників' })
+  if (selected && !entries.some(entry => entry.id === selected)) options.push({ value: selected, label: 'Обрано – немає працівників' })
   return options
 }

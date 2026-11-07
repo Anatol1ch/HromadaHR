@@ -47,7 +47,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
       confirmRestore: () => ({}), retryStorage: () => ({}) }, () => {}, personnel, leave)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   const api = preload(async (channel, ...args) => handlers.get(channel)(event, ...args))
-  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getRecord', 'listPeriods', 'listRecords', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'updateLeave'])
+  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getRecord', 'listPeriods', 'listRecords', 'listRights', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'saveRights', 'updateLeave'])
   const proposal = await api.leave.proposePeriods(employee.id, '2028-01-01', 'annual_main')
   assert.equal(proposal.ok, true)
   assert.equal(proposal.data[0].status, 'proposed')
@@ -146,6 +146,16 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,30)
   assert.equal((await api.leave.deletePeriod(period.id)).error.code,'PERIOD_IN_USE')
 
+  for (const [channel,args] of [[ipcChannels.leaveListRights,[employee.id]],[ipcChannels.leaveSaveRights,[employee.id,[{leaveType:'study_leave',status:'no_right'}]]]]) {
+    const handler=handlers.get(channel)
+    for(const bad of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}])assert.equal((await handler(bad,...args)).error.code,'FORBIDDEN')
+    contents.mainFrame.url='https://foreign.test/'
+    assert.equal((await handler(event,...args)).error.code,'FORBIDDEN');contents.mainFrame.url=url
+    assert.equal((await handler(event,...args,'extra')).error.code,'INVALID_ARGUMENTS')
+  }
+  assert.deepEqual((await api.leave.listRights(employee.id)).data,[])
+  assert.equal((await api.leave.saveRights(employee.id,[{leaveType:'study_leave',status:'no_right'}])).data[0].status,'no_right')
+  assert.equal((await api.leave.saveRights(employee.id,[{leaveType:'study_leave',status:'no_right',checkedAt:'forged'}])).error.code,'INVALID_ARGUMENTS')
   const studyInput={...registration,requestId:'22222222-2222-4222-8222-222222222222',leaveType:'study_leave',
     allocations:[],grantBasis:'Довідка-виклик'}
   for(const badEvent of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}])

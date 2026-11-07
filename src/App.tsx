@@ -118,10 +118,11 @@ function StorageNotice() {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [leaveEmployee, setLeaveEmployee] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => setActive(id))
+    if (id !== active) navigationGuard.current(() => { if (id === 'leave') setLeaveEmployee(''); setActive(id) })
   }
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
@@ -195,8 +196,8 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace navigationGuard={navigationGuard} /> : active === 'leave' ?
-          <LeaveWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          <EmployeesWorkspace onOpenLeave={id => navigationGuard.current(() => { setLeaveEmployee(id); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
+          <LeaveWorkspace initialEmployeeId={leaveEmployee} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>

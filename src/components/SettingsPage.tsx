@@ -27,7 +27,7 @@ export default function SettingsPage() {
         <img src={hromadaHRLogo} alt="" width="64" height="64" />
         <div className="settings-about-brand">HromadaHR</div>
         <p>Автоматизована система кадрового обліку</p>
-        <span className="settings-about-version">Версія {appVersion ?? '—'}</span>
+        <span className="settings-about-version">Версія {appVersion ?? '–'}</span>
       </section>
       <section className="dashboard-panel settings-about-details" aria-label="Інформація про застосунок">
         <div className="settings-card-heading"><span className="settings-icon"><Info size={19} aria-hidden="true"/></span><div><h2>Відомості про програму</h2><p>Основна інформація про HromadaHR.</p></div></div>

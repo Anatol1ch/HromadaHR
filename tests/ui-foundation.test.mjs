@@ -15,8 +15,8 @@ test('AID date boundary presents only DD.MM.YYYY and preserves ISO calendar date
     assert.equal(isIsoCalendarDate(iso), true)
   }
   assert.equal(parseDateInput(' 03.11.2026 '), '2026-11-03')
-  assert.equal(formatDate(null), '—')
-  assert.equal(formatDate(undefined), '—')
+  assert.equal(formatDate(null), '–')
+  assert.equal(formatDate(undefined), '–')
   assert.equal(formatDateInput(''), '')
   assert.equal(parseDateInput('2026-11-03'), null)
   assert.equal(formatDate('2026-11-03T23:59:00Z'), '03.11.2026')
@@ -30,7 +30,7 @@ test('invalid, non-leap and out-of-range years cannot cross the UI date boundary
   for (const iso of ['0000-01-01', '10000-01-01', '1900-02-29', '2026-02-30', '2026-1-01', 'bad']) {
     assert.equal(isIsoCalendarDate(iso), false)
     assert.equal(formatDateInput(iso), '')
-    assert.equal(formatDate(iso), '—')
+    assert.equal(formatDate(iso), '–')
   }
   assert.equal(daysInMonth(1900, 2), 28)
   assert.equal(daysInMonth(2000, 2), 29)
@@ -78,8 +78,8 @@ test('six-week month grids stay Monday-first and never render year 0/10000', () 
 })
 
 test('backup timestamp presentation is fixed Ukrainian local date/time without seconds', () => {
-  assert.equal(formatDateTime(null), '—')
-  assert.equal(formatDateTime('bad'), '—')
+  assert.equal(formatDateTime(null), '–')
+  assert.equal(formatDateTime('bad'), '–')
   const stamp = '2026-11-03T12:05:47Z'
   const local = new Date(stamp)
   const pad = value => String(value).padStart(2, '0')

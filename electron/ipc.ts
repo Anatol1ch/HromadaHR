@@ -103,6 +103,8 @@ export function registerIpcHandlers(
   register(ipcChannels.personnelCreatePosition, z.tuple([personnelSchemas.positionInput]), personnelSchemas.position,
     ([input]) => personnel.createPosition(input))
 
+  register(ipcChannels.leaveListRights, z.tuple([leaveSchemas.id]), leaveSchemas.employeeRight.array(), ([id]) => leave.listRights(id))
+  register(ipcChannels.leaveSaveRights, z.tuple([leaveSchemas.id,leaveSchemas.rightsInput]), leaveSchemas.employeeRight.array(), ([id,input]) => leave.saveRights(id,input))
   register(ipcChannels.leaveGetRecord, z.tuple([leaveSchemas.id]), leaveSchemas.record, ([id]) => leave.getRecord(id))
   register(ipcChannels.leaveUpdate, z.tuple([leaveSchemas.leaveUpdate]), leaveSchemas.record, ([input]) => leave.updateLeave(input))
   register(ipcChannels.leaveCancel, z.tuple([leaveSchemas.id, leaveSchemas.revision, leaveSchemas.cancelReason]),

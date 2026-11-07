@@ -1,6 +1,6 @@
 import { isPeriodLeave, specialLeaveLimit } from '../../shared/leave.js'
 import { calendarDays, fifoAllocation } from '../../shared/leave-calculations.js'
-import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance } from '../../shared/leave.js'
+import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance, EmployeeLeaveRight, LeaveRightInput } from '../../shared/leave.js'
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
@@ -45,6 +45,29 @@ export class LeaveService {
       'SELECT id, hire_date AS hireDate FROM employees WHERE id=?').get(employeeId)
     if (!row) throw new LeaveError('NOT_FOUND')
     return row
+  }
+
+  private rights(db: Database.Database, employeeId: string): EmployeeLeaveRight[] {
+    return db.prepare<[string], EmployeeLeaveRight>('SELECT employee_id AS employeeId,leave_type AS leaveType,status,checked_at AS checkedAt FROM employee_leave_rights WHERE employee_id=? ORDER BY leave_type').all(employeeId)
+  }
+  listRights = (employeeId: string) => {
+    this.parse(schemas.id, employeeId)
+    return this.run(db => { this.employee(db,employeeId); return this.rights(db,employeeId) })
+  }
+  saveRights = (employeeId: string, input: LeaveRightInput[]) => {
+    this.parse(schemas.id,employeeId)
+    const values = this.parse(schemas.rightsInput,input)
+    if (new Set(values.map(value => value.leaveType)).size !== values.length) throw new LeaveError('INVALID_ARGUMENTS')
+    return this.run(db => db.transaction(() => {
+      this.employee(db,employeeId)
+      const stamp = new Date().toISOString()
+      const save = db.prepare('INSERT INTO employee_leave_rights(employee_id,leave_type,status,checked_at) VALUES (?,?,?,?) ON CONFLICT(employee_id,leave_type) DO UPDATE SET status=excluded.status,checked_at=excluded.checked_at')
+      for (const value of values) {
+        if (value.status === null) db.prepare('DELETE FROM employee_leave_rights WHERE employee_id=? AND leave_type=?').run(employeeId,value.leaveType)
+        else save.run(employeeId,value.leaveType,value.status,stamp)
+      }
+      return this.rights(db,employeeId)
+    }).immediate())
   }
 
   listPeriods = (employeeId: string) => {
