@@ -143,8 +143,8 @@
 .leave-person-list small,.leave-rights-list small,.leave-rights-overview small { display:block; color:var(--color-text-secondary); font-size:.8125rem; }
 .leave-person-content { display:grid; align-content:start; gap:var(--space-4); min-width:0; }
 .leave-rights-panel { display:grid; gap:var(--space-2); padding:var(--space-3); min-width:0; }
-.leave-rights-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); }
-.leave-rights-list > div { display:grid; gap:6px; min-width:0; }
+.leave-rights-list { display:grid; gap:0; }
+
 .leave-right-warning { color:var(--feedback-warning-text); font-size:.8125rem; }
 .leave-rights-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-4); }
 .leave-rights-overview article { display:grid; align-content:start; gap:6px; padding-block:var(--space-2); border-bottom:1px solid var(--border-surface); }
@@ -170,11 +170,12 @@
 /* 4.6.5: individual overview blocks, compact selectors, and information sections. */
 .leave-overview .leave-rights-overview { gap:var(--space-3); }
 .leave-overview .leave-rights-overview > .employee-card-section { padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
-.leave-overview .leave-rights-overview strong { font-size:1.875rem; line-height:1.2; }
+.leave-overview .leave-rights-overview .leave-overview-number { font-size:1.375rem; line-height:1.3; }
+.leave-overview .leave-rights-overview .leave-overview-empty { font-size:.875rem; font-weight:500; color:var(--color-text-secondary); }
 .leave-registry .employee-actions-heading { text-align:center; }
 .leave-register-table .registry-row-actions { justify-content:center; }
 .leave-register-table td:last-child { white-space:nowrap; }
-.leave-employee-context { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); }
+
 .leave-kind-nav { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-kind-nav button { flex:1 1 10rem; min-height:var(--control-height); padding:10px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); cursor:pointer; }
 .leave-kind-nav button[aria-pressed="true"] { border-color:var(--tab-active-border); background:var(--tab-active-background); color:var(--tab-active-text); }
@@ -189,3 +190,50 @@
 .leave-info-section dd { margin:4px 0 0; overflow-wrap:anywhere; }
 .leave-cancellation-info { background:var(--surface-panel); }
 @container leave-modal (max-width:28rem) { .leave-info-section dl { grid-template-columns:minmax(0,1fr); } .leave-form-section,.leave-info-section,.leave-order-section,.leave-allocation-section { padding:var(--space-2); } }
+
+/* 4.6.6: shared employee search, compact rights, and distinct accounting modes. */
+.leave-type-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.125rem; width:2.125rem; height:2.125rem; border-radius:var(--radius-control); color:var(--accent-hover); background:var(--tab-active-background); }
+.leave-overview-heading { display:flex; align-items:center; gap:var(--space-2); }
+.leave-overview-heading h5 { overflow-wrap:anywhere; }
+.leave-overview .employee-card-section { align-content:start; }
+.leave-right-status { display:block; width:fit-content; font-size:.75rem; line-height:1.5; padding:2px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); }
+.leave-right-status.is-has_right { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
+.leave-right-status.is-no_right { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
+.leave-employee-chooser { padding:var(--space-3); min-width:0; }
+.leave-chosen-person { display:flex; align-items:center; gap:var(--space-3); min-width:0; }
+.leave-chosen-person > div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.leave-chosen-person small,.leave-employee-results small { display:block; color:var(--color-text-secondary); font-size:.8125rem; margin-top:3px; }
+.leave-chosen-person > button { flex-shrink:0; }
+.leave-employee-search { display:grid; gap:var(--space-2); min-width:0; }
+.leave-chosen-person + .leave-employee-search { margin-top:var(--space-3); }
+.leave-employee-search .ui-search { width:100%; max-width:none; min-width:0; }
+.leave-employee-results { display:grid; gap:2px; max-height:18rem; overflow:auto; overscroll-behavior:contain; }
+.leave-employee-results > button { padding:10px 12px; border:1px solid transparent; border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); text-align:left; overflow-wrap:anywhere; cursor:pointer; }
+.leave-employee-results > button:hover { background:var(--surface-panel); }
+.leave-employee-results > button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; background:var(--tab-active-background); }
+.leave-accounting-kinds { display:grid; gap:var(--space-3); margin-top:var(--space-3); }
+.leave-accounting-kinds section { min-width:0; }
+.leave-accounting-kinds h3 { margin:0 0 var(--space-2); font-size:.8125rem; font-weight:600; color:var(--color-text-secondary); }
+.leave-accounting-kinds .leave-kind-nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.leave-kind-nav button { overflow-wrap:anywhere; font-size:.875rem; }
+.leave-layout .leave-period-table { table-layout:fixed; min-width:40rem; }
+.leave-layout .leave-period-table .leave-days-column { text-align:center; }
+.leave-actions-column { text-align:center; }
+.leave-period-table .registry-row-actions { justify-content:center; }
+.leave-layout .leave-editor-table .leave-editor-days { text-align:center; }
+.leave-editor-table .leave-days-field { margin-inline:auto; }
+.leave-rights-list .leave-right-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:var(--space-3); padding-block:var(--space-3); border-top:1px solid var(--border-surface); }
+.leave-right-description { display:flex; align-items:flex-start; gap:var(--space-2); min-width:0; }
+.leave-right-description > div { display:grid; gap:5px; min-width:0; overflow-wrap:anywhere; }
+.leave-right-description strong { font-size:.875rem; }
+.leave-right-description small { font-size:.75rem; }
+.leave-right-switch { display:flex; flex-wrap:wrap; gap:4px; }
+.leave-right-switch label { position:relative; cursor:pointer; }
+.leave-right-switch input { position:absolute; opacity:0; width:1px; height:1px; }
+.leave-right-switch span { display:block; padding:8px 10px; border:1px solid var(--border-surface); border-radius:var(--radius-control); font-size:.8125rem; background:var(--surface-card); }
+.leave-right-switch input:checked + span { border-color:var(--tab-active-border); background:var(--tab-active-background); color:var(--tab-active-text); font-weight:600; }
+.leave-right-switch input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+.leave-right-switch input:disabled + span { opacity:.6; cursor:default; }
+.leave-right-row > .leave-right-warning { grid-column:1/-1; margin:0; }
+@container leave-workspace (max-width:52rem) { .leave-rights-list .leave-right-row { grid-template-columns:minmax(0,1fr); } }
+@container leave-workspace (max-width:38rem) { .leave-accounting-kinds .leave-kind-nav { grid-template-columns:minmax(0,1fr); } .leave-chosen-person { flex-wrap:wrap; } .leave-chosen-person > button { margin-inline-start:auto; } }

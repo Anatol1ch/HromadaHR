@@ -1,6 +1,7 @@
 import { navigateTabs } from '../../lib/tabNavigation'
 import { useEffect, useId, useState, type RefObject } from 'react'
-import type { LeaveRecord, PeriodLeaveType } from '../../../shared/leave'
+import { isPeriodLeave, eventLeaveTypes } from '../../../shared/leave'
+import type { LeaveRecord, LeaveType } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
@@ -8,13 +9,16 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import Select from '../Select'
 import LeaveBalances from './LeaveBalances'
+import EmployeeChooser from './EmployeeChooser'
+import EventUsage from './EventUsage'
+import { periodLeaveOptions, leaveLabels } from './presentation'
 import LeaveJournal from './LeaveJournal'
 import LeaveRights from './LeaveRights'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { notifySystemToast } from '../SystemToastHost'
 export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{navigationGuard:RefObject<NavigationGuard>;initialEmployeeId?:string}) {
   const navId=useId()
-  const [periodType,setPeriodType]=useState<PeriodLeaveType>('annual_main')
+  const [periodType,setPeriodType]=useState<LeaveType>('annual_main')
   const [section,setSection]=useState<'journal'|'balances'|'rights'>(initialEmployeeId?'balances':'journal')
   const [employees,setEmployees]=useState<EmployeeCard[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [records,setRecords]=useState<LeaveRecord[]>([]),[recordsLoaded,setRecordsLoaded]=useState(false),[recordsError,setRecordsError]=useState(''),[revision,setRevision]=useState(0)
@@ -31,9 +35,11 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
     <div id={navId+'journal-panel'} role="tabpanel" aria-labelledby={navId+'journal'} hidden={section!=='journal'}>
       {recordsError?<Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>:!recordsLoaded||!loaded?<DataState kind="loading" message="Завантаження журналу…"/>:<LeaveJournal records={records} employeeRows={employees} navigationGuard={navigationGuard} active={section==='journal'} onChanged={refresh} onRegister={register} onBalances={balances}/>}
     </div>
-    {section!=='journal'&&<div className="leave-employee-context"><div className="leave-select"><Select label="Працівник" searchable value={selected} options={employees.map(p=>({value:p.id,label:fullName(p)}))} advanceOnSelect={false} onChange={id=>navigationGuard.current(()=>setSelected(id))}/></div>{employee&&<header className="leave-person-context"><h2>{fullName(employee)}</h2><p>{employee.position.name} · {employee.department.name}</p></header>}</div>}
+    {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={(id,accepted)=>navigationGuard.current(()=>{setSelected(id);accepted()})}/>}
     <div id={navId+'balances-panel'} role="tabpanel" aria-labelledby={navId+'balances'} hidden={section!=='balances'}>
-      {section==='balances'&&employee?<LeaveBalances selectedType={periodType} onTypeChange={setPeriodType} key={employee.id} employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard} showJournal={false} showRegister={false} refreshRevision={revision}/>:<DataState kind="empty" message="Оберіть працівника для роботи із залишками."/>}
+      {section==='balances'&&employee?<>
+        <div className="leave-accounting-kinds">{[{label:'Залишки за періодами',types:periodLeaveOptions.map(option=>option.value)},{label:'Використання за рік',types:[...eventLeaveTypes]}].map(group=><section key={group.label}><h3>{group.label}</h3><div className="leave-kind-nav">{group.types.map(type=><button type="button" key={type} aria-pressed={periodType===type} onClick={()=>navigationGuard.current(()=>setPeriodType(type))}>{leaveLabels[type]}</button>)}</div></section>)}</div>
+        {isPeriodLeave(periodType)?<LeaveBalances showTypeSelector={false} selectedType={periodType} onTypeChange={setPeriodType} key={employee.id} employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard} showJournal={false} showRegister={false} refreshRevision={revision}/>:recordsError?<Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>:!recordsLoaded?<DataState kind="loading" message="Завантаження реєстрацій…"/>:<EventUsage key={employee.id+periodType} records={records} employeeId={employee.id} type={periodType}/>}</>:<DataState kind="empty" message="Оберіть працівника для роботи із залишками."/>}
     </div>
     <div id={navId+'rights-panel'} role="tabpanel" aria-labelledby={navId+'rights'} hidden={section!=='rights'}>{section==='rights'&&employee?<LeaveRights key={employee.id} employeeId={employee.id} records={records} navigationGuard={navigationGuard}/>:<DataState kind="empty" message="Оберіть працівника для перевірки прав."/>}</div>
     {creating&&<LeaveRegistrationForm key={createEmployee||'new'} employeeId={person?.id??''} employeeName={person?fullName(person):undefined} hireDate={person?.hireDate??'0001-01-01'} initialType="annual_main" navigationGuard={navigationGuard}

@@ -42,6 +42,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
     const end = parseDateInput(row.end)
     return !!start && !!end && start <= end
   }
+  const hasRowActions = type === 'oms_service_additional' && rows.some(row => 'start' in row)
   const zeroCount = rows.filter(eligible).length
   function update(index: number, edit: (row: Draft) => Draft) {
     setRows(current => current.map((row, i) => i === index ? edit(row) : row))
@@ -81,7 +82,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         <label className="recipient-field">До року<ValidatedInput inputMode="numeric" value={toYear} disabled={busy} onChange={e=>setToYear(e.target.value)}/></label>
         <button type="button" className="secondary-button" disabled={busy} onClick={()=>{try{const proposals=serviceYearDrafts(Number(fromYear),Number(toYear));const starts=new Set(rows.map(row=>'period' in row?row.period.periodStart:row.startIso));setRows(current=>[...current,...proposals.filter(p=>!starts.has(p.start)).map(p=>({id:nextRowId.current++,start:formatDate(p.start),end:formatDate(p.end),startIso:p.start,endIso:p.end,days:''}))]);setError('')}catch(e){setError(e instanceof Error?e.message:'Перевірте роки.')}}}>Запропонувати періоди</button></div></section>}
       <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
-        columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-days-column' }, {label:'Дії',width:'3.5rem'}]}
+        columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-editor-days' }, ...(hasRowActions ? [{label:'Дії',width:'3.5rem',className:'leave-actions-column'}] : [])]}
         empty={rows.length ? undefined : 'Немає періодів для введення.'}>
         {rows.map((row, index) => {
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
@@ -96,7 +97,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
             <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
               aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)}
               onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days })) }} /></div></td>
-            <td>{'start' in row && <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy} onClick={() => setRows(current => current.filter((_,i)=>i!==index))}><X size={16} aria-hidden="true" /></button>}</td>
+            {hasRowActions && <td className="leave-actions-column">{'start' in row && <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy} onClick={() => setRows(current => current.filter((_,i)=>i!==index))}><X size={16} aria-hidden="true" /></button>}</td>}
           </tr>
         })}
       </DictionaryTable>

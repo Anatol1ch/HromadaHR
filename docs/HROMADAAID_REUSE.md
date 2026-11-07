@@ -132,3 +132,7 @@ Read-only джерело SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, src/Recip
 ## 4.6.5
 
 Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: звірено три горизонтальні секції. Застосовано чинні HR-контроли, інформаційні секції особової картки та реєстр; специфічні акаунтні/серверні функції AID не переносилися. Адаптації й ручне приймання — UI-TRANSFER/HANDOFF 4.6.5.
+
+## 4.6.6 – Вибір контексту й компактні реєстрові рядки
+
+Перевірено read-only src/RecipientRegistry.tsx, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: DictionarySearch/DictionaryTable, явне відкриття/вибір запису, іконкові дії. Рішення – адаптувати чинні HR SearchField/DictionaryTable і секції картки, не переносити предметну модель отримувачів. Фактично: EmployeeChooser з guard та native keyboard buttons; LeaveRights з native radio й одним збереженням; LeaveTypeIcon для шести видів. Нових залежностей/універсальної бібліотеки немає. Геометрія Windows і масштабування залишаються ручним прийманням.

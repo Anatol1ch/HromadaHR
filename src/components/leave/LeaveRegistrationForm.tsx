@@ -218,7 +218,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         <div className="leave-toolbar"><span aria-live="polite">{allocationMessage(days,total,allocationValid,manualAllocation)}</span>
           <button type="button" className="secondary-button" disabled={busy || !!uncertain} onClick={() => { autoRequested.current = true; setRetry(value => value + 1) }}>Автоматично розподілити</button></div>
       </section>}
-      <section className="leave-order-section"><h3>Розпорядження (необов’язково)</h3><HelpTip label="Реквізити розпорядження" text="Номер і дату можна додати пізніше через редагування реєстрації." /><div className="leave-registration-grid">
+      <section className="leave-order-section"><div className="leave-section-heading"><h3>Розпорядження (необов’язково)</h3><HelpTip label="Реквізити розпорядження" text="Номер і дату можна додати пізніше через редагування реєстрації." /></div><div className="leave-registration-grid">
         <label className="recipient-field">Номер<ValidatedInput maxLength={100} disabled={busy || !!uncertain} value={orderNumber} onChange={event => setOrderNumber(event.target.value)} /></label>
         <label className="recipient-field">Дата<DateField disabled={busy || !!uncertain} value={dates.orderIso}
           onChange={orderIso => setDates(current => ({ ...current, orderIso }))} onDraftChange={order => setDates(current => ({ ...current, order }))} /></label>
