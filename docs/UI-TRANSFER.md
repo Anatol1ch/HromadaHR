@@ -423,3 +423,7 @@ AID source 33eca10733caaf73b1a99e75a24ff35e706a0afb, server-manager/src/BackupMa
 ## 4.2.1 — Компонування залишків
 
 За SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb звірено src/RecipientRegistry.tsx (DictionaryTable, registry-row-actions і Trash2) та src/AidRegistry.tsx (ValidatedInput, recipient-field, recipient-form-actions і вкладені діалоги). Адаптовано через чинні компоненти HR та локальні стилі leave.css. Дві колонки редактора звільняють місце для дат і чисел. Закріплені дії доступні при довгому переліку, а групування в режимі перегляду прибирає повторювані підписи. Геометрія інших екранів і механізми запису лишаються як у 4.2. Чекліст Windows у HANDOFF.
+
+## 4.3 — Форма реєстрації та журнал
+
+Джерело src/AidRegistry.tsx HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Використано патерни Modal wide, форми recipient-field/recipient-form-actions, DateField/Select/ValidatedInput і явне підтвердження через ConfirmDialog. HR додає компактну таблицю розподілів і залишків та журнал, зберігаючи композицію 4.2.1. Ручне GUI-приймання за чеклістом HANDOFF очікується.

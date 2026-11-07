@@ -17,3 +17,22 @@ export const periodsInput = z.array(periodInput).min(1).max(200)
 export const confirmedPeriod = periodInput.extend({ id, employeeId: id, status: z.literal('confirmed') })
 export const proposedPeriod = z.strictObject({ leaveType, periodStart: calendarDate, periodEnd: calendarDate,
   accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']), status: z.literal('proposed') })
+export const allocation = z.strictObject({ periodId: id, days: z.number().int().positive().max(3652059) })
+export const registration = z.strictObject({
+  requestId: id, employeeId: id, leaveType, startDate: calendarDate, endDate: calendarDate,
+  usedDays: z.number().int().positive().max(3652059),
+  orderNumber: z.string().trim().min(1).max(100).nullable(),
+  orderDate: calendarDate.nullable(),
+  durationExplanation: z.string().trim().min(1).max(1000).nullable(),
+  allocations: z.array(allocation).min(1).max(200),
+})
+export const record = registration.omit({ requestId: true }).extend({
+  id, status: z.enum(['active', 'cancelled']), createdAt: z.iso.datetime(),
+})
+export const balance = confirmedPeriod.extend({
+  usedDays: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  availableDays: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+})
+export const allocationProposal = z.strictObject({
+  balances: z.array(balance), allocations: z.array(allocation), shortfall: z.number().int().nonnegative(),
+})

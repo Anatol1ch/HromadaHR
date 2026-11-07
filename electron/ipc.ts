@@ -103,6 +103,14 @@ export function registerIpcHandlers(
   register(ipcChannels.personnelCreatePosition, z.tuple([personnelSchemas.positionInput]), personnelSchemas.position,
     ([input]) => personnel.createPosition(input))
 
+  register(ipcChannels.leaveRegister, z.tuple([leaveSchemas.registration]), leaveSchemas.record,
+    ([input]) => leave.registerLeave(input))
+  register(ipcChannels.leaveListRecords, z.tuple([leaveSchemas.id.nullable()]), leaveSchemas.record.array(),
+    ([employeeId]) => leave.listRecords(employeeId))
+  register(ipcChannels.leaveGetBalances, z.tuple([leaveSchemas.id]), leaveSchemas.balance.array(),
+    ([employeeId]) => leave.getBalances(employeeId))
+  register(ipcChannels.leaveProposeAllocation, z.tuple([leaveSchemas.id, leaveSchemas.leaveType, leaveSchemas.registration.shape.usedDays]),
+    leaveSchemas.allocationProposal, ([employeeId, type, days]) => leave.proposeAllocation(employeeId, type, days))
   register(ipcChannels.leaveListPeriods, z.tuple([personnelSchemas.id]), leaveSchemas.confirmedPeriod.array(),
     ([employeeId]) => leave.listPeriods(employeeId))
   register(ipcChannels.leaveProposePeriods, z.tuple([personnelSchemas.id, leaveSchemas.calendarDate, leaveSchemas.leaveType]),

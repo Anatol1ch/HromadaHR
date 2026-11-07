@@ -129,7 +129,7 @@ if (!process.versions.electron) {
       await assert.rejects(service.selectCopy(fresh.id), code('INVALID_SELECTION'))
       storage.getDatabase().prepare('UPDATE backup_config SET folder1=?').run(folders[0])
       const selected = await select(trusted, fresh.id)
-      assert.equal(selected.ok, true); assert.equal(selected.data.fileName, basename(source)); assert.equal(selected.data.schemaVersion, 6)
+      assert.equal(selected.ok, true); assert.equal(selected.data.fileName, basename(source)); assert.equal(selected.data.schemaVersion, 7)
       assert.equal(prompts, 0)
       const originalPrompt = dialog.showMessageBox
       dialog.showMessageBox = async (_window, options) => {

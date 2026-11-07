@@ -97,7 +97,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
               {fields.map(([field, value]) => <div key={field}><dt>{field}</dt><dd>{value}</dd></div>)}
             </dl>
           </section>)}
-        </div> : index === 1 ? (tab === 1 && <LeaveBalances employeeId={id} hireDate={employee.hireDate} navigationGuard={navigationGuard} />)
+        </div> : index === 1 ? (tab === 1 && <LeaveBalances employeeName={fullName(employee)} employeeId={id} hireDate={employee.hireDate} navigationGuard={navigationGuard} />)
           : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
       </div>)}
     </article>

@@ -65,3 +65,10 @@
   .leave-editor-actions .leave-save-actions { flex: 1 1 100%; }
   .leave-editor-modal .leave-editor-actions button { white-space: normal; }
 }
+
+.leave-registration-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-3); }
+.leave-registration .recipient-field { min-width: 0; display: grid; gap: var(--space-1); }
+.leave-registration summary { cursor: pointer; padding-block: var(--space-2); }
+.leave-layout .leave-journal { min-width: 36rem; }
+.leave-registration .leave-table { min-width: 25rem; }
+.leave-layout > h3 { margin-block: var(--space-3) 0; font-size: 1rem; }

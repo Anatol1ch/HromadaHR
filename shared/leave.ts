@@ -27,11 +27,42 @@ export interface ProposedLeavePeriod {
   status: 'proposed'
 }
 
-export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY'
+export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE'
 
 export interface LeaveApi {
+  registerLeave: (input: LeaveRegistration) => Promise<IpcResult<LeaveRecord>>
+  listRecords: (employeeId: string | null) => Promise<IpcResult<LeaveRecord[]>>
+  getBalances: (employeeId: string) => Promise<IpcResult<PeriodBalance[]>>
+  proposeAllocation: (employeeId: string, leaveType: LeaveType, days: number) => Promise<IpcResult<AllocationProposal>>
+
   listPeriods: (employeeId: string) => Promise<IpcResult<ConfirmedLeavePeriod[]>>
   proposePeriods: (employeeId: string, throughDate: string, leaveType: LeaveType) => Promise<IpcResult<ProposedLeavePeriod[]>>
   savePeriods: (employeeId: string, periods: LeavePeriodInput[]) => Promise<IpcResult<ConfirmedLeavePeriod[]>>
   deletePeriod: (periodId: string) => Promise<IpcResult<null>>
+}
+export interface PeriodBalance extends ConfirmedLeavePeriod {
+  usedDays: number
+  availableDays: number
+}
+export interface LeaveRegistration {
+  requestId: string
+  employeeId: string
+  leaveType: LeaveType
+  startDate: string
+  endDate: string
+  usedDays: number
+  orderNumber: string | null
+  orderDate: string | null
+  durationExplanation: string | null
+  allocations: import('./leave-calculations.js').DayAllocation[]
+}
+export interface LeaveRecord extends Omit<LeaveRegistration, 'requestId'> {
+  id: string
+  status: 'active' | 'cancelled'
+  createdAt: string
+}
+export interface AllocationProposal {
+  balances: PeriodBalance[]
+  allocations: import('./leave-calculations.js').DayAllocation[]
+  shortfall: number
 }

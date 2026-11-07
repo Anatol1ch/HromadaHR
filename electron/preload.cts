@@ -21,6 +21,10 @@ const api: HromadaHRApi = {
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
   },
   leave: {
+    registerLeave: input => call(ipcChannels.leaveRegister, input),
+    listRecords: employeeId => call(ipcChannels.leaveListRecords, employeeId),
+    getBalances: employeeId => call(ipcChannels.leaveGetBalances, employeeId),
+    proposeAllocation: (employeeId, type, days) => call(ipcChannels.leaveProposeAllocation, employeeId, type, days),
     listPeriods: employeeId => call(ipcChannels.leaveListPeriods, employeeId),
     proposePeriods: (employeeId, throughDate, leaveType) => call(ipcChannels.leaveProposePeriods, employeeId, throughDate, leaveType),
     savePeriods: (employeeId, periods) => call(ipcChannels.leaveSavePeriods, employeeId, periods),

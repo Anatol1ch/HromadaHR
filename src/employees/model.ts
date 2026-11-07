@@ -53,6 +53,11 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'INSUFFICIENT_DAYS': return 'Недостатньо підтверджених днів. Оновіть розподіл або внесіть підтверджені права.'
+    case 'LEAVE_OVERLAP': return 'На ці дати вже зареєстровано чинну відпустку працівника.'
+    case 'PERIOD_IN_USE': return 'Із цього періоду вже використано дні. Його не можна вилучити або зменшити нижче використаного.'
+    case 'TRANSITION_LEAVE': return 'Відпустка з початком до 01.01.2027 потребує окремої перевірки початкових залишків.'
+
     case 'HIRE_DATE_HAS_LEAVE_PERIODS': return 'Дату прийняття не можна змінити, поки є підтверджені періоди відпусток.'
     case 'BUSY': return 'Зараз триває інша операція зі сховищем. Зачекайте й повторіть спробу.'
     case 'CONFLICT': return 'Виник конфлікт даних. Перевірте відомості та повторіть спробу.'

@@ -1,3 +1,4 @@
+import { leaveRegistrationSql } from './leave-registration-migration.js'
 import { personnelSql } from './personnel-migration.js'
 import { createHash } from 'node:crypto'
 import type Database from 'better-sqlite3'
@@ -112,6 +113,11 @@ WHEN EXISTS (
 BEGIN
   SELECT RAISE(ABORT, 'leave period overlap');
 END;`,
+}, {
+  version: 7,
+  name: 'leave_registration',
+  requiresBackup: true,
+  sql: leaveRegistrationSql,
 }]
 
 function checksum(migration: Migration) {

@@ -47,7 +47,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
       confirmRestore: () => ({}), retryStorage: () => ({}) }, () => {}, personnel, leave)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   const api = preload(async (channel, ...args) => handlers.get(channel)(event, ...args))
-  assert.deepEqual(Object.keys(api.leave).sort(), ['deletePeriod', 'listPeriods', 'proposePeriods', 'savePeriods'])
+  assert.deepEqual(Object.keys(api.leave).sort(), ['deletePeriod', 'getBalances', 'listPeriods', 'listRecords', 'proposeAllocation', 'proposePeriods', 'registerLeave', 'savePeriods'])
   const proposal = await api.leave.proposePeriods(employee.id, '2028-01-01', 'annual_main')
   assert.equal(proposal.ok, true)
   assert.equal(proposal.data[0].status, 'proposed')
@@ -74,4 +74,42 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   contents.mainFrame.url = 'https://example.test/'
   assert.equal((await save(event, employee.id, [value])).error.code, 'FORBIDDEN')
   contents.mainFrame.url = url
+
+  const [period] = (await api.leave.savePeriods(employee.id, [{ ...value, confirmedDays: 30 }])).data
+  const registration = {
+    requestId: '11111111-1111-4111-8111-111111111111', employeeId: employee.id, leaveType: 'annual_main',
+    startDate: '2027-04-05', endDate: '2027-04-20', usedDays: 16,
+    orderNumber: null, orderDate: null, durationExplanation: null,
+    allocations: [{ periodId: period.id, days: 16 }],
+  }
+  const operations = [
+    [ipcChannels.leaveRegister, [registration]],
+    [ipcChannels.leaveListRecords, [null]],
+    [ipcChannels.leaveGetBalances, [employee.id]],
+    [ipcChannels.leaveProposeAllocation, [employee.id, 'annual_main', 16]],
+  ]
+  for (const [channel, args] of operations) {
+    const handler = handlers.get(channel)
+    for (const badEvent of [{ ...event, sender: {} }, { ...event, senderFrame: null }, { ...event, senderFrame: { url } }]) {
+      assert.equal((await handler(badEvent,...args)).error.code, 'FORBIDDEN')
+    }
+    contents.mainFrame.url = 'https://foreign.test/'
+    assert.equal((await handler(event,...args)).error.code, 'FORBIDDEN')
+    contents.mainFrame.url = url
+    assert.equal((await handler(event,...args, { sql: 'DELETE' })).error.code, 'INVALID_ARGUMENTS')
+  }
+  assert.equal((await api.leave.registerLeave({ ...registration, path: 'secret' })).error.code,'INVALID_ARGUMENTS')
+  const created = await api.leave.registerLeave(registration)
+  assert.equal(created.ok,true)
+  assert.equal((await api.leave.registerLeave(registration)).data.id,created.data.id)
+  assert.equal((await api.leave.getBalances(employee.id)).data[0].availableDays,14)
+  assert.equal((await api.leave.listRecords(null)).data.length,1)
+  assert.equal((await api.leave.proposeAllocation(employee.id,'annual_main',16)).data.shortfall,2)
+  assert.equal((await api.leave.deletePeriod(period.id)).error.code,'PERIOD_IN_USE')
+  const handler = handlers.get(ipcChannels.leaveListRecords)
+  const real = leave.listRecords
+  leave.listRecords = () => [{ path: 'private path' }]
+  assert.deepEqual(await handler(event,null),{ok:false,error:{code:'INTERNAL_ERROR'}})
+  leave.listRecords = real
+
 })
