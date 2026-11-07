@@ -51,7 +51,8 @@ if (!process.versions.electron) {
       const manual = names(folders[0])[0]
       assert.equal(names(folders[1])[0], manual)
       assert.deepEqual(readFileSync(join(folders[0], manual)), readFileSync(join(folders[1], manual)))
-      assert.equal(inspectDatabase(join(folders[0], manual)), 5); assert.equal(inspectDatabase(join(folders[1], manual)), 5)
+      const activeSchemaVersion = storage.getStatus().schemaVersion
+      assert.equal(inspectDatabase(join(folders[0], manual)), activeSchemaVersion); assert.equal(inspectDatabase(join(folders[1], manual)), activeSchemaVersion)
       let list = await service.listCopies(); assert.equal(list.copies.length, 1); assert.equal(list.copies[0].locations.length, 2)
       assert.equal(service.getHistory().events.filter(event => event.operation === 'manual').length, 1)
       assert.equal(service.getHistory().events[0].result, 'success')
