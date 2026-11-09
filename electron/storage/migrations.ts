@@ -132,6 +132,13 @@ END;`,
   requiresBackup: true,
   sql: specialLeavesSql,
 }, { version: 10, name: 'employee_leave_rights', requiresBackup: true, sql: leaveRightsSql,
+}, { version: 11, name: 'service_leave_start', requiresBackup: true, sql: `
+CREATE TABLE employee_service_leave_start (
+  employee_id TEXT PRIMARY KEY NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  acquired_on TEXT NOT NULL CHECK (acquired_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+    AND substr(acquired_on, 1, 4) != '0000' AND coalesce(date(acquired_on, '+0 days') = acquired_on, 0))
+) STRICT;
+`,
 }]
 
 function checksum(migration: Migration) {

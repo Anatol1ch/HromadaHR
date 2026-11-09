@@ -23,6 +23,8 @@ const api: HromadaHRApi = {
   leave: {
     listRights: id => call(ipcChannels.leaveListRights,id),
     saveRights: (id,input) => call(ipcChannels.leaveSaveRights,id,input),
+    getServiceLeaveStart: id => call(ipcChannels.leaveGetServiceLeaveStart, id),
+    saveServiceLeaveStart: (id, date) => call(ipcChannels.leaveSaveServiceLeaveStart, id, date),
     getRecord: id => call(ipcChannels.leaveGetRecord, id),
     updateLeave: input => call(ipcChannels.leaveUpdate, input),
     cancelLeave: (id, revision, reason) => call(ipcChannels.leaveCancel, id, revision, reason),

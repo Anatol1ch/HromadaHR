@@ -1,10 +1,21 @@
 import type { ConfirmedLeavePeriod, LeavePeriodInput, ProposedLeavePeriod } from '../../../shared/leave'
-import { parseDateInput } from '../../lib/dates.ts'
+import { formatDateInput, parseDateInput } from '../../lib/dates.ts'
+import { shiftDays, shiftMonths } from '../../lib/calendar.ts'
 
 export const cutoff = '2027-01-01'
 export type Period = ConfirmedLeavePeriod | ProposedLeavePeriod
-export type Draft = { period: Period; days: string } |
-  { id: number; start: string; end: string; startIso: string; endIso: string; days: string }
+type ManualDraft = { id: number; start: string; end: string; startIso: string; endIso: string; days: string; endEdited?: boolean }
+export type Draft = { period: Period; days: string } | ManualDraft
+
+export function suggestedPeriodEnd(start: string) {
+  return start && start.slice(0, 4) !== '9999' ? shiftDays(shiftMonths(start, 12), -1) : ''
+}
+
+export function setManualStart(row: ManualDraft, startIso: string): ManualDraft {
+  if (row.endEdited) return { ...row, startIso }
+  const endIso = suggestedPeriodEnd(startIso)
+  return { ...row, startIso, endIso, end: formatDateInput(endIso) }
+}
 
 export function historicalBalancePeriods(periods: Period[]) {
   return periods.filter(period => period.status === 'confirmed' || period.accountingBasis === 'initial_balance')

@@ -487,3 +487,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.7.5 – Геометрія Select
 
 Звірено `src/components/Select.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Використано наявний popover і клавіатурну поведінку. У HromadaHR позиціювання враховує фактичну висоту списку й межі viewport, а активна опція прокручується лише в контейнері списку.
+
+## 4.7.6 – Календарні поля
+
+Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Для дати набуття права адаптовано наявні DateField і спільні кнопки HromadaHR.

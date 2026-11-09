@@ -97,7 +97,7 @@ test('rights validation, busy guards and partial write rollback are controlled',
   assert.deepEqual(db.pragma('integrity_check'),[{integrity_check:'ok'}])
 })
 
-test('v9 to v10 preserves registrations, cancellations, balances and protective source; restore remains immutable',async t=>{
+test('v9 to v11 preserves registrations, cancellations, balances and protective source; restore remains immutable',async t=>{
   const f=await fixture(t,migrations.slice(0,9))
   const [p]=f.service.savePeriods(f.employee.id,[f.period(2024,30)])
   const record=f.register([{periodId:p.id,days:16}])
@@ -114,14 +114,14 @@ test('v9 to v10 preserves registrations, cancellations, balances and protective 
   const beforeRestoreService=new LeaveService(storage,()=>backup.isBusy())
   await backup.confirmRestore(selected.token,async()=>true)
   assert.deepEqual(readFileSync(f.file),source)
-  assert.equal(storage.getStatus().schemaVersion,10)
+  assert.equal(storage.getStatus().schemaVersion,11)
   const live=storage.getDatabase()
   for(const [table,rows] of Object.entries(before))assert.deepEqual(live.prepare(`SELECT * FROM ${table}`).all(),rows)
   assert.deepEqual(beforeRestoreService.listRights(f.employee.id),[])
   assert.deepEqual(live.pragma('foreign_key_check'),[])
   assert.deepEqual(live.pragma('integrity_check'),[{integrity_check:'ok'}])
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,10)
+  assert.equal(upgraded.schemaVersion,11)
   const protection=join(f.root,'data','protection')
   assert.equal(inspectDatabase(join(protection,readdirSync(protection).find(x=>x.includes('protect-migration-v10-')))),9)
 })

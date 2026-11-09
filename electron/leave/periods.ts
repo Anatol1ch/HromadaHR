@@ -37,7 +37,7 @@ export function accountingBasisForPeriod(periodStart: string): LeaveAccountingBa
 }
 
 export function proposedPeriods(leaveType: PeriodLeaveType, hireDate: string, throughDate: string): ProposedLeavePeriod[] {
-  if (!isCalendarDate(hireDate) || !isCalendarDate(throughDate) || throughDate < hireDate || leaveType === 'oms_service_additional') return []
+  if (!isCalendarDate(hireDate) || !isCalendarDate(throughDate) || (throughDate < hireDate && leaveType !== 'oms_service_additional')) return []
   const result: ProposedLeavePeriod[] = []
   if (leaveType === 'children_social_additional') {
     const firstYear = Number(hireDate.slice(0, 4))
@@ -51,6 +51,7 @@ export function proposedPeriods(leaveType: PeriodLeaveType, hireDate: string, th
   }
   let start = hireDate
   while (start <= throughDate) {
+    if (result.length === 200) return result
     const nextStart = addCalendarYear(start)
     if (!nextStart) break
     result.push({ leaveType, periodStart: start, periodEnd: previousDate(nextStart),

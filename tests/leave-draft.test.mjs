@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildChanges, hasNewEntitlement, historicalBalancePeriods } from '../src/components/leave/draft.ts'
+import { buildChanges, hasNewEntitlement, historicalBalancePeriods, setManualStart } from '../src/components/leave/draft.ts'
+
+test('manual service dates suggest a clamped anniversary and preserve an edited end', () => {
+  const row = { id: 1, start: '29.02.2024', startIso: '', end: '', endIso: '', days: '' }
+  const suggested = setManualStart(row, '2024-02-29')
+  assert.equal(suggested.endIso, '2025-02-27')
+  const custom = { ...suggested, endIso: '2024-12-31', end: '31.12.2024', endEdited: true }
+  assert.equal(setManualStart(custom, '2024-03-01').endIso, '2024-12-31')
+  assert.equal(setManualStart({ ...custom, endEdited: false }, '2024-03-01').endIso, '2025-02-28')
+})
 
 test('confirmation is limited to new entitlements, including explicit zero and mixed batches', () => {
   const entitlement = { leaveType: 'annual_main', periodStart: '2027-01-01', periodEnd: '2027-12-31', accountingBasis: 'confirmed_entitlement', status: 'proposed' }

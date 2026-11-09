@@ -21,11 +21,6 @@ export function journalRows(records: LeaveRecord[], employees: EmployeeCard[], f
   }
   return rows.sort((a,b) => { const x=value(a),y=value(b); const compared=typeof x === 'number' && typeof y === 'number' ? x-y : String(x).localeCompare(String(y),'uk'); return (direction==='asc'?1:-1)*compared || a.id.localeCompare(b.id) })
 }
-export function serviceYearDrafts(from: number, to: number) {
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to > 9999 || to < from || to-from > 99) throw new Error('Оберіть коректний діапазон до 100 календарних років.')
-  return Array.from({length:to-from+1},(_,i)=>({start: String(from+i).padStart(4,'0')+'-01-01',end:String(from+i).padStart(4,'0')+'-12-31'}))
-}
-
 export function recordCountLabel(found: number, total: number, filtered: boolean) {
   if (filtered) return 'Знайдено: '+found+' із '+total
   const form=new Intl.PluralRules('uk-UA').select(found)

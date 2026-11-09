@@ -1,6 +1,6 @@
 import useAccountingDate from './useAccountingDate'
 import { balanceSummary, formatLeaveDays } from './summary'
-import { leaveLabels as labels, periodLeaveOptions as options } from './presentation'
+import { leaveLabels as labels } from './presentation'
 import type { PeriodBalance } from '../../../shared/leave'
 import { Fragment, useEffect, useId, useRef, useState, type RefObject, type ReactNode } from 'react'
 import { CalendarDays, Pencil, Trash2 } from 'lucide-react'
@@ -16,6 +16,7 @@ import DictionaryTable from '../DictionaryTable'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import BalanceEditor, { periodLabel } from './BalanceEditor'
+import ServiceLeaveDate from './ServiceLeaveDate'
 import { historicalBalancePeriods, type Period } from './draft'
 
 const columns = [{ label: 'Обліковий період', width: '38%' },
@@ -45,7 +46,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const [deleting, setDeleting] = useState<ConfirmedLeavePeriod | null>(null)
   const [deleteError, setDeleteError] = useState('')
   const [manualProposals, setManualProposals] = useState<ProposedLeavePeriod[]>([])
-  const [state, setState] = useState<{ key: string; periods?: Period[]; balances?: PeriodBalance[]; proposals?: ProposedLeavePeriod[]; error?: string }>()
+  const [state, setState] = useState<{ key: string; periods?: Period[]; balances?: PeriodBalance[]; proposals?: ProposedLeavePeriod[]; serviceStart?: string | null; error?: string }>()
   const key = JSON.stringify([employeeId, hireDate, revision, refreshRevision, throughDate])
   const data = state?.key === key ? state : undefined
   const selectedPeriods = data?.periods?.filter(period => period.leaveType === type)
@@ -66,27 +67,28 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     const api = window.hromadaHR.leave
     async function load() {
       try {
-        const [saved, proposals, balances] = await Promise.all([
+        const [saved, proposals, balances, serviceStart] = await Promise.all([
           api.listPeriods(employeeId),
-          Promise.all(options.map(option => api.proposePeriods(employeeId, throughDate, option.value))),
+          api.proposePeriods(employeeId, throughDate, type),
           api.getBalances(employeeId),
+          type === 'oms_service_additional' ? api.getServiceLeaveStart(employeeId) : null,
         ])
         if (!active) return
         if (!saved.ok) { setState({ key, error: personnelMessage(saved.error.code) }); return }
-        const failed = proposals.find(result => !result.ok)
-        if (failed && !failed.ok) { setState({ key, error: personnelMessage(failed.error.code) }); return }
-        const proposed = proposals.flatMap(result => result.ok ? result.data : [])
+        if (!proposals.ok) { setState({ key, error: personnelMessage(proposals.error.code) }); return }
+        if (serviceStart && !serviceStart.ok) { setState({ key, error: personnelMessage(serviceStart.error.code) }); return }
+        const proposed = proposals.data
         if (!balances.ok) { setState({ key, error: personnelMessage(balances.error.code) }); return }
         const merged = new Map<string, Period>(proposed.map(period => [period.leaveType + period.periodStart, period]))
         for (const period of saved.data) merged.set(period.leaveType + period.periodStart, period)
-        setState({ key, proposals: proposed, balances: balances.data, periods: [...merged.values()].sort((a, b) => a.periodStart.localeCompare(b.periodStart)) })
+        setState({ key, serviceStart: serviceStart?.data, proposals: proposed, balances: balances.data, periods: [...merged.values()].sort((a, b) => a.periodStart.localeCompare(b.periodStart)) })
       } catch {
         if (active) setState({ key, error: 'Не вдалося завантажити залишки.' })
       }
     }
     void load()
     return () => { active = false }
-  }, [employeeId, key])
+  }, [employeeId, key, throughDate, type])
 
   useEffect(() => {
     if (!data || !focusAfterRefresh.current) return
@@ -103,7 +105,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     editButton.current?.focus()
     setEditing(true)
   }, [openEditor, rightsReady, editorCandidates])
-  const visiblePeriods = historicalOnly ? periods?.filter(period => period.status === 'confirmed') : periods
+  const visiblePeriods = historicalOnly || type === 'children_social_additional' ? periods?.filter(period => period.status === 'confirmed') : periods
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
   const refresh = () => setRevision(value => value + 1)
 
@@ -129,15 +131,17 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     } finally { pending.current = false }
   }
 
-  const selectedSummary=balanceSummary(type,data?.balances??[],(data?.proposals??[]).filter(p=>p.periodStart<=throughDate))
+  const selectedSummary=balanceSummary(type,data?.balances??[],type === 'children_social_additional' ? [] : (data?.proposals??[]).filter(p=>p.periodStart<=throughDate))
   return <section ref={owner} className="leave-layout" aria-label="Залишки відпусток">
     <InfoSection title={labels[type]} icon={<LeaveTypeIcon type={type}/>} action={<div className="leave-summary-actions">
       {rightBadge}
       <button ref={editButton} type="button" className="secondary-button"
         disabled={!editorCandidates || (!editorCandidates.length && type !== 'oms_service_additional')}
         onClick={() => { editorPeriods.current = editorCandidates ?? []; setEditing(true) }}>
-        <Pencil size={16} aria-hidden="true"/>{selectedSummary.count > 0 ? 'Редагувати залишки' : historicalOnly ? 'Внести історичні залишки' : 'Внести залишки'}
+        <Pencil size={16} aria-hidden="true"/>{selectedSummary.count > 0 ? 'Редагувати залишки' : type === 'children_social_additional' ? 'Додати рік' : historicalOnly ? 'Внести історичні залишки' : 'Внести залишки'}
       </button>
+      {type === 'children_social_additional' && selectedSummary.count > 0 && <button type="button" className="secondary-button" disabled={!editorCandidates?.some(p => p.status === 'proposed')}
+        onClick={() => { editorPeriods.current = editorCandidates ?? []; setEditing(true) }}>Додати рік</button>}
     </div>}>
       {data?.error ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{data.error}</Alert>
         : !data ? <DataState kind="loading" compact message="Завантаження залишків…"/>
@@ -152,6 +156,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
           {selectedSummary.incomplete && !historicalOnly && <Alert variant="warning">Залишки внесено лише за частиною періодів.</Alert>}
         </>}
       {rightNotice}
+      {data?.serviceStart !== undefined && <ServiceLeaveDate employeeId={employeeId} saved={data.serviceStart} navigationGuard={navigationGuard} onSaved={refresh}/>}
     </InfoSection>
     {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
@@ -163,7 +168,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         return <Fragment key={group.basis}>
           <tr className="leave-group"><th id={groupId + group.basis} colSpan={5}>{historicalOnly && group.basis === 'confirmed_entitlement' ? 'Раніше підтверджені періоди' : group.label}</th></tr>
           {entries.map(period => <tr key={period.periodStart}>
-            <td className="leave-period" aria-describedby={groupId + group.basis}>{periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
+            <td className="leave-period" aria-describedby={groupId + group.basis}>{type === 'children_social_additional' ? period.periodStart.slice(0, 4) + ' рік' : periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
             <td className="leave-days-column">{period.status === 'confirmed'
               ? <strong>{formatLeaveDays(period.confirmedDays)}</strong>
               : <span className="leave-muted">Не внесено</span>}</td>

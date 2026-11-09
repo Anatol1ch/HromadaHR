@@ -9,6 +9,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
   leaveListRights: 'leave:listRights', leaveSaveRights: 'leave:saveRights',
+  leaveGetServiceLeaveStart: 'leave:getServiceLeaveStart', leaveSaveServiceLeaveStart: 'leave:saveServiceLeaveStart',
   leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
   leaveProposeEditAllocation: 'leave:proposeEditAllocation',
   leaveRegister: 'leave:registerLeave', leaveListRecords: 'leave:listRecords',
@@ -54,6 +55,8 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: I
 export interface IpcOperations {
   [ipcChannels.leaveListRights]: { args: [string]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveSaveRights]: { args: [string, LeaveRightInput[]]; result: EmployeeLeaveRight[] }
+  [ipcChannels.leaveGetServiceLeaveStart]: { args: [string]; result: string | null }
+  [ipcChannels.leaveSaveServiceLeaveStart]: { args: [string, string | null]; result: string | null }
   [ipcChannels.leaveGetRecord]: { args: [string]; result: LeaveRecord }
   [ipcChannels.leaveUpdate]: { args: [LeaveUpdate]; result: LeaveRecord }
   [ipcChannels.leaveCancel]: { args: [string, number, string]; result: LeaveRecord }

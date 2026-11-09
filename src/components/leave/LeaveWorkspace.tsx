@@ -1,8 +1,7 @@
 import { navigateTabs } from '../../lib/tabNavigation'
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { ShieldCheck } from 'lucide-react'
-import { isPeriodLeave, type PeriodLeaveType } from '../../../shared/leave'
-import type { EmployeeLeaveRight, LeaveRecord, LeaveType } from '../../../shared/leave'
+import type { EmployeeLeaveRight, LeaveRecord, PeriodLeaveType } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
@@ -11,7 +10,6 @@ import DataState from '../DataState'
 import Select from '../Select'
 import LeaveBalances from './LeaveBalances'
 import EmployeeChooser from './EmployeeChooser'
-import EventUsage from './EventUsage'
 import LeaveTypeNavigation from './LeaveTypeNavigation'
 import LeaveJournal from './LeaveJournal'
 import LeaveRights from './LeaveRights'
@@ -20,7 +18,7 @@ import { notifySystemToast } from '../SystemToastHost'
 export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{navigationGuard:RefObject<NavigationGuard>;initialEmployeeId?:string}) {
   const navId=useId()
   const rightsTab = useRef<HTMLButtonElement>(null)
-  const [periodType,setPeriodType]=useState<LeaveType>('annual_main')
+  const [periodType,setPeriodType]=useState<PeriodLeaveType>('annual_main')
   const [section,setSection]=useState<'journal'|'balances'|'rights'>(initialEmployeeId?'balances':'journal')
   const [employees,setEmployees]=useState<EmployeeCard[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [records,setRecords]=useState<LeaveRecord[]>([]),[recordsLoaded,setRecordsLoaded]=useState(false),[recordsError,setRecordsError]=useState(''),[revision,setRevision]=useState(0)
@@ -56,7 +54,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
       rightsTab.current?.focus()
     })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити право</button>}>
     <strong>Право на цей вид відпустки відсутнє</strong>
-    {isPeriodLeave(periodType) && <span>Перед підтвердженням нового права перевірте його статус.</span>}
+    <span>Перед підтвердженням нового права перевірте його статус.</span>
   </Alert>
   const refreshRights = () => setRightsRevision(value => value + 1)
   useEffect(()=>{let active=true;void window.hromadaHR.personnel.listEmployees().then(result=>{if(!active)return;if(result.ok){setEmployees(result.data);setLoaded(true)}else setError(personnelMessage(result.error.code))}).catch(()=>{if(active)setError('Не вдалося завантажити працівників.')});return()=>{active=false}},[retry])
@@ -84,13 +82,10 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
         }}/>
         <div className="leave-balances-detail">
           {currentRights?.error && <Alert variant="error" action={<button type="button" onClick={refreshRights}>Повторити</button>}>{currentRights.error}</Alert>}
-          {isPeriodLeave(periodType) ? <LeaveBalances key={employee.id} type={periodType}
+          <LeaveBalances key={employee.id + periodType} type={periodType}
             employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
             openEditor={editorRequest?.id === employee.id && editorRequest.type === periodType ? () => setEditorRequest(null) : undefined}
             refreshRevision={revision} rightsReady={Boolean(currentRights?.data)} historicalOnly={noRight} rightBadge={rightBadge} rightNotice={rightNotice}/>
-          : recordsError ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>
-          : !recordsLoaded ? <DataState kind="loading" message="Завантаження реєстрацій…"/>
-          : <EventUsage key={employee.id + periodType} records={records} employeeId={employee.id} type={periodType} noRight={noRight} rightBadge={rightBadge} rightNotice={rightNotice}/>}
         </div>
       </div> : <DataState kind="empty" message="Оберіть працівника для роботи із залишками."/>}
     </div>

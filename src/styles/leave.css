@@ -154,7 +154,13 @@
 .leave-person-content .leave-balance-choice { padding:10px; }
 .leave-person-content .leave-balance-choice strong { font-size:1rem; }
 .leave-person-content .leave-section-heading > .secondary-button { margin-inline-start:auto; }
-.leave-year-proposals { display:grid; gap:var(--space-2); padding:var(--space-2); background:var(--surface-panel); border-radius:var(--radius-control); }
+.leave-service-date { display:flex; flex-wrap:wrap; align-items:end; gap:var(--space-2); min-width:0; }
+.leave-service-date > label { flex:1 1 16rem; min-width:0; }
+.leave-service-date > :is(p,.ui-alert) { flex-basis:100%; margin:0; }
+.leave-editor-table .leave-manual-period > td:nth-child(2) { vertical-align:bottom; }
+.leave-editor-table .leave-manual-period .leave-days-field { margin-block:0; }
+.leave-editor-table .leave-manual-period > td:last-child { vertical-align:middle; text-align:center; }
+.leave-recalculate-end { margin-bottom:var(--space-2); white-space:normal; }
 .leave-editor-table .leave-dates { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; }
 .leave-editor-table .leave-dates input,.leave-editor-table .leave-days-field input { min-height:var(--control-height); }
 .leave-editor-table .leave-days-field { align-self:end; }
@@ -162,7 +168,7 @@
 @container leave-workspace (max-width:64rem) { .leave-balance-workspace { grid-template-columns:minmax(11rem,15rem) minmax(0,1fr); } .leave-rights-list { grid-template-columns:minmax(0,1fr); } }
 @container leave-workspace (max-width:46rem) { .leave-balance-workspace { grid-template-columns:minmax(0,1fr); } .leave-person-list { max-height:14rem; } }
 @container (max-width:30rem) { .leave-rights-panel .employee-group-heading { flex-wrap:wrap; } }
-@container leave-modal (max-width:30rem) { .leave-editor-table .leave-dates { grid-template-columns:minmax(0,1fr); } }
+@container leave-modal (max-width:35rem) { .leave-editor-table .leave-dates { grid-template-columns:minmax(0,1fr); } }
 
 /* 4.6.5: individual overview blocks, compact selectors, and information sections. */
 .leave-register-table th.employee-actions-heading { text-align:center; }

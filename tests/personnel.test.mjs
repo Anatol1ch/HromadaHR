@@ -66,14 +66,14 @@ test('published migration names and checksums 1–9 are immutable', () => {
   ])
 })
 
-test('v4 → v10 preserves directories and service tables and protects the original test personnel', async t => {
+test('v4 → v11 preserves directories and service tables and protects the original test personnel', async t => {
   const f = fixture(t)
   const { ids, before } = await legacy(f)
   assert.equal(migrations[4].requiresBackup, true)
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 10)
-  assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employee_leave_rights', 'employees', 'leave_allocations', 'leave_period_balances', 'leave_records', 'positions', 'schema_migrations'])
+  assert.equal(current.schemaVersion, 11)
+  assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employee_leave_rights', 'employee_service_leave_start', 'employees', 'leave_allocations', 'leave_period_balances', 'leave_records', 'positions', 'schema_migrations'])
   assert.deepEqual(db.pragma('table_info(employees)').map(column => column.name),
     ['id', 'last_name', 'first_name', 'middle_name', 'birth_date', 'employee_type', 'hire_date', 'position_id', 'department_id'])
   assert.equal(db.pragma('table_list').find(row => row.name === 'employees').strict, 1)
@@ -119,11 +119,11 @@ test('v5 refuses to run without protection and rolls back destructive SQL on fai
   assertLegacy()
 })
 
-test('fresh v10 validates and updates the current employee atomically with an independent hire date', async t => {
+test('fresh v11 validates and updates the current employee atomically with an independent hire date', async t => {
   const f = fixture(t)
   const connection = await f.open()
   assert.equal(connection.created, true)
-  assert.equal(connection.schemaVersion, 10)
+  assert.equal(connection.schemaVersion, 11)
   const db = connection.database
   const service = new PersonnelService({ getDatabase: () => db }, () => false)
   assert.deepEqual(service.listEmployees(), [])
@@ -158,7 +158,7 @@ test('fresh v10 validates and updates the current employee atomically with an in
   integrity(db)
 })
 
-test('restoring a v4 test image applies v10 without altering the source image', async t => {
+test('restoring a v4 test image applies v11 without altering the source image', async t => {
   const f = fixture(t)
   const { ids } = await legacy(f)
   const before = checksum(readFileSync(f.file))
@@ -170,7 +170,7 @@ test('restoring a v4 test image applies v10 without altering the source image', 
   const selected = await backup.chooseRestore(async () => f.file)
   assert.equal(selected.schemaVersion, 4)
   assert.deepEqual(await backup.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 10)
+  assert.equal(storage.getStatus().schemaVersion, 11)
   const db = storage.getDatabase()
   assert.equal(db.prepare('SELECT count(*) AS n FROM employees').get().n, 0)
   assert.equal(tables(db).includes('employee_positions'), false)

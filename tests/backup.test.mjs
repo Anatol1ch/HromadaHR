@@ -88,11 +88,11 @@ temporaryTest('online backup includes committed WAL data and publishes only comp
   for (const folder of folders) {
     assert.equal(readdirSync(folder).some(name => name.includes('partial')), false)
     const copy = join(folder, copies(folder, 'manual')[0])
-    assert.equal(inspectDatabase(copy), 10)
+    assert.equal(inspectDatabase(copy), storage.getStatus().schemaVersion)
     const database = new Database(copy, { readonly: true })
     try {
       assert.equal(database.prepare('SELECT text FROM test_payload').get().text, 'WAL data')
-      assert.equal(database.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, 10)
+      assert.equal(database.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n, storage.getStatus().schemaVersion)
     } finally { database.close() }
   }
   assert.ok(result.targets.every(target => target.autoDay === null))
@@ -290,7 +290,7 @@ temporaryTest('compatible older backup is migrated on restore without changing i
   const selection = await service.chooseRestore(async () => legacyFile)
   assert.equal(selection.schemaVersion, 1)
   await service.confirmRestore(selection.token, async () => true)
-  assert.equal(storage.getStatus().schemaVersion, 10)
+  assert.equal(storage.getStatus().schemaVersion, 11)
   assert.equal(storage.getDatabase().prepare('SELECT value FROM test_older').get().value, 'legacy')
   assert.deepEqual(readFileSync(legacyFile), before)
 })
@@ -318,19 +318,21 @@ temporaryTest('critical startup migration creates a verified pre-migration snaps
   const legacy = await openStorageSafely(legacyFile, [migrations[0]])
   legacy.database.exec("CREATE TABLE test_legacy(v); INSERT INTO test_legacy VALUES ('preserved')")
   legacy.close()
-  const critical = [...migrations, { version: 11, name: 'test_critical', requiresBackup: true, sql: 'CREATE TABLE test_new(id INTEGER)' }]
+  const nextVersion = migrations.length + 1
+  const critical = [...migrations, { version: nextVersion, name: 'test_critical', requiresBackup: true, sql: 'CREATE TABLE test_new(id INTEGER)' }]
   const upgraded = await openStorageSafely(legacyFile, critical); upgraded.close()
   const protection = join(root, 'critical', 'protection')
-  assert.equal(readdirSync(protection).length, 9)
-  const copy = join(protection, readdirSync(protection).find(name => name.includes('protect-migration-v11-')))
-  assert.equal(inspectDatabase(copy), 10)
+  const snapshots = critical.slice(1).filter(migration => migration.requiresBackup).length
+  assert.equal(readdirSync(protection).length, snapshots)
+  const copy = join(protection, readdirSync(protection).find(name => name.includes(`protect-migration-v${nextVersion}-`)))
+  assert.equal(inspectDatabase(copy), nextVersion - 1)
   const reopened = await openStorageSafely(legacyFile, critical); reopened.close()
-  assert.equal(readdirSync(protection).length, 9)
-  const failed = [...critical, { version: 12, name: 'test_fail', requiresBackup: true, sql: 'CREATE TABLE test_fail(id); INVALID SQL' }]
+  assert.equal(readdirSync(protection).length, snapshots)
+  const failed = [...critical, { version: nextVersion + 1, name: 'test_fail', requiresBackup: true, sql: 'CREATE TABLE test_fail(id); INVALID SQL' }]
   await assert.rejects(openStorageSafely(legacyFile, failed), hasCode('MIGRATION_FAILED'))
-  assert.equal(readdirSync(protection).length, 10)
+  assert.equal(readdirSync(protection).length, snapshots + 1)
   const healthy = await openStorageSafely(legacyFile, critical)
-  try { assert.equal(healthy.schemaVersion, 11) } finally { healthy.close() }
+  try { assert.equal(healthy.schemaVersion, nextVersion) } finally { healthy.close() }
 })
 
 temporaryTest('critical migration never executes when protective-copy creation fails', async ({ root }) => {
@@ -338,11 +340,11 @@ temporaryTest('critical migration never executes when protective-copy creation f
   const prior = await openStorageSafely(file); prior.close()
   renameSync(join(root, 'critical-failure', 'protection'), join(root, 'critical-failure', 'migration-protection'))
   writeFileSync(join(root, 'critical-failure', 'protection'), 'blocked')
-  const critical = [...migrations, { version: 11, name: 'test_blocked', requiresBackup: true, sql: 'CREATE TABLE test_blocked(id)' }]
+  const critical = [...migrations, { version: migrations.length + 1, name: 'test_blocked', requiresBackup: true, sql: 'CREATE TABLE test_blocked(id)' }]
   await assert.rejects(openStorageSafely(file, critical))
   const after = await openStorageSafely(file)
   try {
-    assert.equal(after.schemaVersion, 10)
+    assert.equal(after.schemaVersion, 11)
     assert.equal(after.database.prepare("SELECT name FROM sqlite_schema WHERE name='test_blocked'").get(), undefined)
   } finally { after.close() }
 })

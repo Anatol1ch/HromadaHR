@@ -81,12 +81,42 @@ export class LeaveService {
     })
   }
 
+  private serviceLeaveStart(db: Database.Database, employeeId: string) {
+    return db.prepare<[string], { acquired_on: string }>('SELECT acquired_on FROM employee_service_leave_start WHERE employee_id=?')
+      .get(employeeId)?.acquired_on ?? null
+  }
+
+  getServiceLeaveStart = (employeeId: string) => {
+    this.parse(schemas.id, employeeId)
+    return this.run(db => { this.employee(db, employeeId); return this.serviceLeaveStart(db, employeeId) })
+  }
+
+  saveServiceLeaveStart = (employeeId: string, value: string | null) => {
+    this.parse(schemas.id, employeeId)
+    const date = this.parse(schemas.calendarDate.nullable(), value)
+    return this.run(db => db.transaction(() => {
+      this.employee(db, employeeId)
+      if (date === null) db.prepare('DELETE FROM employee_service_leave_start WHERE employee_id=?').run(employeeId)
+      else db.prepare(`INSERT INTO employee_service_leave_start VALUES (?,?)
+        ON CONFLICT(employee_id) DO UPDATE SET acquired_on=excluded.acquired_on`).run(employeeId, date)
+      return date
+    }).immediate())
+  }
+
   proposePeriods = (employeeId: string, throughDate: string, leaveType: PeriodLeaveType): ProposedLeavePeriod[] => {
     this.parse(schemas.id, employeeId)
     const date = this.parse(schemas.calendarDate, throughDate)
     const type = this.parse(schemas.periodLeaveType, leaveType)
     return this.run(db => {
       const employee = this.employee(db, employeeId)
+      if (type === 'oms_service_additional') {
+        const start = this.serviceLeaveStart(db, employeeId)
+        if (!start) return []
+        const existing = db.prepare<[string], { period_start: string; period_end: string }>(
+          "SELECT period_start, period_end FROM leave_period_balances WHERE employee_id=? AND leave_type='oms_service_additional'").all(employeeId)
+        return proposedPeriods(type, start, date).filter(period =>
+          !existing.some(row => row.period_start <= period.periodEnd && row.period_end >= period.periodStart))
+      }
       if (Number(date.slice(0, 4)) - Number(employee.hireDate.slice(0, 4)) > 199) throw new LeaveError('INVALID_ARGUMENTS')
       return proposedPeriods(type, employee.hireDate, date)
     })

@@ -43,6 +43,8 @@ export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 
 export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
 export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }
 export interface LeaveApi {
+  getServiceLeaveStart: (employeeId: string) => Promise<IpcResult<string | null>>
+  saveServiceLeaveStart: (employeeId: string, date: string | null) => Promise<IpcResult<string | null>>
   listRights: (employeeId: string) => Promise<IpcResult<EmployeeLeaveRight[]>>
   saveRights: (employeeId: string, input: LeaveRightInput[]) => Promise<IpcResult<EmployeeLeaveRight[]>>
   getRecord: (id: string) => Promise<IpcResult<LeaveRecord>>
