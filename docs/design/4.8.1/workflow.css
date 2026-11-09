@@ -1,0 +1,26 @@
+.workspace { max-width:1160px }
+#scenario { max-width:min(100%, 25rem) }
+.preview-select { flex-wrap:wrap }
+.workflow-actions { display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:center }
+#operation { padding:0; border:1px solid var(--border-surface); border-radius:var(--radius-modal); background:var(--surface-card); color:var(--color-text); width:min(740px, calc(100% - 24px)); max-height:calc(100dvh - 24px); box-shadow:var(--shadow-modal) }
+#operation[open] { display:grid; grid-template-rows:auto minmax(0,1fr) auto }
+body:has(#operation[open]) { overflow:hidden }
+#operation::backdrop { background:var(--surface-backdrop) }
+#operation .dialog-body { min-height:0 }
+#operation .dialog-title, #operation .dialog-footer { padding-inline:var(--space-3) }
+#operation .dialog-body { padding-inline:var(--space-3) }
+#operation .table-wrap input { max-width:7rem }
+.workflow-year { display:grid; gap:var(--space-1) }
+.workflow-year select { min-height:var(--control-height-compact) }
+.workflow-error:empty { display:none }
+.workflow-error { color:var(--feedback-error-text) }
+.workflow-inline { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:end }
+.workflow-inline .field { flex:1 1 12rem }
+.workflow-inline button { min-height:var(--control-height) }
+.workflow-date { max-width:16rem }
+.workflow-summary { display:grid; gap:var(--space-2) }
+@media (max-width:580px) {
+  .workspace { padding:var(--space-3) }
+  .preview-select { flex:1 1 100% }
+  #operation .field-grid,.workspace .field-grid.two { grid-template-columns:minmax(0,1fr) }
+}

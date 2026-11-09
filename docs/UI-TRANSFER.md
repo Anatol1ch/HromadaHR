@@ -491,3 +491,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.7.6 – Календарні поля
 
 Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Для дати набуття права адаптовано наявні DateField і спільні кнопки HromadaHR.
+
+## 4.8.1 – Контекстна чернетка відпустки
+
+Для [функціонального прототипу відпусток](design/4.8.1/README.md) використано затверджені поверхні, токени й іконки HromadaHR. Підтвердження відмови від чернетки звірено з `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Демо використовує браузерний діалог, а специфікація передбачає чинні Modal, ConfirmDialog і DateField при інтеграції.

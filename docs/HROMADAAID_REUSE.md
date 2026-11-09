@@ -136,3 +136,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.6.6 – Вибір контексту й компактні реєстрові рядки
 
 Перевірено read-only src/RecipientRegistry.tsx, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: DictionarySearch/DictionaryTable, явне відкриття/вибір запису, іконкові дії. Рішення – адаптувати чинні HR SearchField/DictionaryTable і секції картки, не переносити предметну модель отримувачів. Фактично: EmployeeChooser з guard та native keyboard buttons; LeaveRights з native radio й одним збереженням; LeaveTypeIcon для шести видів. Нових залежностей/універсальної бібліотеки немає. Геометрія Windows і масштабування залишаються ручним прийманням.
+
+## 4.8.1 – Контекстна чернетка відпустки
+
+Звірено read-only `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано принцип чернетки в пам’яті та підтвердження відмови для переходу між реєстрацією і внесенням днів. Статус – локальний прототип для погодження.
