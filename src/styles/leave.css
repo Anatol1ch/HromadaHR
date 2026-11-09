@@ -127,6 +127,11 @@
 /* 4.6.4: registry and employee workspace, using the existing registry surfaces. */
 .leave-workspace { max-width:none; width:100%; }
 .leave-registry { display:grid; gap:var(--space-3); min-width:0; }
+@container leave-workspace (max-width:52rem) {
+  .leave-registry .aid-toolbar { flex-wrap:wrap; justify-content:flex-start; gap:10px; }
+  .leave-registry .aid-toolbar .registry-search { flex-basis:100%; }
+  .leave-registry .aid-toolbar button { max-width:100%; height:auto; white-space:normal; padding-block:9px; }
+}
 .leave-registry .dictionary-table-wrap { max-width:100%; overflow-x:auto; }
 .leave-register-table { min-width:76rem; table-layout:auto; }
 .leave-register-table td { overflow-wrap:anywhere; max-width:22rem; }
