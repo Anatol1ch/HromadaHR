@@ -49,7 +49,7 @@ input,textarea { width:100% }
 .workbench { display:grid; grid-template-columns:minmax(220px,244px) minmax(0,1fr); gap:var(--space-4); align-items:start; min-width:0 }
 .type-nav { display:grid; gap:var(--space-3); padding:var(--space-2) }
 .type-group { display:grid; gap:var(--space-1); min-width:0 }
-.type-picker { display:none }
+.type-nav .type-picker { display:none }
 .group-title { margin:var(--space-1) var(--space-2) }
 .type-link { width:100%; font-size:13px }
 .type-link:hover { background:var(--tab-hover-background) }
@@ -61,8 +61,15 @@ input,textarea { width:100% }
 .section-head .title { display:flex; align-items:center; gap:var(--space-2); min-width:0 }
 .section-head .title > .icon { color:var(--accent) }
 .metrics { display:grid; grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr)); gap:var(--space-2) }
-.metrics.four { grid-template-columns:repeat(4,minmax(0,1fr)) }
 .metrics.two { grid-template-columns:repeat(2,minmax(0,1fr)) }
+.metrics.balance-metrics { grid-template-columns:minmax(0,1.08fr) minmax(0,1fr) }
+.balance-metrics .hero-value { display:grid; align-content:center; gap:var(--space-1); padding:var(--space-3) var(--space-4); border:1px solid var(--border-accent) }
+.balance-metrics .hero-value dt { color:var(--accent-hover); font-weight:650 }
+.balance-metrics .item.hero-value dd { font-size:32px }
+.balance-metrics.two-details .hero-value { grid-row:span 2 }
+.balance-metrics.three-details .hero-value { grid-row:span 3 }
+.balance-metrics .item:not(.hero-value) { display:flex; flex-wrap:wrap; align-items:baseline; align-content:center; justify-content:space-between; gap:var(--space-1) var(--space-2) }
+.balance-metrics .item:not(.hero-value) dd { margin:0 }
 .item { min-width:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-control); background:var(--surface-card); overflow-wrap:anywhere }
 .item dt,.field-label { color:var(--color-text-muted); font-size:12px }
 .item dd { margin-top:var(--space-1); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums }
@@ -132,7 +139,6 @@ body:is([data-screen="card"],[data-screen="register"],[data-screen="record"]) { 
   .type-nav { grid-template-columns:repeat(2,minmax(0,1fr)) }
   .type-link { min-height:36px; padding:var(--space-1) var(--space-2) }
   .right-row { grid-template-columns:minmax(0,1fr) }
-  .metrics.four { grid-template-columns:repeat(2,minmax(0,1fr)) }
 }
 @media (max-width:760px) {
   .type-nav { grid-template-columns:minmax(0,1fr) }
@@ -153,9 +159,19 @@ body:is([data-screen="card"],[data-screen="register"],[data-screen="record"]) { 
   .switch span { font-size:11px }
 }
 .wide-item { grid-column:1/-1 }
-.row-actions { display:flex; align-items:center }
+.journal-table :is(th,td):last-child { text-align:center }
+.row-actions { display:flex; align-items:center; justify-content:center }
 .journal-table .row-actions .icon-button { width:30px; height:32px }
-.record-dialog .metrics.four { grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) repeat(2,minmax(0,1fr)) }
+.metrics.record-fields { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.record-fields .hero-value dd { font-size:20px }
 @media (max-width:780px) {
-  .record-dialog .metrics.four { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .metrics.record-fields { grid-template-columns:repeat(2,minmax(0,1fr)) }
+}
+@media (max-width:560px) {
+  .metrics.balance-metrics { grid-template-columns:minmax(0,1fr) }
+  .balance-metrics.two-details .hero-value,.balance-metrics.three-details .hero-value { grid-row:auto }
+  .record-fields .hero-value { grid-column:auto }
+}
+@media (max-width:440px) {
+  .metrics.record-fields { grid-template-columns:minmax(0,1fr) }
 }

@@ -10,14 +10,18 @@
 
 Виявлене переповнення футера при 200% усунено розподілом доступної висоти між панеллю прикладів, шапкою, прокручуваним вмістом і футером. Вузький список видів замінено групованим вибором, щоб дані були ближче до початку екрана.
 
+У 4.7.1.1 повторено браузерний перегляд для тієї самої матриці. Окремо перевірено центрування журналу з однією, двома та трьома діями, три стани діалогу й перенесення довгих синтетичних ПІБ, підрозділу та посади. На вузькому знімку журналу прокручено саму таблицю до колонки «Дії». На широкому екрані вибір виду представлений вертикальним списком, на вузькому – одним групованим контролом.
+
 | Екран | Знімок |
 | --- | --- |
 | Особова картка | [100%](screenshots/01-card.png) · [125%](screenshots/11-card-125.png) |
-| Журнал | [100%](screenshots/02-journal.png) |
+| Журнал | [100%](screenshots/02-journal.png) · [Вузьке вікно, колонка дій](screenshots/14-journal-narrow.png) |
 | Реєстрація | [100%](screenshots/03-registration.png) · [150%](screenshots/10-registration-150.png) |
-| Перегляд запису | [100%](screenshots/04-record.png) |
-| Періодні залишки | [100%](screenshots/05-balances.png) · [Вузьке вікно](screenshots/08-balances-narrow.png) |
-| Річний огляд | [100%](screenshots/06-annual.png) · [Порожній рік, 200%](screenshots/09-annual-empty-200.png) |
+| Перегляд запису | [Звичайна](screenshots/04-record.png) · [Спеціальна](screenshots/12-record-special.png) · [Скасована](screenshots/13-record-cancelled.png) |
+| Перегляд на вузькому екрані | [Дві колонки](screenshots/15-record-narrow.png) · [Одна колонка](screenshots/20-record-compact.png) · [Довгі значення](screenshots/21-record-long-narrow.png) |
+| Перегляд зі збільшенням | [Спеціальна, 150%](screenshots/18-record-special-150.png) · [Скасована, 200%](screenshots/19-record-cancelled-200.png) |
+| Періодні залишки | [100%](screenshots/05-balances.png) · [Вузьке вікно](screenshots/08-balances-narrow.png) · [125%](screenshots/17-balances-125.png) |
+| Річний огляд | [100%](screenshots/06-annual.png) · [Вузьке вікно](screenshots/16-annual-narrow.png) · [Порожній рік, 200%](screenshots/09-annual-empty-200.png) |
 | Права | [100%](screenshots/07-rights.png) |
 
 До завдання скриншоти поточного інтерфейсу не надійшли. Візуальна звірка спирається на чинні компоненти й опис проблем. У теці є локальна копія чинних токенів і SVG HromadaHR. Lucide-гліфи вбудовані в HTML як статичні SVG-символи. [Ліцензія Lucide](LUCIDE-LICENSE.txt)

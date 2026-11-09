@@ -141,7 +141,7 @@
       '<tr class="subgroup"><th colspan="5">Права за новими періодами</th></tr>',
       row(['01.09.2027–31.08.2028 <small>Майбутній період</small>', num(isEmpty || isPartial ? 'Не внесено' : isZero ? '0 днів' : '15 днів'), num(isEmpty || isPartial ? '–' : '0'), num(isEmpty || isPartial ? '–' : isZero ? '0' : '15'), isEmpty || isPartial ? '–' : iconBtn('trash', 'Вилучення поза сценарієм прототипу')])]
     const content = isEmpty ? empty('Підтверджених залишків за цим видом ще немає.') :
-      `<dl class="metrics">${metric(isPartial ? 'Залишок за внесеними періодами' : 'Доступний залишок', remaining, true)}${metric('Внесено', totals[0])}${metric('Враховано у відпустках', totals[1])}</dl>`
+      `<dl class="metrics balance-metrics two-details">${metric(isPartial ? 'Доступно за внесеними періодами' : 'Доступно', remaining, true)}${metric('Внесено до обліку', totals[0])}${metric('Враховано у відпустках', totals[1])}</dl>`
     return `${info(name, symbol, content + (isPartial ? note('Залишки внесено лише за частиною періодів.') : ''),
       `<span class="push">${rightsBadge(status)}</span>${btn(isEmpty ? 'Внести залишки' : 'Редагувати залишки', 'pencil')}`)}
       <section class="table-section">${heading('Облікові періоди', 'calendar')}${table('Облікові періоди', ['Обліковий період', num('Внесено днів'), num('Враховано у відпустках'), num('Залишилося'), 'Дії'], groups)}</section>`
@@ -156,7 +156,7 @@
     const days = study ? '10 днів' : `${limit} днів`
     const yearSelect = `<label class="preview-select push">Рік <select data-year aria-label="Календарний рік">${options(samples.annual.map(([value]) => [value, value]))}</select></label>`
     const tip = help('annual-tip', 'Як рахуються дні за рік', 'Відпустка належить до року початку, навіть якщо завершується наступного року. Дні не накопичуються. Для спеціальних видів допускається одна активна реєстрація на рік.')
-    const metrics = filled ? `<dl class="metrics ${study ? 'two' : 'four'}">${metric('Зареєстровані дні', days, true)}${metric('Активні реєстрації', '1')}${study ? '' :
+    const metrics = filled ? `<dl class="metrics balance-metrics${study ? '' : ' three-details'}">${metric(`Зареєстровано за ${year} рік`, days, true)}${metric('Активні реєстрації', '1')}${study ? '' :
       metric('Межа тривалості', `${limit} днів`) + metric('Повторне надання', 'Недоступне')}</dl>` :
       `${empty('За обраний рік реєстрацій цього виду немає.')}${study ? '' : `<dl class="metrics two">${metric('Межа тривалості', `${limit} днів`)}${metric('Активна реєстрація', 'Відсутня')}</dl>`}`
     return `${info(name, symbol, metrics + (!study && filled ? note(`За ${year} рік уже є активна реєстрація.`) : ''), tip + yearSelect)}
@@ -192,7 +192,12 @@
     const cancelled = state.sample === 'cancelled'
     const special = state.sample === 'special'
     const [name, symbol] = types[special ? 4 : 0]
-    const summary = `<dl class="metrics four">${metric('Днів', special ? '14 днів' : '5 днів', true)}${metric('Працівник', employee + `<small>${role} · ${department}</small>`)}${metric('Початок', special ? '12.03.2027' : cancelled ? '18.02.2027' : '10.06.2027')}${metric('Завершення', special ? '25.03.2027' : cancelled ? '22.02.2027' : '14.06.2027')}</dl>`
+    const summary = `<dl class="metrics record-fields">
+      ${metric('Працівник', employee)}${metric('Підрозділ', department)}${metric('Посада', role)}
+      ${metric('Початок', special ? '12.03.2027' : cancelled ? '18.02.2027' : '10.06.2027')}
+      ${metric('Завершення', special ? '25.03.2027' : cancelled ? '22.02.2027' : '14.06.2027')}
+      ${metric('Днів', special ? '14 днів' : '5 днів', true)}
+    </dl>`
     const documentFields = `<dl class="metrics two">${metric('Номер розпорядження', special ? '№ 17-к' : cancelled ? '№ 09-к' : '№ 45-к')}${metric('Дата розпорядження', special ? '09.03.2027' : cancelled ? '15.02.2027' : '07.06.2027')}${special ? '<div class="item wide-item"><dt>Підстава надання</dt><dd>Заява працівниці та документ, що підтверджує право.</dd></div>' : ''}</dl>`
     return dialog('Перегляд відпустки', '', info(name, symbol, summary, `<span class="push">${cancelled ? badge('Скасовано', 'warn') : badge('Зареєстровано', 'good')}</span>`) +
       (cancelled ? note('Скасовано 16.02.2027 о 10:30. Причина – зміна погоджених дат.') : '') +
