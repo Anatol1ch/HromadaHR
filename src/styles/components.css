@@ -377,3 +377,8 @@ table:where(.dictionary-table) { width: 100%; border-collapse: collapse; table-l
 :root body .app-select-popup .app-select-search input:focus {
   outline:none; box-shadow:none; border:0; background:transparent;
 }
+
+/* SearchField draws focus on the wrapper for both its input and clear action. */
+:root body .ui-search.registry-search > input:focus {
+  outline:none; box-shadow:none; border:0; background:transparent;
+}

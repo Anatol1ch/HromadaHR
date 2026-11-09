@@ -12,7 +12,7 @@ import InfoSection from '../InfoSection'
 import LeaveTypeIcon from './LeaveTypeIcon'
 import LeaveStatus from './LeaveStatus'
 import { leaveLabels } from './presentation'
-import { annualUsage } from './usage'
+import { annualUsage, sortedLeaveYears } from './usage'
 import { cutoff } from './draft'
 import { formatLeaveDays } from './summary'
 
@@ -25,7 +25,7 @@ export default function EventUsage({ records, employeeId, type, noRight, rightBa
   const [year, setYear] = useState(defaultYear)
   const recordYears = records.filter(record => record.employeeId === employeeId && record.leaveType === type).map(record => record.startDate.slice(0, 4))
   const nextYear = String(Math.min(Number(defaultYear) + 1, 9999))
-  const years = [...new Set([defaultYear, nextYear, firstYear, year, ...recordYears])].sort().reverse()
+  const years = sortedLeaveYears([defaultYear, nextYear, firstYear, year, ...recordYears])
   const usage = annualUsage(records, employeeId, type, year)
   const repeatStatus = usage.alreadyGranted ? 'Недоступне' : 'Активної реєстрації немає'
   const special = !noRight && usage.limit !== null

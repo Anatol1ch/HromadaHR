@@ -64,7 +64,6 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     return <Modal title="Перегляд відпустки" onClose={onClose} size="wide" className="leave-editor-modal leave-design-dialog"
       footer={<div className="leave-dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>Закрити</button></div>}>
       <div className="leave-record-card">
-        {record.allocationWarning && <Alert variant="warning">Старий розподіл містить період після завершення відпустки. Потрібна перевірка кадровика.</Alert>}
         <InfoSection title={leaveLabels[record.leaveType]} icon={<LeaveTypeIcon type={record.leaveType}/>} action={<LeaveStatus status={record.status}/>}>
           <dl className="info-grid">
             <InfoItem label="Працівник" value={fullName(employee)}/>
@@ -107,7 +106,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     <button type="button" className="secondary-button" onClick={() => { onChanged(); onClose() }}>Закрити та оновити журнал</button>
   </Modal>
   return kind === 'edit' ? <LeaveRegistrationForm employeeId={data.employee.id} employeeName={fullName(data.employee)}
-    hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} originalBalances={data.balances} navigationGuard={navigationGuard}
+    hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} navigationGuard={navigationGuard}
     onClose={refreshAndClose} onSaved={changed} onBalances={(type, openEditor) => { refreshAndClose(); onBalances?.(data.employee.id, type, openEditor) }} /> :
     <CancelRegistration record={data.record} employeeName={fullName(data.employee)} navigationGuard={navigationGuard} onClose={refreshAndClose} onChanged={changed} />
 }

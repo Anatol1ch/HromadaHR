@@ -483,3 +483,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.7.4 – Підсумок розподілу
 
 Цільово звірено `src/Dashboard.tsx` та `.overview-track` у `src/styles.css` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано тонку смугу з доступним числовим і текстовим значенням. Секція, таблиця, підтвердження та акцент використовують чинні компоненти й токени HromadaHR.
+
+## 4.7.5 – Геометрія Select
+
+Звірено `src/components/Select.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Використано наявний popover і клавіатурну поведінку. У HromadaHR позиціювання враховує фактичну висоту списку й межі viewport, а активна опція прокручується лише в контейнері списку.

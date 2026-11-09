@@ -4,7 +4,7 @@ import HelpTip from './HelpTip'
 import InfoSection from '../InfoSection'
 import { CalendarDays, FileText, List, Wallet } from 'lucide-react'
 import { isPeriodLeave, specialLeaveLimit, type PeriodLeaveType } from '../../../shared/leave'
-import type { LeaveRecord, LeaveUpdate, PeriodBalance } from '../../../shared/leave'
+import type { LeaveRecord, LeaveUpdate } from '../../../shared/leave'
 import { matchesUpdate } from './corrections'
 import { useEffect, useId, useRef, useState, type RefObject, type ReactNode, type FormEvent } from 'react'
 import type { AllocationProposal, ConfirmedLeavePeriod, LeaveRegistration, LeaveType, ProposedLeavePeriod } from '../../../shared/leave'
@@ -21,8 +21,8 @@ import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import { leaveLabels, leaveGroupOptions, specialOptions, groupForType, selectedLeaveType, type LeaveGroup } from './presentation'
 
-export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onBalances, record, originalBalances, employeePicker }: {
-  record?: LeaveRecord; originalBalances?: PeriodBalance[]; employeePicker?: ReactNode
+export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onBalances, record, employeePicker }: {
+  record?: LeaveRecord; employeePicker?: ReactNode
   employeeId: string; employeeName?: string; hireDate: string; initialType: LeaveType; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: (type: LeaveType) => void; onBalances: (type: PeriodLeaveType, openEditor?: boolean) => void
 }) {
@@ -193,15 +193,8 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         </div>
       </div>}>
     <form id={formId} ref={owner} className="leave-layout leave-registration" onSubmit={prepare} onInvalidCapture={()=>setAttempted(true)}>
-      {record?.allocationWarning && <Alert variant="warning">Попередній розподіл містить період, що почався після завершення відпустки. Виправте розподіл вручну.</Alert>}
       <InfoSection title="Відомості про відпустку" icon={<CalendarDays size={17}/>}>
       {start && start < '2027-01-01' && <Alert variant="error">Дата початку має бути від 01.01.2027. Перехідні відпустки потребують окремої перевірки залишків.</Alert>}
-      {record?.allocationWarning && record.allocations.length > 0 && <details><summary>Поточний збережений розподіл</summary><ul>
-        {record.allocations.map(allocation => {
-          const period = originalBalances?.find(item => item.id === allocation.periodId)
-          return <li key={allocation.periodId}>{period ? formatDate(period.periodStart) + '–' + formatDate(period.periodEnd) : 'Період недоступний'} – {allocation.days} днів</li>
-        })}
-      </ul></details>}
       <div className={employeePicker ? "info-grid info-grid-two" : undefined}>{employeePicker}
       <div className="recipient-field"><span>Вид відпустки</span><Select label="Вид відпустки" value={group} options={leaveGroupOptions} disabled={busy || !!uncertain}
         onChange={value => {
@@ -241,14 +234,17 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         {allocation.shortfall > 0 ? <Alert variant="warning" className="leave-right-notice" action={<button type="button" className="secondary-button" disabled={busy || !!uncertain} onClick={() => close(() => onBalances(type as PeriodLeaveType))}><Wallet size={16} aria-hidden="true"/>Перейти до залишків</button>}>
           За допустимими підтвердженими періодами бракує {formatLeaveDays(allocation.shortfall)}.
         </Alert> : current.value.shortfall > 0 && <Alert variant="info">
-          Автоматичний розподіл не охоплює всі дні. Решту можна розподілити вручну за періодами, що починаються до завершення відпустки або в день завершення.
+          Автоматичний розподіл не охоплює всі дні. Решту можна розподілити вручну за доступними підтвердженими періодами.
         </Alert>}
         {allocation.ignored && <Alert variant="info">Дні, введені за періоди, яких зараз немає в таблиці, не враховано.</Alert>}
         {next?.error && <Alert variant="error" action={<button type="button" disabled={busy || !!uncertain} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{next.error}</Alert>}
         <DictionaryTable label="Розподіл використаних днів" className="leave-table" columns={[{ label: 'Обліковий період' }, { label: 'Доступно', width: '24%', className: 'leave-days-column' }, { label: 'Списати', width: '25%', className: 'leave-days-column' }]}
           empty={available.length || infoPeriod ? undefined : 'Немає підтверджених доступних днів.'}>
           {available.map(period => <tr key={period.id}><td>{formatDate(period.periodStart)}–{formatDate(period.periodEnd)}
-            {period.periodStart > today && <small className="leave-period-note">Майбутній період</small>}</td><td className="leave-days-column">{period.availableDays}</td>
+            {period.periodStart > today && <small className="leave-period-note">Майбутній період</small>}
+            {end && period.periodStart > end && Number(allocations[period.id]) > 0 && <small className="leave-period-note" role="status">
+              Обраний період починається після завершення відпустки. Перевірте підставу його використання.
+            </small>}</td><td className="leave-days-column">{period.availableDays}</td>
             <td><div className="recipient-field leave-days-field"><ValidatedInput aria-label={'Списати за період ' + formatDate(period.periodStart)} aria-invalid={allocation.invalid.has(period.id) || undefined} inputMode="numeric" disabled={busy || !!uncertain}
               value={allocations[period.id] ?? '0'} onChange={event => { setEditedAllocation(true); setAllocations(current => ({ ...current, [period.id]: event.target.value })) }} /></div></td></tr>)}
           {infoPeriod && <tr><td>{formatDate(infoPeriod.periodStart)}–{formatDate(infoPeriod.periodEnd)}

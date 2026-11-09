@@ -11,6 +11,7 @@ import HelpTip from './HelpTip'
 import LeaveRecordAction from './LeaveRecordAction'
 import { leaveLabels, leaveGroupOptions } from './presentation'
 import { recordCountLabel, journalRows, emptyLeaveFilters, personName, type LeaveSortKey } from './registry'
+import { sortedLeaveYears } from './usage'
 export default function LeaveJournal({records,employeeRows=[],employees, navigationGuard,onChanged,onRegister,onBalances,active=true}: {
   records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; onBalances?:(id:string,type:PeriodLeaveType,openEditor?:boolean)=>void; active?:boolean
 }) {
@@ -28,7 +29,7 @@ export default function LeaveJournal({records,employeeRows=[],employees, navigat
     {key:'position',label:'Посада',options:[...new Map(employeeRows.map(p=>[p.position.id,{value:p.position.id,label:p.position.name}])).values()]},
     {key:'employee',label:'Працівник',options:employeeRows.map(p=>({value:p.id,label:personName(p)}))},
     {key:'type',label:'Вид відпустки',options:leaveGroupOptions},
-    {key:'year',label:'Календарний рік',options:[...new Set(records.flatMap(r=>Array.from({length:Number(r.endDate.slice(0,4))-Number(r.startDate.slice(0,4))+1},(_,i)=>String(Number(r.startDate.slice(0,4))+i))))].sort().reverse().map(value=>({value,label:value}))},
+    {key:'year',label:'Календарний рік',options:sortedLeaveYears(records.flatMap(r=>Array.from({length:Number(r.endDate.slice(0,4))-Number(r.startDate.slice(0,4))+1},(_,i)=>String(Number(r.startDate.slice(0,4))+i)))).map(value=>({value,label:value}))},
     {key:'status',label:'Статус',options:[{value:'active',label:'Зареєстровано'},{value:'cancelled',label:'Скасовано'}]},
   ]
   const columns:{key:LeaveSortKey;label:string}[]=[{key:'name',label:'Працівник'},{key:'department',label:'Підрозділ'},{key:'position',label:'Посада'},{key:'type',label:'Вид відпустки'},{key:'startDate',label:'Початок'},{key:'endDate',label:'Завершення'},{key:'days',label:'Днів'}]

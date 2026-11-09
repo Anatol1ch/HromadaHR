@@ -24,7 +24,6 @@ export default function Select({ label, value, options, onChange, placeholder = 
   const [query, setQuery] = useState('')
   const [active, setActive] = useState('')
   const [invalid, setInvalid] = useState(false)
-  const [position, setPosition] = useState({ left: 0, top: 0, width: 240, maxHeight: 320 })
   const selected = options.find((option) => option.value === value && !option.disabled)
   const canSearch = searchable ?? options.length > 7
   const visible = options.filter((option) => `${option.label} ${option.searchText ?? ''}`.toLocaleLowerCase('uk').includes(query.trim().toLocaleLowerCase('uk')))
@@ -87,26 +86,31 @@ export default function Select({ label, value, options, onChange, placeholder = 
   useLayoutEffect(() => {
     if (!open || !popup.current) return
     const panel = popup.current
+    const list = panel.querySelector<HTMLElement>('.app-select-options')
+    if (!list) return
     panel.showPopover()
     const place = () => {
-      if (!root.current) return
-      const anchor = root.current.getBoundingClientRect()
+      if (!trigger.current) return
+      const anchor = trigger.current.getBoundingClientRect()
       const margin = 10, gap = 6
-      const below = window.innerHeight - anchor.bottom - margin - gap
-      const above = anchor.top - margin - gap
-      const up = below < 280 && above > below
-      const maxHeight = Math.max(60, Math.min(340, up ? above : below))
-      const width = Math.min(Math.max(anchor.width, 240), window.innerWidth - margin * 2)
-      panel.style.width = `${width}px`; panel.style.maxHeight = `${maxHeight}px`
+      const viewport = document.documentElement
+      const width = Math.min(Math.max(anchor.width, 240), viewport.clientWidth - margin * 2)
+      panel.style.width = `${width}px`
+      const desiredHeight = Math.min(340, panel.offsetHeight - list.offsetHeight + list.scrollHeight)
+      const above = Math.max(0, Math.min(anchor.top - gap, viewport.clientHeight - margin) - margin)
+      const below = Math.max(0, viewport.clientHeight - margin - Math.max(anchor.bottom + gap, margin))
+      const up = below < desiredHeight && above > below
+      panel.style.maxHeight = `${Math.min(desiredHeight, up ? above : below)}px`
       const height = panel.getBoundingClientRect().height
-      setPosition({ width, maxHeight, left: Math.max(margin, Math.min(anchor.left, window.innerWidth - width - margin)), top: Math.max(margin, Math.min(up ? anchor.top - gap - height : anchor.bottom + gap, window.innerHeight - height - margin)) })
+      panel.style.left = `${Math.max(margin, Math.min(anchor.left, viewport.clientWidth - width - margin))}px`
+      panel.style.top = `${Math.max(margin, Math.min(up ? anchor.top - gap - height : anchor.bottom + gap, viewport.clientHeight - height - margin))}px`
     }
     const outside = (event: Event) => {
       if (!root.current?.contains(event.target as Node) && !panel.contains(event.target as Node)) close()
     }
     const observer = new ResizeObserver(place)
     observer.observe(panel)
-    if (root.current) observer.observe(root.current)
+    if (trigger.current) observer.observe(trigger.current)
     place()
     if (canSearch) search.current?.focus({ preventScroll: true })
     else trigger.current?.focus({ preventScroll: true })
@@ -124,7 +128,14 @@ export default function Select({ label, value, options, onChange, placeholder = 
     }
   }, [open, host, canSearch])
   useEffect(() => {
-    if (open) popup.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' })
+    if (!open) return
+    const list = popup.current?.querySelector<HTMLElement>('.app-select-options')
+    const option = list?.querySelector('[data-active="true"]')
+    if (!list || !option) return
+    const bounds = list.getBoundingClientRect()
+    const activeBounds = option.getBoundingClientRect()
+    if (activeBounds.top < bounds.top) list.scrollTop += activeBounds.top - bounds.top
+    else if (activeBounds.bottom > bounds.bottom) list.scrollTop += activeBounds.bottom - bounds.bottom
   }, [open, activeValue])
   const optionId = (option: SelectOption) => `${id}-option-${options.indexOf(option)}`
   const activeOption = enabled.find((option) => option.value === activeValue)
@@ -137,7 +148,7 @@ export default function Select({ label, value, options, onChange, placeholder = 
     {canClear && <span className="app-select-icon-group"><button type="button" className="app-select-clear-button" title={clearLabel} aria-label={clearLabel} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); clearSelection() }}><X size={15} aria-hidden="true"/></button><ChevronDown size={17} aria-hidden="true"/></span>}
     <input ref={validity} className="app-select-validity" tabIndex={-1} aria-hidden="true" value={selected?.value ?? ''} onChange={() => {}} required={required} disabled={disabled} onInvalid={(event) => { event.preventDefault(); setInvalid(true); trigger.current?.focus() }}/>
     {(invalid || error) && <span className="app-select-error" id={`${id}-error`} role="alert">{message}</span>}
-    {open && !disabled && host && createPortal(<div ref={popup} data-keyboard-popup={id} className="app-select-popup" popover="manual" style={position} onKeyDown={keyboard} onClick={(event) => event.stopPropagation()}>
+    {open && !disabled && host && createPortal(<div ref={popup} data-keyboard-popup={id} className="app-select-popup" popover="manual" onKeyDown={keyboard} onClick={(event) => event.stopPropagation()}>
       {canSearch && <div className="app-select-search"><Search size={16} aria-hidden="true"/><input ref={search} role="combobox" aria-label={`Пошук: ${label}`} aria-expanded="true" aria-controls={listId} aria-autocomplete="list" aria-activedescendant={activeOption ? optionId(activeOption) : undefined} placeholder="Пошук…" value={query} onChange={(event) => { setQuery(event.target.value); setActive('') }}/></div>}
       <div id={listId} role="listbox" aria-label={label} className="app-select-options">
         {visible.map((option) => <div key={option.value} id={optionId(option)} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-active={option.value === activeValue} className="app-select-option" onPointerMove={() => { if (!option.disabled) setActive(option.value) }} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}><span>{option.label}{option.description && <small className="app-select-description">{option.description}</small>}</span>{option.value === value && <Check size={16} aria-hidden="true"/>}</div>)}

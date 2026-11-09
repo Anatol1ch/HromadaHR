@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { annualUsage, matchesEmployeeName } from '../src/components/leave/usage.ts'
+import { annualUsage, matchesEmployeeName, sortedLeaveYears } from '../src/components/leave/usage.ts'
+
+test('leave year selectors list distinct years in ascending order', () => {
+  assert.deepEqual(sortedLeaveYears(['2029','2027','2028','2027']), ['2027','2028','2029'])
+})
 
 const record = (changes = {}) => ({ employeeId:'a', leaveType:'veteran_special_leave', startDate:'2027-12-25', endDate:'2028-01-07', usedDays:14, status:'active', ...changes })
 

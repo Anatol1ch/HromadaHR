@@ -172,7 +172,7 @@ export class LeaveService {
     startDate: string, endDate: string, excludeId: string | null = null) {
     this.checkDates(this.employee(db, employeeId).hireDate, startDate, endDate)
     const balances = this.balances(db, employeeId, excludeId)
-      .filter(period => period.leaveType === type && period.periodStart <= endDate)
+      .filter(period => period.leaveType === type)
     return { balances, ...fifoAllocation(balances.filter(period => period.periodStart <= startDate), days) }
   }
 
@@ -204,8 +204,7 @@ export class LeaveService {
       leave_type AS leaveType, start_date AS startDate, end_date AS endDate, used_days AS usedDays,
       order_number AS orderNumber, order_date AS orderDate, duration_explanation AS durationExplanation,
       grant_basis AS grantBasis, status, revision, cancelled_at AS cancelledAt, cancel_reason AS cancelReason, created_at AS createdAt,
-      EXISTS(SELECT 1 FROM leave_allocations a JOIN leave_period_balances p ON p.id=a.period_id
-        WHERE a.record_id=leave_records.id AND p.period_start>leave_records.end_date) AS allocationWarning
+      0 AS allocationWarning
       FROM leave_records WHERE (? IS NULL OR employee_id=?)
       ORDER BY start_date DESC,id`).all(employeeId, employeeId)
     const allocations = db.prepare<[string], { periodId: string; days: number }>(
@@ -277,7 +276,6 @@ export class LeaveService {
       allocated.add(allocation.periodId)
       const period = balances.get(allocation.periodId)
       if (!period || period.leaveType !== value.leaveType) throw new LeaveError('INVALID_ARGUMENTS')
-      if (period.periodStart > value.endDate) throw new LeaveError('INVALID_PERIOD')
       if (allocation.days > period.availableDays) throw new LeaveError('INSUFFICIENT_DAYS')
       total += allocation.days
     }

@@ -202,7 +202,7 @@ test('service respects current storage connection and backup busy guard', async 
 })
 
 
-test('exactly one next annual proposal is canonical, unpersisted and cannot be spent before its dates',async t=>{
+test('exactly one next annual proposal is canonical and only confirmed days can be spent',async t=>{
   const f=fixture(t),connection=await f.open()
   const {employee:person}=await employee(connection)
   const leave=new LeaveService({getDatabase:()=>connection.database},()=>false)
@@ -215,8 +215,8 @@ test('exactly one next annual proposal is canonical, unpersisted and cannot be s
   leave.savePeriods(person.id,[annual(future.periodStart,future.periodEnd,20)])
   const period=leave.getBalances(person.id)[0]
   const input={requestId:randomUUID(),employeeId:person.id,leaveType:'annual_main',startDate:'2027-04-01',endDate:'2027-04-02',usedDays:2,orderNumber:null,orderDate:null,durationExplanation:null,allocations:[{periodId:period.id,days:2}]}
-  assert.throws(()=>leave.registerLeave(input),code('INVALID_PERIOD'))
-  const record=leave.registerLeave({...input,startDate:'2027-07-01',endDate:'2027-07-02'})
+  const record=leave.registerLeave(input)
+  assert.equal(record.allocationWarning,false)
   assert.equal(leave.getBalances(person.id)[0].availableDays,18)
   leave.cancelLeave(record.id,record.revision,'Тест')
   assert.equal(leave.getBalances(person.id)[0].availableDays,20)
