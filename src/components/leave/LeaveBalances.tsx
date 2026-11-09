@@ -116,9 +116,19 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     {(showTypeSelector || showRegister) && <div className="leave-section-heading">{showTypeSelector && <h3>Залишки відпусток</h3>}
       {showRegister && <button className="primary-button" type="button" onClick={() => setRegistering(true)}>Зареєструвати відпустку</button>}</div>}
     {showTypeSelector && <div className="leave-kind-nav">{options.map(option=><button type="button" key={option.value} aria-pressed={type===option.value} onClick={()=>setType(option.value)}>{option.label}</button>)}</div>}
-    {data&&!data.error&&<div className="leave-selected-summary"><strong>{selectedSummary.count?selectedSummary.remaining.toLocaleString('uk-UA')+' '+dayLabel(selectedSummary.remaining):'Залишки не внесено'}</strong>
-      {selectedSummary.count>0&&<span>Внесено {selectedSummary.entered.toLocaleString('uk-UA')} · Враховано у відпустках {selectedSummary.accounted.toLocaleString('uk-UA')}</span>}
-      {selectedSummary.incomplete&&<small>Залишки внесено не за всі поточні чи минулі періоди</small>}</div>}
+    {data && !data.error && <section className="leave-balance-summary" aria-label="Підсумок залишків">
+      {selectedSummary.count > 0 ? <>
+        <dl>
+          <div className="leave-balance-available">
+            <dt>{selectedSummary.incomplete ? 'Залишок за внесеними періодами' : 'Доступний залишок'}</dt>
+            <dd>{selectedSummary.remaining.toLocaleString('uk-UA')} {dayLabel(selectedSummary.remaining)}</dd>
+          </div>
+          <div><dt>Підтверджено</dt><dd>{selectedSummary.entered.toLocaleString('uk-UA')} {dayLabel(selectedSummary.entered)}</dd></div>
+          <div><dt>Враховано у відпустках</dt><dd>{selectedSummary.accounted.toLocaleString('uk-UA')} {dayLabel(selectedSummary.accounted)}</dd></div>
+        </dl>
+        {selectedSummary.incomplete && <p className="leave-muted">Залишки внесено лише за частиною поточних чи минулих періодів.</p>}
+      </> : <p className="leave-muted">Залишки не внесено.</p>}
+    </section>}
     <div className="leave-section-heading"><button type="button" className="secondary-button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')} onClick={() => { editorPeriods.current=periods??[]; setEditing(true) }}>Внести або змінити залишки</button>
       </div>
     {data?.error && <p role="alert">{data.error} <button type="button" onClick={refresh}>Повторити</button></p>}
