@@ -104,8 +104,9 @@ export function submitCurrentForm(from: HTMLElement) {
   const form = owner.closest('form') ?? (scope !== document.body ? scope.querySelector('form') : null)
   if (!form || !scope.contains(form) || form.closest('.app-modal') !== owner.closest('.app-modal')
     || scope.getAttribute('aria-busy') === 'true') return
-  const submit = [...form.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button[type="submit"], button:not([type]), input[type="submit"]')]
-    .find(isAvailable)
+  const submit = Array.from(form.elements).find((control): control is HTMLButtonElement | HTMLInputElement =>
+    (control instanceof HTMLButtonElement || control instanceof HTMLInputElement) && control.type === 'submit' &&
+    scope.contains(control) && isAvailable(control))
   if (!submit) return
   form.requestSubmit(submit)
   requestAnimationFrame(() => focusFirstInvalid(form))

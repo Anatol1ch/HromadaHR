@@ -465,3 +465,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.7.1 – Дворівнева композиція в прототипі відпусток
 
 Звірено `RecipientDetails` у `src/RecipientRegistry.tsx` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Поділ на тематичні секції, сітки окремих полів, обгортку таблиці та нижні дії вже має локальне втілення в «Загальній інформації» HromadaHR. Прототип переносить цей принцип на відпустки через чинні поверхні й токени HromadaHR. Адаптації описані в [дизайн-стандарті](design/HROMADAHR-DESIGN-SYSTEM.md).
+
+## 4.7.2.1 – Спільні інформаційні секції у відпустках
+
+Під час перенесення затвердженого прототипу 4.7.1.1 звірено `RecipientDetails` та `recipient-detail-grid` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. `InfoSection` та `InfoItem` адаптують поділ на тематичні групи й окремі реквізити до білих елементів на сиреневих поверхнях HromadaHR. Використано чинні `DictionaryTable`, `DateField`, `Select`, `HelpTip`, `Alert` та `Modal`. Опційний футер `Modal` і пошук асоційованої кнопки через `form.elements` підтримують Ctrl+Enter. [Стандарт і стан перенесення](design/HROMADAHR-DESIGN-SYSTEM.md).

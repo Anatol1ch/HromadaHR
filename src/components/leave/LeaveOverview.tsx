@@ -1,11 +1,14 @@
 import LeaveTypeIcon from './LeaveTypeIcon'
+import LeaveStatus from './LeaveStatus'
+import { ArrowRight, History, Wallet } from 'lucide-react'
+import InfoSection from '../InfoSection'
 import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
 import { useEffect, useState } from 'react'
 import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight } from '../../../shared/leave'
 import { balanceSummary, formatLeaveDays } from './summary'
 import { leaveLabels, leaveOptions, periodLeaveOptions } from './presentation'
-import { formatDate, formatDateTime } from '../../lib/dates'
+import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import DataState from '../DataState'
@@ -41,29 +44,43 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
   if (error) return <Alert variant="error" action={<button type="button" onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{error}</Alert>
   if (!data) return <DataState kind="loading" message="Завантаження відпусток…" />
   return <section className="leave-layout leave-overview" aria-label="Огляд відпусток">
-    <div className="leave-rights-overview">{leaveOptions.map(option => {
+    <InfoSection title="Права та залишки відпусток" icon={<Wallet size={17}/>}>
+    <div className="info-grid info-grid-two">{leaveOptions.map(option => {
       const right = data.rights.find(item => item.leaveType === option.value)
       const summary = isPeriodLeave(option.value) ? balanceSummary(option.value, data.balances, data.proposals.filter(p=>p.periodStart<=throughDate)) : null
-      return <article className="employee-card-section" key={option.value}>
+      return <article className="info-item leave-overview-item" key={option.value}>
         <div className={summary ? 'leave-overview-content has-balance' : 'leave-overview-content'}>
           <div className="leave-overview-details">
-            <header className="leave-overview-heading"><LeaveTypeIcon type={option.value}/><h5>{option.label}</h5></header>
-            <span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
-            {right && <small>Перевірено {formatDateTime(right.checkedAt)}</small>}
+            <LeaveTypeIcon type={option.value}/>
+            <div>
+              <h4>{option.label}</h4>
+              <span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
+            </div>
           </div>
           {summary && <div className="leave-overview-balance">
             {summary.count > 0 ? <>
               <strong className="leave-overview-number">{formatLeaveDays(summary.remaining)}</strong>
-              <small>Внесено {formatLeaveDays(summary.entered)}</small>
               {summary.incomplete && <small>Лише за внесеними періодами</small>}
-            </> : <small className="leave-overview-empty">Залишки не внесено</small>}
+            </> : <small className="leave-muted">Не внесено</small>}
           </div>}
         </div>
         {right?.status === 'no_right' && ((summary?.remaining ?? 0n) > 0n || data.records.some(record => record.leaveType === option.value)) && <small role="status">Є внесені дні або попередні реєстрації – перевірте поточний статус.</small>}
       </article>
     })}</div>
-    <h3>Останні зареєстровані відпустки</h3><DictionaryTable label="Останні відпустки" className="leave-table" columns={[{label:'Вид'},{label:'Дати'},{label:'Днів'},{label:'Статус'},{label:'Розпорядження'}]} empty={data.records.length ? undefined : 'Відпусток ще не зареєстровано.'}>
-      {data.records.slice(0,5).map(record => <tr key={record.id}><td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small role="status">Розподіл потребує перевірки у розділі «Відпустки».</small>}</td><td>{formatDate(record.startDate)}–{formatDate(record.endDate)}</td><td>{record.usedDays}</td><td>{record.status === 'active' ? 'Зареєстровано' : 'Скасовано'}</td><td>{record.orderNumber ?? '–'}</td></tr>)}
-    </DictionaryTable><button type="button" className="primary-button leave-open-workspace" onClick={onOpen}>Перейти до відпусток</button>
+    </InfoSection>
+    <InfoSection title="Останні зареєстровані відпустки" icon={<History size={17}/>}>
+      {data.records.length ? <DictionaryTable label="Останні відпустки" className="leave-table leave-recent-table" columns={[
+        {label:'Вид',width:'37%'},{label:'Дати',width:'24%'},{label:'Днів',width:'7%',className:'leave-days-column'},{label:'Статус',width:'16%'},{label:'Розпорядження',width:'16%'},
+      ]}>
+        {data.records.slice(0,5).map(record => <tr key={record.id}>
+          <td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small role="status">Розподіл потребує перевірки у розділі «Відпустки».</small>}</td>
+          <td>{formatDate(record.startDate)}–{formatDate(record.endDate)}</td>
+          <td className="leave-days-column">{record.usedDays}</td>
+          <td><LeaveStatus status={record.status}/></td>
+          <td>{record.orderNumber ?? '–'}</td>
+        </tr>)}
+      </DictionaryTable> : <div className="info-item"><DataState kind="empty" compact message="Відпусток ще не зареєстровано."/></div>}
+    </InfoSection>
+    <div className="leave-dialog-actions"><button type="button" className="primary-button" onClick={onOpen}><ArrowRight size={16} aria-hidden="true"/>Перейти до відпусток</button></div>
   </section>
 }

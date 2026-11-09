@@ -92,7 +92,6 @@
 .leave-workspace > .page-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); }
 .leave-workspace .leave-layout { margin-block:var(--space-2); }
 .leave-status { white-space:nowrap; font-size:.8125rem; color:var(--color-text-secondary); }
-.leave-allocation-section { display:grid; gap:var(--space-2); min-width:0; padding-block:var(--space-3); border-top:1px solid var(--border-surface); }
 .leave-help { display:inline-flex; vertical-align:middle; }
 .leave-help button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:0; border-radius:6px; color:var(--color-text-secondary); background:transparent; cursor:help; }
 .leave-help button:hover { background:var(--surface-panel); }
@@ -111,8 +110,6 @@
 .leave-overview .dictionary-table-wrap, .leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
 .leave-editor-modal { width:min(54rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
 .leave-editor-modal .app-modal-content { container:leave-modal / inline-size; min-width:0; overflow-y:auto; overflow-x:hidden; }
-.leave-editor-modal .leave-registration { gap:var(--space-2); }
-.leave-editor-modal .leave-registration h3 { margin:0; font-size:1rem; }
 .leave-editor-modal .leave-registration-grid { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
 .leave-editor-modal .leave-registration-grid .recipient-field { min-width:0; }
 .leave-editor-modal .dictionary-table-wrap { min-width:0; max-width:100%; overflow-x:auto; }
@@ -140,17 +137,12 @@
 .leave-person-list { display:grid; gap:var(--space-1); max-height:60dvh; overflow:auto; }
 .leave-person-list button { display:grid; gap:4px; border:1px solid transparent; border-radius:var(--radius-control); background:transparent; text-align:left; padding:10px; color:var(--color-text); cursor:pointer; overflow-wrap:anywhere; }
 .leave-person-list button[aria-pressed="true"] { background:var(--tab-active-background); border-color:var(--tab-active-border); }
-.leave-person-list small,.leave-rights-list small,.leave-rights-overview small { display:block; color:var(--color-text-secondary); font-size:.8125rem; }
+.leave-person-list small,.leave-rights-list small { display:block; color:var(--color-text-secondary); font-size:.8125rem; }
 .leave-person-content { display:grid; align-content:start; gap:var(--space-4); min-width:0; }
 .leave-rights-panel { display:grid; gap:var(--space-2); padding:var(--space-3); min-width:0; }
 .leave-rights-list { display:grid; gap:0; }
 
 .leave-right-warning { color:var(--feedback-warning-text); font-size:.8125rem; }
-.leave-rights-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-4); }
-.leave-rights-overview article { display:grid; align-content:start; gap:6px; padding-block:var(--space-2); border-bottom:1px solid var(--border-surface); }
-.leave-rights-overview h5 { margin:0; font-size:.9375rem; }
-.leave-rights-overview strong { color:var(--accent-hover); font-size:1.5rem; }
-.leave-open-workspace { width:100%; }
 .leave-person-content .leave-balance-choice[aria-pressed="true"] { background:var(--tab-active-background); border-color:var(--tab-active-border); box-shadow:none; }
 .leave-person-content .leave-balance-grid { gap:var(--space-2); }
 .leave-person-content .leave-balance-choice { padding:10px; }
@@ -160,19 +152,14 @@
 .leave-editor-table .leave-dates { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; }
 .leave-editor-table .leave-dates input,.leave-editor-table .leave-days-field input { min-height:var(--control-height); }
 .leave-editor-table .leave-days-field { align-self:end; }
-.leave-order-section { display:grid; gap:var(--space-2); }
 .leave-workspace { container:leave-workspace / inline-size; }
 @container leave-workspace (max-width:64rem) { .leave-balance-workspace { grid-template-columns:minmax(11rem,15rem) minmax(0,1fr); } .leave-rights-list { grid-template-columns:minmax(0,1fr); } }
 @container leave-workspace (max-width:46rem) { .leave-balance-workspace { grid-template-columns:minmax(0,1fr); } .leave-person-list { max-height:14rem; } }
-@container (max-width:30rem) { .leave-rights-overview { grid-template-columns:minmax(0,1fr); } .leave-rights-panel .employee-group-heading { flex-wrap:wrap; } }
+@container (max-width:30rem) { .leave-rights-panel .employee-group-heading { flex-wrap:wrap; } }
 @container leave-modal (max-width:30rem) { .leave-editor-table .leave-dates { grid-template-columns:minmax(0,1fr); } }
 
 /* 4.6.5: individual overview blocks, compact selectors, and information sections. */
-.leave-overview .leave-rights-overview { gap:var(--space-3); }
-.leave-overview .leave-rights-overview > .employee-card-section { padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
-.leave-overview .leave-rights-overview .leave-overview-number { font-size:1.375rem; line-height:1.3; }
-.leave-overview .leave-rights-overview .leave-overview-empty { font-size:.875rem; font-weight:500; color:var(--color-text-secondary); }
-.leave-registry .employee-actions-heading { text-align:center; }
+.leave-register-table th.employee-actions-heading { text-align:center; }
 .leave-register-table .registry-row-actions { justify-content:center; }
 .leave-register-table td:last-child { white-space:nowrap; }
 
@@ -194,25 +181,16 @@
   .leave-balance-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .leave-balance-summary .leave-balance-available { grid-column:1/-1; grid-row:auto; }
 }
-.leave-form-section,.leave-allocation-section,.leave-order-section,.leave-info-section { display:grid; gap:var(--space-2); min-width:0; padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); }
-.leave-form-section > h3,.leave-info-section > h3 { margin:0; font-size:1rem; }
 .leave-record-card { display:grid; gap:var(--space-3); min-width:0; }
-.leave-info-section dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); margin:0; }
-.leave-info-section dt { color:var(--color-text-secondary); font-size:.8125rem; }
-.leave-info-section dd { margin:4px 0 0; overflow-wrap:anywhere; }
-.leave-cancellation-info { background:var(--surface-panel); }
-@container leave-modal (max-width:28rem) { .leave-info-section dl { grid-template-columns:minmax(0,1fr); } .leave-form-section,.leave-info-section,.leave-order-section,.leave-allocation-section { padding:var(--space-2); } }
 
 /* 4.6.6: shared employee search, compact rights, and distinct accounting modes. */
 .leave-type-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.125rem; width:2.125rem; height:2.125rem; border-radius:var(--radius-control); color:var(--accent-hover); background:var(--tab-active-background); }
-.leave-overview-heading { display:flex; align-items:center; gap:var(--space-2); }
-.leave-overview-heading h5 { overflow-wrap:anywhere; }
-.leave-overview .employee-card-section { align-content:start; container-type:inline-size; }
-.leave-overview-content { display:grid; gap:var(--space-2); }
+.leave-overview-content { display:grid; gap:var(--space-2); align-items:center; }
 .leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr) minmax(0,auto); }
-.leave-overview-details, .leave-overview-balance { display:grid; align-content:start; gap:var(--space-1); min-width:0; }
+.leave-overview-details { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-overview-balance { display:grid; align-content:center; gap:var(--space-1); min-width:0; }
 .leave-overview-balance { text-align:end; max-inline-size:9rem; overflow-wrap:anywhere; }
-@container (max-width:21rem) {
+@container leave-tile (max-width:250px) {
   .leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr); }
   .leave-overview-balance { text-align:start; max-inline-size:none; }
 }
@@ -263,3 +241,29 @@
 @container leave-workspace (max-width:52rem) { .leave-rights-list .leave-right-row { grid-template-columns:minmax(0,1fr); } }
 @container leave-workspace (max-width:30rem) { .leave-rights-footer .primary-button { width:100%; white-space:normal; } }
 @container leave-workspace (max-width:38rem) { .leave-accounting-kinds .leave-kind-nav { grid-template-columns:minmax(0,1fr); } .leave-chosen-person { flex-wrap:wrap; } .leave-chosen-person > button { margin-inline-start:auto; } }
+
+/* Shared information sections applied to the leave overview and two dialogs. */
+.leave-overview-item { display:grid; align-content:center; gap:var(--space-2); min-height:64px; container:leave-tile / inline-size; }
+.leave-overview-details h4 { margin:0; font-size:13px; line-height:1.4; }
+.leave-overview-item small { color:var(--color-text-secondary); font-size:12px; }
+.leave-overview-number { color:var(--accent-hover); font-size:17px; font-variant-numeric:tabular-nums; }
+.leave-recent-table { min-width:490px; }
+.leave-layout :is(.leave-recent-table, .leave-registration .leave-table) .leave-days-column { text-align:center; }
+.leave-registration .leave-days-field { margin-inline:auto; }
+.leave-registration textarea { font-family:inherit; }
+.leave-record-card .leave-days-column { text-align:center; }
+.leave-record-status { display:inline-block; max-width:100%; padding:2px 7px; border-radius:var(--radius-control); font-size:11px; font-weight:600; }
+.leave-record-status.is-active { background:var(--feedback-success-bg); color:var(--feedback-success-text); }
+.leave-record-status.is-cancelled { background:var(--feedback-warning-bg); color:var(--feedback-warning-text); }
+.leave-design-dialog { width:min(840px,100%); max-width:100%; max-height:calc(100dvh - 2 * var(--modal-gutter)); }
+.leave-design-dialog :is(.app-modal-header,.app-modal-content) { padding:var(--space-3) var(--modal-gutter); }
+.leave-design-dialog .app-modal-content { scroll-padding-block:var(--space-3); }
+.leave-design-dialog .info-section-icon .leave-type-icon { background:transparent; color:var(--accent); width:18px; height:18px; flex-basis:18px; }
+.leave-design-dialog .leave-registration-grid { gap:var(--space-2); }
+.leave-design-dialog .leave-table :is(th,td) { padding-block:var(--space-2); }
+.leave-design-dialog .leave-table td { height:44px; }
+.leave-design-dialog .leave-cancelled-notice { margin:0; }
+.leave-dialog-footer { display:grid; gap:var(--space-2); }
+.leave-dialog-footer > :is(p,.ui-alert) { margin:0; }
+.leave-dialog-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--space-2); }
+.leave-dialog-actions button { height:auto; min-height:var(--control-height-compact); max-width:100%; white-space:normal; }
