@@ -16,8 +16,8 @@ import { annualUsage } from './usage'
 import { cutoff } from './draft'
 import { formatLeaveDays } from './summary'
 
-export default function EventUsage({ records, employeeId, type, rightBadge, rightNotice }: {
-  records: LeaveRecord[]; employeeId: string; type: LeaveType; rightBadge?: ReactNode; rightNotice?: ReactNode
+export default function EventUsage({ records, employeeId, type, noRight, rightBadge, rightNotice }: {
+  records: LeaveRecord[]; employeeId: string; type: LeaveType; noRight: boolean; rightBadge?: ReactNode; rightNotice?: ReactNode
 }) {
   const currentYear = todayIsoDate().slice(0, 4)
   const firstYear = cutoff.slice(0, 4)
@@ -28,7 +28,7 @@ export default function EventUsage({ records, employeeId, type, rightBadge, righ
   const years = [...new Set([defaultYear, nextYear, firstYear, year, ...recordYears])].sort().reverse()
   const usage = annualUsage(records, employeeId, type, year)
   const repeatStatus = usage.alreadyGranted ? 'Недоступне' : 'Активної реєстрації немає'
-  const special = usage.limit !== null
+  const special = !noRight && usage.limit !== null
   return <section className="leave-layout" aria-label="Використання за рік">
     <InfoSection title={leaveLabels[type]} icon={<LeaveTypeIcon type={type}/>}
       help={<HelpTip label="Як рахуються дні за рік" text={'Повна тривалість належить до року початку, навіть якщо відпустка переходить через Новий рік. Дні не накопичуються.' + (special ? ' За рік допускається одна активна реєстрація цього виду.' : '')}/>}
@@ -39,18 +39,18 @@ export default function EventUsage({ records, employeeId, type, rightBadge, righ
       {usage.history.length ? <dl className={'leave-metric-grid' + (special ? ' leave-metric-grid-three' : '')}>
         <InfoItem label={`Зареєстровано за ${year} рік`} value={formatLeaveDays(usage.days)} emphasis/>
         <InfoItem label="Активні реєстрації" value={usage.activeCount.toLocaleString('uk-UA')}/>
-        {usage.limit !== null && <>
+        {special && usage.limit !== null && <>
           <InfoItem label="Межа тривалості" value={formatLeaveDays(usage.limit)}/>
           <InfoItem label="Повторне надання" value={repeatStatus}/>
         </>}
-      </dl> : <>
+      </dl> : !noRight && <>
         <div className="info-item"><DataState kind="empty" compact message="За обраний рік реєстрацій цього виду немає."/></div>
         {usage.limit !== null && <dl className="info-grid info-grid-two">
           <InfoItem label="Межа тривалості" value={formatLeaveDays(usage.limit)}/>
           <InfoItem label="Повторне надання" value={repeatStatus}/>
         </dl>}
       </>}
-      {usage.alreadyGranted && <Alert variant="warning">За {year} рік уже є активна реєстрація.</Alert>}
+      {special && usage.alreadyGranted && <Alert variant="warning">За {year} рік уже є активна реєстрація.</Alert>}
       {rightNotice}
     </InfoSection>
     {usage.history.length > 0 && <section className="leave-balances-table" aria-label="Історія реєстрацій">

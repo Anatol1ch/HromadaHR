@@ -269,7 +269,13 @@
 .leave-type-picker-control select { position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; }
 .leave-type-picker-control:has(select:focus-visible) { outline:2px solid var(--border-focus); outline-offset:2px; }
 .leave-summary-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:var(--space-2); min-width:0; }
-.leave-balances-detail .leave-right-notice { align-items:center; gap:var(--space-2); padding:var(--space-2) var(--space-3); margin:0; }
+:is(.leave-balances-detail,.leave-registration) .leave-right-notice { align-items:center; gap:var(--space-2); padding:var(--space-2) var(--space-3); margin:0; }
+.leave-allocation-summary { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3); }
+.leave-allocation-state { display:grid; flex:1 1 15rem; gap:var(--space-1); min-width:0; padding:var(--space-2) var(--space-3); border-radius:var(--radius-control); background:var(--surface-card); }
+.leave-allocation-state strong { color:var(--accent-hover); font-variant-numeric:tabular-nums; }
+.leave-allocation-track { height:6px; overflow:hidden; border-radius:6px; background:var(--accent-soft); }
+.leave-allocation-track > span { display:block; height:100%; border-radius:inherit; background:var(--accent); }
+.leave-registration .secondary-button.leave-confirm-period { min-height:var(--control-height-compact); white-space:normal; }
 .leave-right-notice .ui-alert-icon { margin:0; }
 .leave-right-notice .ui-alert-content { flex:1 1 15rem; }
 .leave-right-notice .ui-alert-action { margin-inline-start:auto; }

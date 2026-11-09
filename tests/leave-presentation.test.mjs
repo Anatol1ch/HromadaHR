@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationMessage, formatLeaveDays } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, futureAllocationPeriod, formatLeaveDays } from '../src/components/leave/summary.ts'
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
   const rows = [{leaveType:'annual_main',periodStart:'2024-01-01',confirmedDays:40,usedDays:14,availableDays:26}, {leaveType:'children_social_additional',periodStart:'2024-01-01',confirmedDays:0,usedDays:0,availableDays:0}]
   const proposals = [{leaveType:'annual_main',periodStart:'2024-01-01'}, {leaveType:'annual_main',periodStart:'2025-01-01'}]
@@ -21,10 +21,33 @@ test('oldest positive period ignores exhausted balances and other types regardle
   assert.equal(summary.remaining, 9n)
   assert.equal(balanceSummary('annual_main', [rows[1]], []).oldestPositive, null)
 })
-test('allocation feedback distinguishes automatic, preserved, missing, excess and invalid inputs', () => {
-  assert.match(allocationMessage(16,16,true,false),/автоматично/)
-  assert.match(allocationMessage(16,16,true,true),/ручний/)
-  assert.match(allocationMessage(16,12,true,true),/ще 4/)
-  assert.match(allocationMessage(16,18,true,true),/зайві 2/)
-  assert.match(allocationMessage(16,NaN,false,true),/Перевірте/)
+test('manual allocation starts empty, validates row limits and counts only eligible period IDs', () => {
+  const rows = [{ id: 'old', availableDays: 4 }, { id: 'next', availableDays: 4 }]
+  const draft = { old: '2', next: '4' }
+  const initial = allocationDraft(rows, {}, 6)
+  assert.deepEqual(initial.values, [])
+  assert.equal(initial.total, 0)
+  assert.equal(initial.complete, false)
+  assert.match(initial.message, /6 днів/)
+  assert.equal(allocationDraft(rows, { old: '4' }, 6).complete, false)
+  assert.match(allocationDraft(rows, { old: '4', next: '4' }, 6).message, /прибрати 2/)
+  assert.equal(allocationDraft(rows, { old: '5', next: '1' }, 6).complete, false)
+  assert.equal(allocationDraft(rows, { old: '2.5', next: '4' }, 6).invalid.has('old'), true)
+  assert.equal(allocationDraft(rows, draft, 6).complete, true)
+  assert.deepEqual(allocationDraft(rows, draft, 6).values, [{ periodId: 'old', days: 2 }, { periodId: 'next', days: 4 }])
+  const revised = allocationDraft(rows.slice(0, 1), draft, 6)
+  assert.equal(revised.ignored, true)
+  assert.equal(revised.shortfall, 2)
+  assert.equal(revised.total, 2)
+  assert.equal(allocationDraft(rows, draft, 6).shortfall, 0)
+  assert.deepEqual(draft, { old: '2', next: '4' })
+})
+
+test('future proposal remains informational until a saved period exists, including confirmed zero', () => {
+  const first = { leaveType: 'annual_main', periodStart: '2027-01-01', status: 'proposed' }
+  const next = { ...first, periodStart: '2028-01-01' }
+  assert.equal(futureAllocationPeriod([first, next], [], '2027-01-01'), next)
+  const confirmed = { ...next, id: 'real-id', status: 'confirmed', confirmedDays: 0 }
+  assert.equal(futureAllocationPeriod([first, next], [confirmed], '2027-01-01'), confirmed)
+  assert.equal(futureAllocationPeriod([first], [], '2027-01-01'), undefined)
 })

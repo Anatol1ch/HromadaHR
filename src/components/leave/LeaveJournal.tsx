@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type RefObject } from 'react'
 import { Eye, Pencil, Ban, Plus, SlidersHorizontal, FilterX, ListRestart } from 'lucide-react'
-import type { LeaveRecord } from '../../../shared/leave'
+import type { LeaveRecord, PeriodLeaveType } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import { formatDate } from '../../lib/dates'
@@ -12,7 +12,7 @@ import LeaveRecordAction from './LeaveRecordAction'
 import { leaveLabels, leaveGroupOptions } from './presentation'
 import { recordCountLabel, journalRows, emptyLeaveFilters, personName, type LeaveSortKey } from './registry'
 export default function LeaveJournal({records,employeeRows=[],employees, navigationGuard,onChanged,onRegister,onBalances,active=true}: {
-  records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; onBalances?:(id:string)=>void; active?:boolean
+  records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; onBalances?:(id:string,type:PeriodLeaveType,openEditor?:boolean)=>void; active?:boolean
 }) {
   const panelId=useId()
   const [filters,setFilters]=useState(emptyLeaveFilters)

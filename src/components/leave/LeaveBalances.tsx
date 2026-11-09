@@ -25,7 +25,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, rightNotice }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, rightNotice, openEditor }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -36,6 +36,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   historicalOnly: boolean
   rightBadge?: ReactNode
   rightNotice?: ReactNode
+  openEditor?: () => void
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -94,6 +95,14 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   }, [data])
 
   const editorCandidates = periods && (historicalOnly ? historicalBalancePeriods(periods) : periods)
+  useEffect(() => {
+    if (!openEditor || !rightsReady || !editorCandidates) return
+    openEditor()
+    if (!editorCandidates.length) return
+    editorPeriods.current = editorCandidates
+    editButton.current?.focus()
+    setEditing(true)
+  }, [openEditor, rightsReady, editorCandidates])
   const visiblePeriods = historicalOnly ? periods?.filter(period => period.status === 'confirmed') : periods
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
   const refresh = () => setRevision(value => value + 1)
