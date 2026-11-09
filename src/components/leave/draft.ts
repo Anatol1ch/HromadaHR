@@ -6,6 +6,10 @@ export type Period = ConfirmedLeavePeriod | ProposedLeavePeriod
 export type Draft = { period: Period; days: string } |
   { id: number; start: string; end: string; startIso: string; endIso: string; days: string }
 
+export function historicalBalancePeriods(periods: Period[]) {
+  return periods.filter(period => period.status === 'confirmed' || period.accountingBasis === 'initial_balance')
+}
+
 export function hasNewEntitlement(changes: LeavePeriodInput[], periods: Period[]) {
   return changes.some(change => change.accountingBasis === 'confirmed_entitlement' &&
     !periods.some(period => period.status === 'confirmed' && period.leaveType === change.leaveType && period.periodStart === change.periodStart))

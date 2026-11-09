@@ -1,15 +1,16 @@
 import Modal from '../Modal'
-import { Check, UserRound, X } from 'lucide-react'
+import { BriefcaseBusiness, Check, UserRound, X } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput from '../ValidatedInput'
 import Select from '../Select'
 import { formatDateInput } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, RefObject } from 'react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import Alert from '../Alert'
+import InfoSection from '../InfoSection'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
 import { employeeInput, employeeTypeLabels, emptyValues,
@@ -23,6 +24,7 @@ type Props = {
   onSaved: (employee: EmployeeCard) => void
 }
 export default function EmployeeForm({ employee, navigationGuard, onCancel, onSaved }: Props) {
+  const formId = useId()
   const [initial] = useState(() => employee ? valuesForEmployee(employee) : { ...emptyValues })
   const [values, setValues] = useState(initial)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -64,7 +66,11 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
         await window.hromadaHR.personnel.createEmployee(employeeInput(values))
       if (!alive.current) return
       if (!result.ok) {
-        setError(result.error.code === 'UNAVAILABLE' ? 'Результат збереження не підтверджено. Перед повторною спробою перевірте запис у реєстрі.' : personnelMessage(result.error.code))
+        const message = result.error.code === 'UNAVAILABLE' ? 'Результат збереження не підтверджено. Перед повторною спробою перевірте запис у реєстрі.' : personnelMessage(result.error.code)
+        setError(message)
+        if (result.error.code === 'HIRE_DATE_HAS_LEAVE_PERIODS') {
+          requestAnimationFrame(() => { if (form.current) focusFirstInvalid(form.current, '#employee-hireDate') })
+        }
         return
       }
       // The saved response is authoritative. Leave directly without the discard guard.
@@ -83,32 +89,36 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
-  return <Modal title={employee ? 'Редагувати працівника' : 'Додати працівника'} description="Поля зі знаком * обов’язкові. Решту можна заповнити пізніше." size="large" className="employee-form-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={busy} onClose={close}>
-    {error && <Alert variant="error">{error}</Alert>}
-    <form ref={form} noValidate onSubmit={event => { void submit(event) }} aria-busy={busy}>
-      <fieldset className="recipient-fieldset" disabled={busy}>
-        <legend>Персональні відомості</legend>
-        <div className="employee-form-grid employee-personal-grid">
-          {textField('lastName', 'Прізвище', true)}{textField('firstName', 'Ім’я', true)}{textField('middleName', 'По батькові')}
-          {textField('birthDate', 'Дата народження')}
-          <div className="recipient-field employee-field"><span>Тип працівника *</span>
-            <Select label="Тип працівника" required disabled={busy} value={values.employeeType} error={errors.employeeType}
-              options={Object.entries(employeeTypeLabels).map(([value, label]) => ({ value, label }))} onChange={value => change('employeeType', value as FormValues['employeeType'])} />
-          </div>
-        </div>
-      </fieldset>
-      <fieldset className="recipient-fieldset" disabled={busy}>
-        <legend>Кадрові відомості</legend>
-        <div className="employee-form-grid">
-          <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
-            onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
-          {textField('hireDate', 'Дата прийняття', true)}
-        </div>
-      </fieldset>
-      <div className="recipient-form-actions"><span>Зміни зберігаються лише після підтвердження.</span><div>
+  return <Modal title={employee ? 'Редагувати працівника' : 'Додати працівника'} size="large" className="employee-form-modal" headerIcon={<UserRound size={21} aria-hidden="true"/>} busy={busy} onClose={close}
+    footer={<div className="employee-form-footer">
+      {error && <Alert variant="error">{error}</Alert>}
+      <div className="employee-form-actions">
         <button type="button" className="secondary-button" disabled={busy} onClick={close}><X size={17} aria-hidden="true"/>Скасувати</button>
-        <button type="submit" className="primary-button" disabled={busy || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
-      </div></div>
+        <button type="submit" form={formId} className="primary-button" disabled={busy || directory.loading || !!directory.error || directory.draft} aria-busy={saving}><Check size={17} aria-hidden="true"/>{saving ? 'Збереження…' : employee ? 'Зберегти зміни' : 'Створити працівника'}</button>
+      </div>
+    </div>}>
+    <form id={formId} ref={form} className="employee-form" noValidate onSubmit={event => { void submit(event) }} aria-busy={busy}>
+      <InfoSection title="Персональні відомості" icon={<UserRound size={17}/>}>
+        <fieldset className="recipient-fieldset" disabled={busy}>
+          <div className="employee-form-grid employee-personal-grid">
+            {textField('lastName', 'Прізвище', true)}{textField('firstName', 'Ім’я', true)}{textField('middleName', 'По батькові')}
+            {textField('birthDate', 'Дата народження')}
+            <div className="recipient-field employee-field"><span>Тип працівника *</span>
+              <Select label="Тип працівника" required disabled={busy} value={values.employeeType} error={errors.employeeType}
+                options={Object.entries(employeeTypeLabels).map(([value, label]) => ({ value, label }))} onChange={value => change('employeeType', value as FormValues['employeeType'])} />
+            </div>
+          </div>
+        </fieldset>
+      </InfoSection>
+      <InfoSection title="Кадрові відомості" icon={<BriefcaseBusiness size={17}/>}>
+        <fieldset className="recipient-fieldset" disabled={busy}>
+          <div className="employee-form-grid">
+            <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
+              onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
+            {textField('hireDate', 'Дата прийняття', true)}
+          </div>
+        </fieldset>
+      </InfoSection>
     </form>
   </Modal>
 }

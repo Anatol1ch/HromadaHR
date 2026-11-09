@@ -110,6 +110,7 @@
 .leave-overview .dictionary-table-wrap, .leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
 .leave-editor-modal { width:min(54rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
 .leave-editor-modal .app-modal-content { container:leave-modal / inline-size; min-width:0; overflow-y:auto; overflow-x:hidden; }
+.leave-editor-modal :is(.app-select-trigger, .app-select-option) > span { min-width:0; overflow-wrap:anywhere; }
 .leave-editor-modal .leave-registration-grid { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
 .leave-editor-modal .leave-registration-grid .recipient-field { min-width:0; }
 .leave-editor-modal .dictionary-table-wrap { min-width:0; max-width:100%; overflow-x:auto; }
@@ -268,6 +269,23 @@
 .leave-type-picker-control select { position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; }
 .leave-type-picker-control:has(select:focus-visible) { outline:2px solid var(--border-focus); outline-offset:2px; }
 .leave-summary-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-balances-detail .leave-right-notice { align-items:center; gap:var(--space-2); padding:var(--space-2) var(--space-3); margin:0; }
+.leave-right-notice .ui-alert-icon { margin:0; }
+.leave-right-notice .ui-alert-content { flex:1 1 15rem; }
+.leave-right-notice .ui-alert-action { margin-inline-start:auto; }
+.leave-right-notice .ui-alert-action > .secondary-button {
+  min-height:var(--control-height-compact);
+  padding:4px var(--space-2);
+  border:1px solid var(--border-accent);
+  background:var(--surface-card);
+  color:var(--accent-hover);
+  text-decoration:none;
+}
+.leave-right-notice .ui-alert-action > .secondary-button:hover { background:var(--accent-soft); }
+@container info-section (max-width:450px) {
+  .leave-right-notice .ui-alert-content { flex-basis:calc(100% - 27px); }
+  .leave-right-notice .ui-alert-action { flex-basis:100%; padding-inline-start:27px; }
+}
 .leave-summary-actions .secondary-button { min-height:var(--control-height-compact); height:auto; max-width:100%; white-space:normal; }
 .leave-year-select { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
 .leave-year-select .app-select-trigger { min-height:var(--control-height-compact); }

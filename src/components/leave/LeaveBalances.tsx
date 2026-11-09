@@ -16,7 +16,7 @@ import DictionaryTable from '../DictionaryTable'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import BalanceEditor, { periodLabel } from './BalanceEditor'
-import { type Period } from './draft'
+import { historicalBalancePeriods, type Period } from './draft'
 
 const columns = [{ label: 'Обліковий період', width: '38%' },
   { label: 'Внесено днів', width: '18%', className: 'leave-days-column' }, { label: 'Враховано у відпустках', width: '18%', className: 'leave-days-column' },
@@ -25,7 +25,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, warnNewEntitlement, rightBadge, rightNotice }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, rightNotice }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -33,7 +33,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   navigationGuard: RefObject<NavigationGuard>
   refreshRevision: number
   rightsReady: boolean
-  warnNewEntitlement: boolean
+  historicalOnly: boolean
   rightBadge?: ReactNode
   rightNotice?: ReactNode
 }) {
@@ -93,6 +93,8 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     if (document.activeElement === document.body) editButton.current?.focus()
   }, [data])
 
+  const editorCandidates = periods && (historicalOnly ? historicalBalancePeriods(periods) : periods)
+  const visiblePeriods = historicalOnly ? periods?.filter(period => period.status === 'confirmed') : periods
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
   const refresh = () => setRevision(value => value + 1)
 
@@ -123,34 +125,34 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     <InfoSection title={labels[type]} icon={<LeaveTypeIcon type={type}/>} action={<div className="leave-summary-actions">
       {rightBadge}
       <button ref={editButton} type="button" className="secondary-button"
-        disabled={!periods || (!periods.length && type !== 'oms_service_additional')}
-        onClick={() => { editorPeriods.current = periods ?? []; setEditing(true) }}>
-        <Pencil size={16} aria-hidden="true"/>{selectedSummary.count > 0 ? 'Редагувати залишки' : 'Внести залишки'}
+        disabled={!editorCandidates || (!editorCandidates.length && type !== 'oms_service_additional')}
+        onClick={() => { editorPeriods.current = editorCandidates ?? []; setEditing(true) }}>
+        <Pencil size={16} aria-hidden="true"/>{selectedSummary.count > 0 ? 'Редагувати залишки' : historicalOnly ? 'Внести історичні залишки' : 'Внести залишки'}
       </button>
     </div>}>
       {data?.error ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{data.error}</Alert>
         : !data ? <DataState kind="loading" compact message="Завантаження залишків…"/>
-        : selectedSummary.count === 0 ? <div className="info-item"><DataState kind="empty" compact message="Підтверджених залишків за цим видом ще немає."/></div>
+        : selectedSummary.count === 0 ? !historicalOnly && <div className="info-item"><DataState kind="empty" compact message="Залишки ще не внесено."/></div>
         : <>
           <dl className="leave-metric-grid leave-metric-grid-two">
-            <InfoItem label={selectedSummary.incomplete ? 'Доступно за внесеними періодами' : 'Доступно'}
+            <InfoItem label={historicalOnly ? 'Залишок за підтвердженими періодами' : selectedSummary.incomplete ? 'Доступно за внесеними періодами' : 'Доступно'}
               value={formatLeaveDays(selectedSummary.remaining)} emphasis/>
             <InfoItem label="Внесено до обліку" value={formatLeaveDays(selectedSummary.entered)}/>
             <InfoItem label="Враховано у відпустках" value={formatLeaveDays(selectedSummary.accounted)}/>
           </dl>
-          {selectedSummary.incomplete && <Alert variant="warning">Залишки внесено лише за частиною періодів.</Alert>}
+          {selectedSummary.incomplete && !historicalOnly && <Alert variant="warning">Залишки внесено лише за частиною періодів.</Alert>}
         </>}
       {rightNotice}
     </InfoSection>
-    <section className="leave-balances-table" aria-label="Облікові періоди">
+    {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
     {!data?.error && <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data}
-      empty={!periods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined}>
+      empty={!visiblePeriods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined}>
       {groups.map(group => {
-        const entries = periods?.filter(period => period.accountingBasis === group.basis)
+        const entries = visiblePeriods?.filter(period => period.accountingBasis === group.basis)
         if (!entries?.length) return null
         return <Fragment key={group.basis}>
-          <tr className="leave-group"><th id={groupId + group.basis} colSpan={5}>{group.label}</th></tr>
+          <tr className="leave-group"><th id={groupId + group.basis} colSpan={5}>{historicalOnly && group.basis === 'confirmed_entitlement' ? 'Раніше підтверджені періоди' : group.label}</th></tr>
           {entries.map(period => <tr key={period.periodStart}>
             <td className="leave-period" aria-describedby={groupId + group.basis}>{periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
             <td className="leave-days-column">{period.status === 'confirmed'
@@ -167,8 +169,8 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         </Fragment>
       })}
     </DictionaryTable>}
-    </section>
-    {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} warnNewEntitlement={warnNewEntitlement}
+    </section>}
+    {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
       onClose={() => { setEditing(false); editorPeriods.current=null }} onSaved={() => {
         setEditing(false)
         editorPeriods.current=null
@@ -177,7 +179,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         notifySystemToast('success', 'Залишки збережено', 'Підтверджені величини оновлено.')
       }} />}
     {deleting && <ConfirmDialog title="Вилучити підтвердження?" confirmLabel="Вилучити" error={deleteError}
-      message={`Підтверджені дні за період ${periodLabel(deleting)} буде вилучено. Період знову відображатиметься як «Не внесено».`}
+      message={`Підтверджені дні за період ${periodLabel(deleting)} буде вилучено. Підтвердження можна внести повторно за чинними правилами.`}
       onCancel={() => setDeleting(null)} onConfirm={() => remove(deleting)} />}
   </section>
 }

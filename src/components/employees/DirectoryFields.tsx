@@ -24,6 +24,7 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
   const [draft, setDraft] = useState<'department' | 'position' | null>(null)
   const [pending, setPending] = useState(false)
   const root = useRef<HTMLDivElement>(null)
+  const returnFocus = useRef<'department' | 'position' | null>(null)
   const alive = useRef(true)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const hasDraft = !!draft
@@ -40,9 +41,13 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [retry])
-  function focusSelect(kind: 'department' | 'position') {
-    requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`[data-directory="${kind}"] [role="combobox"]`)?.focus())
-  }
+  useEffect(() => {
+    if (disabled || draft || pending || !returnFocus.current) return
+    const trigger = root.current?.querySelector<HTMLButtonElement>(`[data-directory="${returnFocus.current}"] [role="combobox"]`)
+    if (!trigger || trigger.disabled) return
+    returnFocus.current = null
+    trigger.focus()
+  }, [disabled, draft, pending])
   async function refreshConflict() {
     const api = window.hromadaHR.personnel
     const result = draft === 'department' ? await api.listDepartments() : await api.listPositions()
@@ -55,7 +60,8 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
     if (!draft) return
     if (draft === 'department') { setDepartments(current => [...current, entry].sort((a,b) => a.name.localeCompare(b.name, 'uk'))); onDepartment(entry.id) }
     else { setPositions(current => [...current, entry].sort((a,b) => a.name.localeCompare(b.name, 'uk'))); onPosition(entry.id) }
-    setDraft(null); focusSelect(draft)
+    returnFocus.current = draft
+    setDraft(null)
     notifySystemToast('success', 'Запис створено', 'Новий запис створено та вибрано.')
   }
   return <div className="recipient-field employee-directory-fields" ref={root}>
@@ -78,6 +84,6 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
       })}
     </div>
     {draft && <DirectoryForm kind={draft} inFlight={inFlight} navigationGuard={navigationGuard} onPending={setPending} onConflict={refreshConflict} onCreated={created}
-      onClose={() => { setDraft(null); focusSelect(draft) }} />}
+      onClose={() => { returnFocus.current = draft; setDraft(null) }} />}
   </div>
 }

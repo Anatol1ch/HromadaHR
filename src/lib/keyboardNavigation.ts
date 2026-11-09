@@ -57,7 +57,9 @@ export function advanceField(from: HTMLElement) {
   const index = fields.indexOf(from)
   if (index < 0) return
   const submit = region instanceof HTMLFormElement
-    ? focusableElements(region, true).find(element => element.matches('button[type="submit"], button:not([type]), input[type="submit"]'))
+    ? Array.from(region.elements).find((element): element is HTMLElement =>
+      element instanceof HTMLElement && scope.contains(element) && isAvailable(element) &&
+      element.matches('button[type="submit"], button:not([type]), input[type="submit"]'))
     : undefined
   ;(fields[index + 1] ?? submit ?? from).focus()
   updateKeyboardHighlight()
@@ -91,7 +93,7 @@ export function focusFirstInvalid(form: HTMLFormElement, fallbackSelector?: stri
   if (!activeKeyboardScope().contains(form)) return
   const invalid = [...form.querySelectorAll<HTMLElement>(':invalid, [aria-invalid="true"]')]
     .map(element => element.closest('.app-select')?.querySelector<HTMLElement>('[role="combobox"]') ?? element)
-    .find(isAvailable)
+    .find(element => element.matches(fieldSelector) && isAvailable(element))
   const target = invalid ?? (fallbackSelector ? form.querySelector<HTMLElement>(fallbackSelector) : null)
   if (target && isAvailable(target)) target.focus()
 }

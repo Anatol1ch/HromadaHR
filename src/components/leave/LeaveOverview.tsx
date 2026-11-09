@@ -57,14 +57,14 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
               <span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
             </div>
           </div>
-          {summary && <div className="leave-overview-balance">
+          {summary && (summary.count > 0 || right?.status !== 'no_right') && <div className="leave-overview-balance">
             {summary.count > 0 ? <>
               <strong className="leave-overview-number">{formatLeaveDays(summary.remaining)}</strong>
-              {summary.incomplete && <small>Лише за внесеними періодами</small>}
+              {right?.status === 'no_right' ? <small>За підтвердженими періодами</small>
+                : summary.incomplete && <small>Лише за внесеними періодами</small>}
             </> : <small className="leave-muted">Не внесено</small>}
           </div>}
         </div>
-        {right?.status === 'no_right' && ((summary?.remaining ?? 0n) > 0n || data.records.some(record => record.leaveType === option.value)) && <small role="status">Є внесені дні або попередні реєстрації – перевірте поточний статус.</small>}
       </article>
     })}</div>
     </InfoSection>

@@ -17,10 +17,10 @@ import { buildChanges, cutoff, hasNewEntitlement, type Draft, type Period } from
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, warnNewEntitlement }: {
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly }: {
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
-  rightsReady?: boolean; warnNewEntitlement?: boolean
+  rightsReady?: boolean; historicalOnly?: boolean
 }) {
   const {today}=useAccountingDate()
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
@@ -28,7 +28,6 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   const [fromYear,setFromYear] = useState('2027')
   const [toYear,setToYear] = useState('2027')
   const [confirmZeros, setConfirmZeros] = useState(false)
-  const [confirmEntitlement, setConfirmEntitlement] = useState<LeavePeriodInput[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const form = useRef<HTMLFormElement>(null)
@@ -42,7 +41,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
     if ('period' in row) return row.period.status === 'proposed'
     const start = parseDateInput(row.start)
     const end = parseDateInput(row.end)
-    return !!start && !!end && start <= end
+    return !!start && !!end && start <= end && (!historicalOnly || start < cutoff)
   }
   const hasRowActions = type === 'oms_service_additional' && rows.some(row => 'start' in row)
   const zeroCount = rows.filter(eligible).length
@@ -52,7 +51,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (pending.current || confirmZeros || confirmEntitlement) return
+    if (pending.current || confirmZeros) return
     setError('')
     let changes
     try { changes = buildChanges(rows) }
@@ -66,8 +65,8 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
       setError('Не вдалося перевірити статус права. Перед внесенням нового підтвердження закрийте редактор та повторіть завантаження статусів.')
       return
     }
-    if (newEntitlement && warnNewEntitlement) {
-      setConfirmEntitlement(changes)
+    if (newEntitlement && historicalOnly) {
+      setError('Нові права за періодами в цьому режимі не підтверджуються. Перевірте право у вкладці «Права на відпустки».')
       return
     }
     await save(changes)
@@ -90,10 +89,11 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
     }
   }
 
-  return <Modal title={"Залишки – " + typeLabel} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
+  return <Modal title={(historicalOnly ? 'Історичні залишки – ' : 'Залишки – ') + typeLabel} description={employeeName} size="wide" className="leave-editor-modal" busy={busy} onClose={() => close(onClose)}>
     <form ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
-      <p className="leave-muted">Перенесіть залишки зі зошита за кожним періодом. Порожньо – не внесено; 0 – залишку немає. <HelpTip label="Як заповнювати залишки" text="Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право – воно не нараховується автоматично." /></p>
-      {type === 'oms_service_additional' && <section className="leave-year-proposals"><p>Календарні інтервали – лише чернетка. Перевірте відповідність стажу та виправте дати перед підтвердженням днів.</p><div className="leave-registration-grid">
+      <p className="leave-muted">{historicalOnly ? 'Виправте підтверджені записи або внесіть документально підтверджений початковий залишок за період, що почався до 01.01.2027.' : 'Перенесіть залишки зі зошита за кожним періодом.'} Порожньо – не внесено. 0 – залишку немає. <HelpTip label="Як заповнювати залишки"
+        text={historicalOnly ? 'Початковий залишок має враховувати операції до 31.12.2026.' : 'Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право – воно не нараховується автоматично.'}/></p>
+      {type === 'oms_service_additional' && !historicalOnly && <section className="leave-year-proposals"><p>Календарні інтервали – лише чернетка. Перевірте відповідність стажу та виправте дати перед підтвердженням днів.</p><div className="leave-registration-grid">
         <label className="recipient-field">З року<ValidatedInput inputMode="numeric" value={fromYear} disabled={busy} onChange={e=>setFromYear(e.target.value)}/></label>
         <label className="recipient-field">До року<ValidatedInput inputMode="numeric" value={toYear} disabled={busy} onChange={e=>setToYear(e.target.value)}/></label>
         <button type="button" className="secondary-button" disabled={busy} onClick={()=>{try{const proposals=serviceYearDrafts(Number(fromYear),Number(toYear));const starts=new Set(rows.map(row=>'period' in row?row.period.periodStart:row.startIso));setRows(current=>[...current,...proposals.filter(p=>!starts.has(p.start)).map(p=>({id:nextRowId.current++,start:formatDate(p.start),end:formatDate(p.end),startIso:p.start,endIso:p.end,days:''}))]);setError('')}catch(e){setError(e instanceof Error?e.message:'Перевірте роки.')}}}>Запропонувати періоди</button></div></section>}
@@ -108,7 +108,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
               <label className="recipient-field">Початок<DateField disabled={busy} value={row.startIso} onChange={startIso => update(index, current => 'start' in current ? { ...current, startIso } : current)} onDraftChange={start => update(index, current => 'start' in current ? { ...current, start } : current)} /></label>
               <label className="recipient-field">Завершення<DateField disabled={busy} value={row.endIso} onChange={endIso => update(index, current => 'end' in current ? { ...current, endIso } : current)} onDraftChange={end => update(index, current => 'end' in current ? { ...current, end } : current)} /></label>
             </div>}
-            {basis === 'confirmed_entitlement' && <small className="leave-period-note">Право за новим періодом</small>}
+            {basis === 'confirmed_entitlement' && !historicalOnly && <small className="leave-period-note">Право за новим періодом</small>}
             </td>
             <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
               aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)}
@@ -132,12 +132,6 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         </div>
       </div>
     </form>
-    {confirmEntitlement && <ConfirmDialog title="Внести нове підтвердження?" variant="warning" confirmLabel="Зберегти зміни"
-      message="Поточний статус цього виду – «Права немає». Перевірте право на відпустку за новим періодом перед збереженням. Статус права залишиться чинним."
-      onCancel={() => setConfirmEntitlement(null)} onConfirm={() => {
-        setConfirmEntitlement(null)
-        return save(confirmEntitlement)
-      }} />}
     {confirmZeros && <ConfirmDialog title="Заповнити нулями?" variant="primary" confirmLabel="Заповнити нулями"
       message={`Кількість періодів вибраного виду для заповнення: ${zeroCount}. Нулі буде записано після натискання «Зберегти».`}
       onCancel={() => setConfirmZeros(false)} onConfirm={() => {

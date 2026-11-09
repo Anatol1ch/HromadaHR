@@ -1,5 +1,6 @@
 import { navigateTabs } from '../../lib/tabNavigation'
-import { useEffect, useId, useState, type RefObject } from 'react'
+import { useEffect, useId, useRef, useState, type RefObject } from 'react'
+import { ShieldCheck } from 'lucide-react'
 import { isPeriodLeave } from '../../../shared/leave'
 import type { EmployeeLeaveRight, LeaveRecord, LeaveType } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
@@ -18,6 +19,7 @@ import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { notifySystemToast } from '../SystemToastHost'
 export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{navigationGuard:RefObject<NavigationGuard>;initialEmployeeId?:string}) {
   const navId=useId()
+  const rightsTab = useRef<HTMLButtonElement>(null)
   const [periodType,setPeriodType]=useState<LeaveType>('annual_main')
   const [section,setSection]=useState<'journal'|'balances'|'rights'>(initialEmployeeId?'balances':'journal')
   const [employees,setEmployees]=useState<EmployeeCard[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
@@ -40,12 +42,16 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
   const currentRights = rights?.key === rightsKey ? rights : undefined
   const rightStatus = currentRights?.data?.find(right => right.leaveType === periodType)?.status
   const noRight = rightStatus === 'no_right'
-  const rightBadge = currentRights?.data && <span className={'leave-right-status is-' + (rightStatus ?? 'unknown')}>
-    {noRight ? 'Права немає' : rightStatus === 'has_right' ? 'Право підтверджено' : 'Не перевірено'}
+  const rightBadge = currentRights?.data && !noRight && <span className={'leave-right-status is-' + (rightStatus ?? 'unknown')}>
+    {rightStatus === 'has_right' ? 'Право підтверджено' : 'Не перевірено'}
   </span>
-  const rightNotice = noRight && <Alert variant="warning" action={<button type="button" className="secondary-button"
-    onClick={() => navigationGuard.current(() => setSection('rights'))}>Права на відпустки</button>}>
-    {isPeriodLeave(periodType) ? 'Перевірте право перед внесенням нового підтвердження.' : 'Поточний статус права для вибраного виду – «Права немає».'}
+  const rightNotice = noRight && <Alert variant="info" className="leave-right-notice" action={<button type="button" className="secondary-button"
+    onClick={() => navigationGuard.current(() => {
+      setSection('rights')
+      rightsTab.current?.focus()
+    })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити право</button>}>
+    <strong>Право на цей вид відпустки відсутнє</strong>
+    {isPeriodLeave(periodType) && <span>Перед підтвердженням нового права перевірте його статус.</span>}
   </Alert>
   const refreshRights = () => setRightsRevision(value => value + 1)
   useEffect(()=>{let active=true;void window.hromadaHR.personnel.listEmployees().then(result=>{if(!active)return;if(result.ok){setEmployees(result.data);setLoaded(true)}else setError(personnelMessage(result.error.code))}).catch(()=>{if(active)setError('Не вдалося завантажити працівників.')});return()=>{active=false}},[retry])
@@ -55,7 +61,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
   const register=()=>{setCreateEmployee('');setCreating(true)}
   function balances(id:string){setSelected(id);setSection('balances')}
   return <div className="page-transition leave-workspace"><header className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Відпустки</h1></div></header>
-    <nav className="settings-section-nav leave-section-nav" role="tablist" aria-label="Розділи відпусток" onKeyDown={navigateTabs}>{(['journal','balances','rights'] as const).map(value=><button key={value} id={navId+value} role="tab" aria-selected={section===value} aria-controls={navId+value+'-panel'} tabIndex={section===value?0:-1} className={'settings-section-current'+(section===value?' is-selected':'')} onClick={()=>navigationGuard.current(()=>setSection(value))}>{value==='journal'?'Журнал відпусток':value==='balances'?'Залишки відпусток':'Права на відпустки'}</button>)}</nav>
+    <nav className="settings-section-nav leave-section-nav" role="tablist" aria-label="Розділи відпусток" onKeyDown={navigateTabs}>{(['journal','balances','rights'] as const).map(value=><button key={value} ref={value === 'rights' ? rightsTab : undefined} id={navId+value} role="tab" aria-selected={section===value} aria-controls={navId+value+'-panel'} tabIndex={section===value?0:-1} className={'settings-section-current'+(section===value?' is-selected':'')} onClick={()=>navigationGuard.current(()=>setSection(value))}>{value==='journal'?'Журнал відпусток':value==='balances'?'Залишки відпусток':'Права на відпустки'}</button>)}</nav>
     {error&&<Alert variant="error" action={<button type="button" onClick={()=>{setError('');setRetry(v=>v+1)}}>Повторити</button>}>{error}</Alert>}
     <div id={navId+'journal-panel'} role="tabpanel" aria-labelledby={navId+'journal'} hidden={section!=='journal'}>
       {recordsError?<Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>:!recordsLoaded||!loaded?<DataState kind="loading" message="Завантаження журналу…"/>:<LeaveJournal records={records} employeeRows={employees} navigationGuard={navigationGuard} active={section==='journal'} onChanged={refresh} onRegister={register} onBalances={balances}/>}
@@ -70,7 +76,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
           {currentRights?.error && <Alert variant="error" action={<button type="button" onClick={refreshRights}>Повторити</button>}>{currentRights.error}</Alert>}
           {isPeriodLeave(periodType) ? <LeaveBalances key={employee.id} type={periodType}
             employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
-            refreshRevision={revision} rightsReady={Boolean(currentRights?.data)} warnNewEntitlement={noRight} rightBadge={rightBadge} rightNotice={rightNotice}/>
+            refreshRevision={revision} rightsReady={Boolean(currentRights?.data)} historicalOnly={noRight} rightBadge={rightBadge} rightNotice={rightNotice}/>
           : recordsError ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>
           : !recordsLoaded ? <DataState kind="loading" message="Завантаження реєстрацій…"/>
           : <EventUsage key={employee.id + periodType} records={records} employeeId={employee.id} type={periodType} rightBadge={rightBadge} rightNotice={rightNotice}/>}

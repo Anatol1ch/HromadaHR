@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildChanges, hasNewEntitlement } from '../src/components/leave/draft.ts'
+import { buildChanges, hasNewEntitlement, historicalBalancePeriods } from '../src/components/leave/draft.ts'
 
 test('confirmation is limited to new entitlements, including explicit zero and mixed batches', () => {
   const entitlement = { leaveType: 'annual_main', periodStart: '2027-01-01', periodEnd: '2027-12-31', accountingBasis: 'confirmed_entitlement', status: 'proposed' }
@@ -17,6 +17,16 @@ test('confirmation is limited to new entitlements, including explicit zero and m
 const proposal = { status: 'proposed', leaveType: 'annual_main', accountingBasis: 'initial_balance',
   periodStart: '2026-06-15', periodEnd: '2027-06-14' }
 const confirmed = { ...proposal, status: 'confirmed', confirmedDays: 7, referenceEntitlementDays: 24 }
+
+test('historical editing retains initial drafts and existing confirmations, including zero', () => {
+  const newRight = { ...proposal, accountingBasis: 'confirmed_entitlement', periodStart: '2027-06-15', periodEnd: '2028-06-14' }
+  const savedRight = { ...newRight, status: 'confirmed', confirmedDays: 0, referenceEntitlementDays: null }
+  assert.deepEqual(historicalBalancePeriods([proposal, confirmed, newRight, savedRight]), [proposal, confirmed, savedRight])
+  const correction = buildChanges([{ period: savedRight, days: '4' }])
+  const manual = { id: 0, start: '01.01.2027', end: '31.12.2027', days: '0' }
+  assert.equal(hasNewEntitlement(correction, [savedRight]), false)
+  assert.equal(hasNewEntitlement(buildChanges([manual]), [savedRight]), true)
+})
 
 test('leave drafts send only new or changed confirmations, including explicit zero', () => {
   assert.deepEqual(buildChanges([{ period: proposal, days: '' }, { period: confirmed, days: '7' }]), [])

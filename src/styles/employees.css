@@ -47,11 +47,14 @@
 .app-modal.employee-form-modal { width: min(880px, 100%); }
 .employee-form-modal .app-modal-content { container-type: inline-size; }
 .employee-select-action { display: flex; align-items: start; gap: 8px; min-width: 0; }
-.employee-select-action > .app-select { flex: 1; }
+.employee-select-action > .app-select { flex: 1; min-width: 0; }
 .employee-select-action > .secondary-button { flex: none; min-height: var(--control-height); }
 .employee-hint, .employee-muted { color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; }
 .field-error { color: var(--color-text-error); font-size: 12px; line-height: 1.5; }
-.employee-form-modal .recipient-fieldset { padding-block: 12px 16px; }
+.employee-form, .employee-form-footer { display: grid; gap: var(--space-3); min-width: 0; }
+.employee-form-footer .ui-alert { margin: 0; }
+.employee-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.employee-form-modal .recipient-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
 .employee-form-grid { display: grid; gap: 12px 16px; align-items: start; }
 .employee-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .employee-form-grid.employee-personal-grid {
@@ -68,7 +71,7 @@
 }
 .employee-directory-fields > * { grid-column: 1 / -1; }
 .employee-directory-grid { display: grid; grid-template-columns: subgrid; row-gap: 12px; }
-.employee-form-modal .recipient-field .app-select-trigger > span { overflow-wrap: anywhere; }
+.employee-form-modal :is(.app-select-trigger, .app-select-option) > span { min-width: 0; overflow-wrap: anywhere; }
 
 @container (max-width: 650px) {
   .employee-form-grid, .employee-form-grid.employee-personal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
