@@ -14,9 +14,15 @@ test('event accounting attributes a full duration once to the start year, exclud
   assert.equal(usage.limit,14)
   assert.equal(usage.alreadyGranted,true)
   assert.equal('availableDays' in usage,false)
-  assert.equal(annualUsage(records,'a','veteran_special_leave','2028').days,0)
+  const empty = annualUsage(records,'a','veteran_special_leave','2028')
+  assert.deepEqual(empty.history,[])
+  assert.equal(empty.activeCount,0)
+  assert.equal(empty.days,0)
   assert.equal(annualUsage(records,'a','chernobyl_special_leave','2027').limit,16)
-  assert.equal(annualUsage([record({status:'cancelled'})],'a','veteran_special_leave','2027').alreadyGranted,false)
+  const cancelledOnly = annualUsage([record({status:'cancelled'})],'a','veteran_special_leave','2027')
+  assert.equal(cancelledOnly.alreadyGranted,false)
+  assert.equal(cancelledOnly.history.length,1)
+  assert.equal(cancelledOnly.days,0)
 })
 
 test('study counts separate events without a universal limit or fictitious available balance', () => {

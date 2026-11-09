@@ -3,7 +3,7 @@ import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
 import { useEffect, useState } from 'react'
 import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight } from '../../../shared/leave'
-import { balanceSummary } from './summary'
+import { balanceSummary, formatLeaveDays } from './summary'
 import { leaveLabels, leaveOptions, periodLeaveOptions } from './presentation'
 import { formatDate, formatDateTime } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
@@ -43,13 +43,22 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
   return <section className="leave-layout leave-overview" aria-label="Огляд відпусток">
     <div className="leave-rights-overview">{leaveOptions.map(option => {
       const right = data.rights.find(item => item.leaveType === option.value)
-      const periodic = isPeriodLeave(option.value)
       const summary = isPeriodLeave(option.value) ? balanceSummary(option.value, data.balances, data.proposals.filter(p=>p.periodStart<=throughDate)) : null
-      return <article className="employee-card-section" key={option.value}><header className="leave-overview-heading"><LeaveTypeIcon type={option.value}/><h5>{option.label}</h5></header><span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
-        {right && <small>Перевірено {formatDateTime(right.checkedAt)}</small>}
-        {periodic ? <>{right?.status !== 'no_right' && <strong className={summary?.count ? 'leave-overview-number' : 'leave-overview-empty'}>{summary?.count ? summary.remaining.toLocaleString('uk-UA') + ' днів' : 'Залишки не внесено'}</strong>}
-          {right?.status !== 'no_right' && summary && summary.count > 0 && <small>{summary.remaining.toLocaleString('uk-UA')} із {summary.entered.toLocaleString('uk-UA')} внесених днів</small>}
-          {summary?.incomplete && <small>Дані внесено не за всі періоди</small>}</> : null}
+      return <article className="employee-card-section" key={option.value}>
+        <div className={summary ? 'leave-overview-content has-balance' : 'leave-overview-content'}>
+          <div className="leave-overview-details">
+            <header className="leave-overview-heading"><LeaveTypeIcon type={option.value}/><h5>{option.label}</h5></header>
+            <span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
+            {right && <small>Перевірено {formatDateTime(right.checkedAt)}</small>}
+          </div>
+          {summary && <div className="leave-overview-balance">
+            {summary.count > 0 ? <>
+              <strong className="leave-overview-number">{formatLeaveDays(summary.remaining)}</strong>
+              <small>Внесено {formatLeaveDays(summary.entered)}</small>
+              {summary.incomplete && <small>Лише за внесеними періодами</small>}
+            </> : <small className="leave-overview-empty">Залишки не внесено</small>}
+          </div>}
+        </div>
         {right?.status === 'no_right' && ((summary?.remaining ?? 0n) > 0n || data.records.some(record => record.leaveType === option.value)) && <small role="status">Є внесені дні або попередні реєстрації – перевірте поточний статус.</small>}
       </article>
     })}</div>

@@ -3,7 +3,7 @@ import { serviceYearDrafts } from './registry'
 import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Check, Plus, X } from 'lucide-react'
-import type { PeriodLeaveType } from '../../../shared/leave'
+import type { LeavePeriodInput, PeriodLeaveType } from '../../../shared/leave'
 import { formatDate, parseDateInput } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
@@ -13,13 +13,14 @@ import DictionaryTable from '../DictionaryTable'
 import Modal from '../Modal'
 import ValidatedInput from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import { buildChanges, cutoff, type Draft, type Period } from './draft'
+import { buildChanges, cutoff, hasNewEntitlement, type Draft, type Period } from './draft'
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved }: {
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, warnNewEntitlement }: {
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
+  rightsReady?: boolean; warnNewEntitlement?: boolean
 }) {
   const {today}=useAccountingDate()
   const initial = useRef<Draft[]>(periods.map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
@@ -27,6 +28,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   const [fromYear,setFromYear] = useState('2027')
   const [toYear,setToYear] = useState('2027')
   const [confirmZeros, setConfirmZeros] = useState(false)
+  const [confirmEntitlement, setConfirmEntitlement] = useState<LeavePeriodInput[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const form = useRef<HTMLFormElement>(null)
@@ -50,7 +52,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (pending.current || confirmZeros) return
+    if (pending.current || confirmZeros || confirmEntitlement) return
     setError('')
     let changes
     try { changes = buildChanges(rows) }
@@ -59,6 +61,20 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
       return
     }
     if (!changes.length) { onClose(); return }
+    const newEntitlement = hasNewEntitlement(changes, periods)
+    if (newEntitlement && !rightsReady) {
+      setError('Не вдалося перевірити статус права. Перед внесенням нового підтвердження закрийте редактор та повторіть завантаження статусів.')
+      return
+    }
+    if (newEntitlement && warnNewEntitlement) {
+      setConfirmEntitlement(changes)
+      return
+    }
+    await save(changes)
+  }
+
+  async function save(changes: LeavePeriodInput[]) {
+    if (pending.current) return
     pending.current = true
     setBusy(true)
     try {
@@ -116,6 +132,12 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         </div>
       </div>
     </form>
+    {confirmEntitlement && <ConfirmDialog title="Внести нове підтвердження?" variant="warning" confirmLabel="Зберегти зміни"
+      message="Поточний статус цього виду – «Права немає». Перевірте право на відпустку за новим періодом перед збереженням. Статус права залишиться чинним."
+      onCancel={() => setConfirmEntitlement(null)} onConfirm={() => {
+        setConfirmEntitlement(null)
+        return save(confirmEntitlement)
+      }} />}
     {confirmZeros && <ConfirmDialog title="Заповнити нулями?" variant="primary" confirmLabel="Заповнити нулями"
       message={`Кількість періодів вибраного виду для заповнення: ${zeroCount}. Нулі буде записано після натискання «Зберегти».`}
       onCancel={() => setConfirmZeros(false)} onConfirm={() => {

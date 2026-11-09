@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildChanges } from '../src/components/leave/draft.ts'
+import { buildChanges, hasNewEntitlement } from '../src/components/leave/draft.ts'
+
+test('confirmation is limited to new entitlements, including explicit zero and mixed batches', () => {
+  const entitlement = { leaveType: 'annual_main', periodStart: '2027-01-01', periodEnd: '2027-12-31', accountingBasis: 'confirmed_entitlement', status: 'proposed' }
+  const confirmed = { ...entitlement, status: 'confirmed', confirmedDays: 8, referenceEntitlementDays: null }
+  const initial = { ...entitlement, accountingBasis: 'initial_balance', periodStart: '2026-01-01', periodEnd: '2026-12-31' }
+  const historical = { period: initial, days: '3' }
+  const correction = { period: confirmed, days: '6' }
+  const next = { ...entitlement, periodStart: '2028-01-01', periodEnd: '2028-12-31' }
+  assert.equal(hasNewEntitlement(buildChanges([historical, correction]), [initial, confirmed]), false)
+  assert.equal(hasNewEntitlement(buildChanges([historical, correction, { period: next, days: '0' }]), [initial, confirmed, next]), true)
+  assert.equal(hasNewEntitlement(buildChanges([{ period: next, days: '' }]), [next]), false)
+})
 
 const proposal = { status: 'proposed', leaveType: 'annual_main', accountingBasis: 'initial_balance',
   periodStart: '2026-06-15', periodEnd: '2027-06-14' }

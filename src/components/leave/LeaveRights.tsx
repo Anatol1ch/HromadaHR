@@ -14,7 +14,7 @@ const rightStates = [
   { value: 'has_right', label: 'Право є', Icon: CircleCheck },
   { value: 'no_right', label: 'Права немає', Icon: CircleX },
 ] as const
-export default function LeaveRights({employeeId,records,navigationGuard}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>}) {
+export default function LeaveRights({employeeId,records,navigationGuard,onSaved}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void}) {
   const radioId=useId()
   const [saved,setSaved]=useState<EmployeeLeaveRight[]>()
   const [draft,setDraft]=useState<Record<string,string>>({})
@@ -24,9 +24,8 @@ export default function LeaveRights({employeeId,records,navigationGuard}: {emplo
   useEffect(()=>{let active=true;void window.hromadaHR.leave.listRights(employeeId).then(result=>{if(!active)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])))}else setError(personnelMessage(result.error.code))}).catch(()=>{if(active)setError('Не вдалося завантажити права.')});return()=>{active=false}},[employeeId,retry])
   const changes:LeaveRightInput[]=leaveOptions.filter(option=>(draft[option.value]??'')!==(saved?.find(r=>r.leaveType===option.value)?.status??'')).map(option=>({leaveType:option.value,status:(draft[option.value]||null) as LeaveRightInput['status']}))
   useUnsavedChanges(changes.length>0,pending,navigationGuard,owner)
-  async function save(){if(pending.current||!saved||!changes.length)return;pending.current=true;setBusy(true);setError('');try{const result=await window.hromadaHR.leave.saveRights(employeeId,changes);if(!alive.current)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])));notifySystemToast('success','Статуси права збережено','Дні та минулі реєстрації не змінено.')}else setError(personnelMessage(result.error.code))}catch{if(alive.current)setError('Результат не підтверджено. Повторне збереження тих самих статусів безпечне.')}finally{pending.current=false;if(alive.current)setBusy(false)}}
+  async function save(){if(pending.current||!saved||!changes.length)return;pending.current=true;setBusy(true);setError('');try{const result=await window.hromadaHR.leave.saveRights(employeeId,changes);if(!alive.current)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])));onSaved();notifySystemToast('success','Статуси права збережено','Дні та минулі реєстрації не змінено.')}else setError(personnelMessage(result.error.code))}catch{if(alive.current)setError('Результат не підтверджено. Повторне збереження тих самих статусів безпечне.')}finally{pending.current=false;if(alive.current)setBusy(false)}}
   return <section ref={owner} className="dashboard-panel leave-rights-panel"><header className="employee-group-heading"><h2>Права на відпустки</h2></header>
-    <p className="leave-muted">Поточний висновок кадровика. Статус не нараховує днів і не змінює минулі відпустки.</p>
     {error && !saved && <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert>}
     <div className="leave-rights-list">{leaveOptions.map(option => {
       const right = saved?.find(item => item.leaveType === option.value)

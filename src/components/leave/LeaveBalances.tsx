@@ -1,12 +1,12 @@
 import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
-import { balanceSummary } from './summary'
+import { balanceSummary, formatLeaveDays } from './summary'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import LeaveJournal from './LeaveJournal'
 import { leaveLabels as labels, periodLeaveOptions as options } from './presentation'
 import type { PeriodBalance, LeaveRecord } from '../../../shared/leave'
 import { Fragment, useEffect, useId, useRef, useState, type RefObject } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { type PeriodLeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import ConfirmDialog from '../ConfirmDialog'
@@ -23,15 +23,10 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-const dayPlural = new Intl.PluralRules('uk-UA')
-const dayLabel = (days: bigint) => {
-  const category = dayPlural.select(Number(days % 100n))
-  return category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
-}
-
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true, refreshRevision = 0, showRegister = true, selectedType, onTypeChange, showTypeSelector = true }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, onRegistered, showJournal = true, refreshRevision = 0, showRegister = true, selectedType, onTypeChange, showTypeSelector = true, rightsReady = true, warnNewEntitlement = false }: {
   employeeId: string; hireDate: string; navigationGuard: RefObject<NavigationGuard>
   showTypeSelector?: boolean; employeeName?: string; onRegistered?: () => void; showJournal?: boolean; refreshRevision?: number; showRegister?: boolean; selectedType?: PeriodLeaveType; onTypeChange?: (type: PeriodLeaveType) => void
+  rightsReady?: boolean; warnNewEntitlement?: boolean
 }) {
   const [localType, setLocalType] = useState<PeriodLeaveType>('annual_main')
   const type = selectedType ?? localType
@@ -121,18 +116,25 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         <dl>
           <div className="leave-balance-available">
             <dt>{selectedSummary.incomplete ? 'Залишок за внесеними періодами' : 'Доступний залишок'}</dt>
-            <dd>{selectedSummary.remaining.toLocaleString('uk-UA')} {dayLabel(selectedSummary.remaining)}</dd>
+            <dd>{formatLeaveDays(selectedSummary.remaining)}</dd>
           </div>
-          <div><dt>Підтверджено</dt><dd>{selectedSummary.entered.toLocaleString('uk-UA')} {dayLabel(selectedSummary.entered)}</dd></div>
-          <div><dt>Враховано у відпустках</dt><dd>{selectedSummary.accounted.toLocaleString('uk-UA')} {dayLabel(selectedSummary.accounted)}</dd></div>
+          <div><dt>Внесено до обліку</dt><dd>{formatLeaveDays(selectedSummary.entered)}</dd></div>
+          <div><dt>Списано у відпустках</dt><dd>{formatLeaveDays(selectedSummary.accounted)}</dd></div>
+          <div><dt>Періодів із залишком</dt><dd>{selectedSummary.positiveCount.toLocaleString('uk-UA')}</dd></div>
+          <div><dt>Найстаріший період із залишком</dt><dd>{selectedSummary.oldestPositive ? periodLabel(selectedSummary.oldestPositive) : '–'}</dd></div>
         </dl>
         {selectedSummary.incomplete && <p className="leave-muted">Залишки внесено лише за частиною поточних чи минулих періодів.</p>}
       </> : <p className="leave-muted">Залишки не внесено.</p>}
     </section>}
-    <div className="leave-section-heading"><button type="button" className="secondary-button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')} onClick={() => { editorPeriods.current=periods??[]; setEditing(true) }}>Внести або змінити залишки</button>
-      </div>
+    <header className="leave-section-heading leave-period-heading">
+      <h3>Облікові періоди</h3>
+      <button type="button" className="secondary-button" disabled={!periods || (!periods.length && type !== 'oms_service_additional')}
+        onClick={() => { editorPeriods.current = periods ?? []; setEditing(true) }}>
+        <Pencil size={16} aria-hidden="true"/>{selectedSummary.count > 0 ? 'Редагувати залишки' : 'Внести залишки'}
+      </button>
+    </header>
     {data?.error && <p role="alert">{data.error} <button type="button" onClick={refresh}>Повторити</button></p>}
-    {periods?.length===0 ? <p className="leave-muted">Періоди ще не внесено. Натисніть «Внести або змінити залишки», щоб додати їх.</p> : <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data}
+    {periods?.length===0 ? <p className="leave-muted">Періоди ще не внесено.</p> : <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data}
       empty={!periods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined} error={data?.error} onRetry={refresh}>
       {groups.map(group => {
         const entries = periods?.filter(period => period.accountingBasis === group.basis)
@@ -142,7 +144,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
           {entries.map(period => <tr key={period.periodStart}>
             <td className="leave-period" aria-describedby={groupId + group.basis}>{periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
             <td className="leave-days-column">{period.status === 'confirmed'
-              ? <strong>{period.confirmedDays} {dayLabel(BigInt(period.confirmedDays))}</strong>
+              ? <strong>{formatLeaveDays(period.confirmedDays)}</strong>
               : <span className="leave-muted">Не внесено</span>}</td>
             <td className="leave-days-column">{period.status === 'confirmed' ? balanceMap.get(period.id)?.usedDays ?? '–' : '–'}</td>
             <td className="leave-days-column">{period.status === 'confirmed' ? <strong>{balanceMap.get(period.id)?.availableDays ?? '–'}</strong> : '–'}</td>
@@ -159,7 +161,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     {registering && <LeaveRegistrationForm employeeId={employeeId} employeeName={employeeName} hireDate={hireDate} initialType={type} navigationGuard={navigationGuard}
       onClose={() => setRegistering(false)} onBalances={selectedType => { setRegistering(false); setType(selectedType); setState(undefined); setEditing(true); refresh() }}
       onSaved={savedType => { setRegistering(false); refresh(); onRegistered?.(); notifySystemToast('success', 'Відпустку зареєстровано', isPeriodLeave(savedType) ? 'Залишки оновлено.' : 'Журнал оновлено.') }} />}
-    {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard}
+    {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} warnNewEntitlement={warnNewEntitlement}
       onClose={() => { setEditing(false); editorPeriods.current=null }} onSaved={() => {
         setEditing(false)
         editorPeriods.current=null

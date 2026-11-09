@@ -6,6 +6,11 @@ export type Period = ConfirmedLeavePeriod | ProposedLeavePeriod
 export type Draft = { period: Period; days: string } |
   { id: number; start: string; end: string; startIso: string; endIso: string; days: string }
 
+export function hasNewEntitlement(changes: LeavePeriodInput[], periods: Period[]) {
+  return changes.some(change => change.accountingBasis === 'confirmed_entitlement' &&
+    !periods.some(period => period.status === 'confirmed' && period.leaveType === change.leaveType && period.periodStart === change.periodStart))
+}
+
 export function buildChanges(rows: Draft[]): LeavePeriodInput[] {
   const changes: LeavePeriodInput[] = []
   const starts = new Set(rows.flatMap(row => 'period' in row &&

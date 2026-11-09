@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { UserRound } from 'lucide-react'
+import { Search, UserRound } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName } from '../../employees/model'
 import SearchField from '../SearchField'
@@ -34,10 +34,10 @@ export default function EmployeeChooser({ employees, selected, loading, onSelect
   return <div ref={root} className="dashboard-panel leave-employee-chooser" onKeyDown={keyboard}>
     {employee && <div className="leave-chosen-person"><span className="leave-type-icon"><UserRound size={20} aria-hidden="true" /></span>
       <div><strong>{fullName(employee)}</strong><small>{employee.position.name} · {employee.department.name}</small></div>
-      <button ref={change} type="button" className="secondary-button" aria-expanded={open} onClick={() => {
+      <button ref={change} type="button" className="secondary-button leave-change-employee" aria-expanded={open} onClick={() => {
         setSearching(value => !value); setQuery('')
         if (!open) requestAnimationFrame(() => root.current?.querySelector<HTMLInputElement>('input')?.focus())
-      }}>{open ? 'Закрити пошук' : 'Змінити працівника'}</button></div>}
+      }}><Search size={16} aria-hidden="true"/>{open ? 'Закрити пошук' : 'Змінити працівника'}</button></div>}
     {open && <div className="leave-employee-search"><SearchField value={query} onChange={setQuery} label="Знайти працівника за ПІБ" placeholder="Знайти працівника за ПІБ" disabled={loading} />
       <div className="leave-employee-results" role="group" aria-label="Результати пошуку працівників">
         {results.map(person => <button data-employee-result type="button" key={person.id} aria-label={'Обрати: ' + fullName(person)} onClick={() => onSelect(person.id, () => {

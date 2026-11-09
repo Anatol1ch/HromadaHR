@@ -179,17 +179,20 @@
 .leave-kind-nav { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-kind-nav button { flex:1 1 10rem; min-height:var(--control-height); padding:10px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); cursor:pointer; }
 .leave-kind-nav button[aria-pressed="true"] { border-color:var(--tab-active-border); background:var(--tab-active-background); color:var(--tab-active-text); }
-.leave-selected-summary { display:grid; gap:5px; }
-.leave-selected-summary strong { font-size:1.75rem; font-variant-numeric:tabular-nums; }
-.leave-selected-summary span,.leave-selected-summary small { color:var(--color-text-secondary); }
 .leave-balance-summary { display:grid; gap:var(--space-2); padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
-.leave-balance-summary dl { display:grid; grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr)); align-items:center; gap:var(--space-3); margin:0; }
+.leave-balance-summary dl { display:grid; grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(0,1fr)); gap:var(--space-3); margin:0; }
+.leave-balance-summary .leave-balance-available { grid-row:span 2; align-self:center; }
 .leave-balance-summary dt { font-size:.875rem; color:var(--color-text-secondary); overflow-wrap:anywhere; }
-.leave-balance-summary dd { margin:var(--space-1) 0 0; font-size:1.125rem; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
-.leave-balance-summary .leave-balance-available dd { color:var(--tab-active-text); font-size:1.625rem; }
-@container leave-workspace (max-width:40rem) {
+.leave-balance-summary dd { margin:var(--space-1) 0 0; font-size:1rem; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.leave-balance-summary .leave-balance-available dd { color:var(--tab-active-text); font-size:1.875rem; }
+.leave-event-summary .leave-balance-available { grid-row:auto; }
+.leave-event-summary .leave-select { margin-inline-start:auto; flex:0 1 9rem; }
+.leave-right-context { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); margin-block:var(--space-2); }
+.leave-right-context .secondary-button { margin-inline-start:auto; }
+.leave-period-heading .secondary-button, .leave-right-context .secondary-button { white-space:normal; max-width:100%; }
+@container (max-width:40rem) {
   .leave-balance-summary dl { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .leave-balance-available { grid-column:1/-1; }
+  .leave-balance-summary .leave-balance-available { grid-column:1/-1; grid-row:auto; }
 }
 .leave-form-section,.leave-allocation-section,.leave-order-section,.leave-info-section { display:grid; gap:var(--space-2); min-width:0; padding:var(--space-3); border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); }
 .leave-form-section > h3,.leave-info-section > h3 { margin:0; font-size:1rem; }
@@ -204,7 +207,15 @@
 .leave-type-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.125rem; width:2.125rem; height:2.125rem; border-radius:var(--radius-control); color:var(--accent-hover); background:var(--tab-active-background); }
 .leave-overview-heading { display:flex; align-items:center; gap:var(--space-2); }
 .leave-overview-heading h5 { overflow-wrap:anywhere; }
-.leave-overview .employee-card-section { align-content:start; }
+.leave-overview .employee-card-section { align-content:start; container-type:inline-size; }
+.leave-overview-content { display:grid; gap:var(--space-2); }
+.leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr) minmax(0,auto); }
+.leave-overview-details, .leave-overview-balance { display:grid; align-content:start; gap:var(--space-1); min-width:0; }
+.leave-overview-balance { text-align:end; max-inline-size:9rem; overflow-wrap:anywhere; }
+@container (max-width:21rem) {
+  .leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr); }
+  .leave-overview-balance { text-align:start; max-inline-size:none; }
+}
 .leave-right-status { display:block; width:fit-content; font-size:.75rem; line-height:1.5; padding:2px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); }
 .leave-right-status.is-has_right { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
 .leave-right-status.is-no_right { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
@@ -213,6 +224,7 @@
 .leave-chosen-person > div { flex:1; min-width:0; overflow-wrap:anywhere; }
 .leave-chosen-person small,.leave-employee-results small { display:block; color:var(--color-text-secondary); font-size:.8125rem; margin-top:3px; }
 .leave-chosen-person > button { flex-shrink:0; }
+.leave-change-employee.secondary-button { color:var(--tab-active-text); border-color:var(--tab-active-border); white-space:normal; max-width:100%; }
 .leave-employee-search { display:grid; gap:var(--space-2); min-width:0; }
 .leave-chosen-person + .leave-employee-search { margin-top:var(--space-3); }
 .leave-employee-search .ui-search { width:100%; max-width:none; min-width:0; }

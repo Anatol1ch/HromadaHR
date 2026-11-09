@@ -1,13 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationMessage } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationMessage, formatLeaveDays } from '../src/components/leave/summary.ts'
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
   const rows = [{leaveType:'annual_main',periodStart:'2024-01-01',confirmedDays:40,usedDays:14,availableDays:26}, {leaveType:'children_social_additional',periodStart:'2024-01-01',confirmedDays:0,usedDays:0,availableDays:0}]
   const proposals = [{leaveType:'annual_main',periodStart:'2024-01-01'}, {leaveType:'annual_main',periodStart:'2025-01-01'}]
-  assert.deepEqual(balanceSummary('annual_main',rows,proposals),{count:1,incomplete:true,entered:40n,accounted:14n,remaining:26n})
+  assert.deepEqual(balanceSummary('annual_main',rows,proposals),{count:1,incomplete:true,entered:40n,accounted:14n,remaining:26n,positiveCount:1,oldestPositive:rows[0]})
   assert.equal(balanceSummary('children_social_additional',rows,proposals).count,1)
   assert.equal(balanceSummary('children_social_additional',rows,proposals).remaining,0n)
   assert.equal(balanceSummary('oms_service_additional',rows,proposals).count,0)
+  assert.equal(formatLeaveDays(0n),'0 днів')
+  assert.equal(formatLeaveDays(21),'21 день')
+})
+test('oldest positive period ignores exhausted balances and other types regardless of row order', () => {
+  const row = (periodStart, availableDays, leaveType = 'annual_main') => ({ periodStart, availableDays, leaveType, confirmedDays: 10, usedDays: 10 - availableDays })
+  const oldest = row('2025-01-01', 2)
+  const rows = [row('2026-01-01', 7), row('2024-01-01', 0), oldest, row('2023-01-01', 8, 'children_social_additional')]
+  const summary = balanceSummary('annual_main', rows, [])
+  assert.equal(summary.positiveCount, 2)
+  assert.equal(summary.oldestPositive, oldest)
+  assert.equal(summary.remaining, 9n)
+  assert.equal(balanceSummary('annual_main', [rows[1]], []).oldestPositive, null)
 })
 test('allocation feedback distinguishes automatic, preserved, missing, excess and invalid inputs', () => {
   assert.match(allocationMessage(16,16,true,false),/автоматично/)
