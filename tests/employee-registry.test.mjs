@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { employeeStructure, filterEmployees, initialRegistry, nextSort, registryOptions, sortEmployees, withDirectoryNames } from '../src/employees/registry.ts'
+import { employeeStructure, employeeSummary, filterEmployees, initialRegistry, registryOptions, withDirectoryNames } from '../src/employees/registry.ts'
 import { initialWorkspace, mergeEmployee, workspaceReducer } from '../src/employees/workspace.ts'
 
 function row(id, lastName, position, department, hireDate, employeeType = 'official') {
@@ -14,21 +14,6 @@ const rows = [
   row('c', 'Гончар', 'Інспектор', 'Інспекція', '2026-01-15'),
 ]
 const ids = values => values.map(row => row.id)
-
-test('all four registry columns sort Ukrainian text / validated ISO dates in both directions without mutating data', () => {
-  const before = structuredClone(rows)
-  for (const [key, ascending] of [['fullName', ['c', 'b', 'a']], ['position', ['a', 'c', 'b']], ['department', ['b', 'c', 'a']], ['hireDate', ['b', 'c', 'a']]]) {
-    assert.deepEqual(ids(sortEmployees(rows, { key, direction: 'asc' })), ascending)
-    assert.deepEqual(ids(sortEmployees(rows, { key, direction: 'desc' })), [...ascending].reverse())
-  }
-  assert.deepEqual(rows, before)
-  const tie = [{ ...rows[0], id: 'z' }, { ...rows[0], id: 'x' }, { ...rows[0], id: 'y' }]
-  assert.deepEqual(ids(sortEmployees(tie, { key: 'position', direction: 'asc' })), ['x', 'y', 'z'])
-  const badDate = { ...rows[0], id: 'bad', hireDate: '02.01.2026' }
-  assert.equal(sortEmployees([rows[1], badDate], { key: 'hireDate', direction: 'asc' })[0].id, 'bad')
-  assert.deepEqual(nextSort({ key: 'fullName', direction: 'desc' }, 'position'), { key: 'position', direction: 'asc' })
-  assert.deepEqual(nextSort({ key: 'position', direction: 'asc' }, 'position'), { key: 'position', direction: 'desc' })
-})
 
 const directory = values => values.map(name => ({ id: name, name }))
 const directories = {
@@ -51,13 +36,9 @@ test('shared name, position, department and type filters intersect and count onl
   assert.equal(registryOptions(directories.position, 'position', 'obsolete').at(-1).value, 'obsolete')
 })
 
-test('the flat sort and selected mode survive modals, group transfers and filter clearing', () => {
-  assert.equal(initialWorkspace.registry.mode, 'structure')
-  let state = workspaceReducer(initialWorkspace, { type: 'registry', registry: { mode: 'list', query: 'умовний', filtersOpen: true, employeeType: 'official' } })
-  state = workspaceReducer(state, { type: 'sort', key: 'position' })
-  state = workspaceReducer(state, { type: 'sort', key: 'position' })
+test('filters survive modals, group transfers and filter clearing', () => {
+  let state = workspaceReducer(initialWorkspace, { type: 'registry', registry: { query: 'умовний', filtersOpen: true, employeeType: 'official' } })
   const registry = state.registry
-  assert.deepEqual(ids(sortEmployees(filterEmployees(rows, registry), registry.sort)), ['b', 'c', 'a'])
   const changed = { ...rows[0], employeeType: 'staff', departmentId: 'Архів', positionId: 'Секретар' }
   state = workspaceReducer(state, { type: 'card', id: changed.id })
   state = workspaceReducer(state, { type: 'form', form: { kind: 'edit', employee: changed } })
@@ -73,15 +54,19 @@ test('the flat sort and selected mode survive modals, group transfers and filter
   assert.equal(state.registry.filtersOpen, true)
   assert.equal(state.registry.query, '')
   assert.equal(state.registry.employeeType, '')
-  assert.equal(state.registry.mode, 'list')
-  assert.deepEqual(state.registry.sort, registry.sort)
-  state = workspaceReducer(state, { type: 'registry', registry: { mode: 'structure' } })
-  assert.deepEqual(employeeStructure(people, directories), groups)
-  state = workspaceReducer(state, { type: 'registry', registry: { mode: 'list' } })
-  assert.deepEqual(state.registry.sort, registry.sort)
-  state = workspaceReducer(state, { type: 'resetSort' })
-  assert.deepEqual(state.registry.sort, initialRegistry().sort)
-  assert.equal(state.registry.filtersOpen, true)
+  assert.deepEqual(employeeStructure(filterEmployees(people, state.registry), directories), groups)
+})
+
+test('summary reflects the same filtered rows after creation, a type change and deletion', () => {
+  const filter = { ...initialRegistry(), departmentId: 'Архів' }
+  const summarize = people => employeeSummary(filterEmployees(people, filter))
+  assert.deepEqual(summarize(rows), { total: 1, officials: 1, staff: 0 })
+  const newEmployee = row('new', 'Гнатюк', 'Юрист', 'Архів', '2026-06-01', 'staff')
+  const created = mergeEmployee(rows, newEmployee)
+  assert.deepEqual(summarize(created), { total: 2, officials: 1, staff: 1 })
+  const edited = mergeEmployee(created, { ...newEmployee, employeeType: 'official' })
+  assert.deepEqual(summarize(edited), { total: 2, officials: 2, staff: 0 })
+  assert.deepEqual(summarize(edited.filter(row => row.id !== 'new' && row.id !== 'b')), { total: 0, officials: 0, staff: 0 })
 })
 
 test('directory ranks control groups and jobs, with Ukrainian names and stable IDs as tie breakers', () => {

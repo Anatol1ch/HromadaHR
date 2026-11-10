@@ -1,6 +1,6 @@
 import type { EmployeeCard } from '../../shared/personnel'
-import { defaultSort, initialRegistry, nextSort } from './registry.ts'
-import type { RegistryState, SortKey } from './registry.ts'
+import { initialRegistry } from './registry.ts'
+import type { RegistryState } from './registry.ts'
 
 export type EmployeeFormTarget = { kind: 'create' } | { kind: 'edit'; employee: EmployeeCard }
 export interface EmployeeWorkspaceState {
@@ -12,15 +12,13 @@ export interface EmployeeWorkspaceState {
 }
 export const initialWorkspace: EmployeeWorkspaceState = { registry: initialRegistry(), cardId: null, form: null, action: null, revision: 0 }
 export type WorkspaceAction =
-  { type: 'sort'; key: SortKey } | { type: 'resetSort' } | { type: 'clearFilters' } |
+  { type: 'clearFilters' } |
   { type: 'registry'; registry: Partial<EmployeeWorkspaceState['registry']> } |
   { type: 'card'; id: string | null } | { type: 'form'; form: EmployeeFormTarget | null } |
   { type: 'action'; action: EmployeeWorkspaceState['action'] } |
   { type: 'saved'; employee: EmployeeCard; created: boolean } | { type: 'deleted'; id: string }
 export function workspaceReducer(state: EmployeeWorkspaceState, action: WorkspaceAction): EmployeeWorkspaceState {
   switch (action.type) {
-    case 'sort': return { ...state, registry: { ...state.registry, sort: nextSort(state.registry.sort, action.key) } }
-    case 'resetSort': return { ...state, registry: { ...state.registry, sort: defaultSort() } }
     case 'clearFilters': return { ...state, registry: { ...state.registry, query: '', departmentId: '', positionId: '', employeeType: '' } }
     case 'registry': return { ...state, registry: { ...state.registry, ...action.registry } }
     case 'card': return { ...state, cardId: action.id }

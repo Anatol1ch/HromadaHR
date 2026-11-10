@@ -79,7 +79,6 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave }: { o
       directories={directories} directoriesLoading={directoriesLoading} directoriesError={directoriesError}
       onRetryDirectories={() => setDirectoryRetry(value => value + 1)}
       state={workspace.registry} onState={registry => dispatch({ type: 'registry', registry })}
-      onSort={key => dispatch({ type: 'sort', key })} onResetSort={() => dispatch({ type: 'resetSort' })}
       onClear={() => dispatch({ type: 'clearFilters' })} onRetry={() => setRetry(value => value + 1)}
       onCreate={() => { rememberOpener(); dispatch({ type: 'form', form: { kind: 'create' } }) }}
       onOpen={employee => { rememberOpener(); dispatch({ type: 'card', id: employee.id }) }}

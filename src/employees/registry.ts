@@ -1,21 +1,14 @@
 import type { DictionaryEntry, EmployeeCard, EmployeeType } from '../../shared/personnel'
 import { fullName, normalizeText } from './model.ts'
-import { isIsoCalendarDate } from '../lib/dates.ts'
 
-export type SortKey = 'fullName' | 'position' | 'department' | 'hireDate'
-export interface EmployeeSort { key: SortKey; direction: 'asc' | 'desc' }
 export interface RegistryState {
   query: string; departmentId: string; positionId: string; filtersOpen: boolean
-  employeeType: EmployeeType | ''; mode: 'structure' | 'list'; sort: EmployeeSort
+  employeeType: EmployeeType | ''
 }
 export type RegistryDirectories = { department: DictionaryEntry[]; position: DictionaryEntry[] }
-export const defaultSort = (): EmployeeSort => ({ key: 'fullName', direction: 'asc' })
 export const initialRegistry = (): RegistryState => ({ query: '', departmentId: '', positionId: '', filtersOpen: false,
-  employeeType: '', mode: 'structure', sort: defaultSort() })
-export const nextSort = (current: EmployeeSort, key: SortKey): EmployeeSort => ({
-  key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
-})
-export const collator = new Intl.Collator('uk', { sensitivity: 'base' })
+  employeeType: '' })
+const collator = new Intl.Collator('uk', { sensitivity: 'base' })
 export function filterEmployees(rows: EmployeeCard[], filter: Pick<RegistryState, 'query' | 'departmentId' | 'positionId' | 'employeeType'>) {
   const terms = normalizeText(filter.query).split(' ').filter(Boolean)
   return rows.filter(row => (!filter.departmentId || row.departmentId === filter.departmentId) &&
@@ -23,14 +16,9 @@ export function filterEmployees(rows: EmployeeCard[], filter: Pick<RegistryState
     (!filter.employeeType || row.employeeType === filter.employeeType) &&
     terms.every(term => normalizeText(fullName(row)).includes(term)))
 }
-export function sortEmployees(rows: EmployeeCard[], sort: EmployeeSort) {
-  const value = (row: EmployeeCard) => sort.key === 'position' ? row.position.name :
-    sort.key === 'department' ? row.department.name : sort.key === 'hireDate' ?
-      (isIsoCalendarDate(row.hireDate) ? row.hireDate : '') : fullName(row)
-  return [...rows].sort((a, b) => {
-    const primary = sort.key === 'hireDate' ? (value(a) < value(b) ? -1 : value(a) > value(b) ? 1 : 0) : collator.compare(value(a), value(b))
-    return (primary || collator.compare(fullName(a), fullName(b)) || a.id.localeCompare(b.id)) * (sort.direction === 'asc' ? 1 : -1)
-  })
+export function employeeSummary(rows: EmployeeCard[]) {
+  const officials = rows.filter(row => row.employeeType === 'official').length
+  return { total: rows.length, officials, staff: rows.length - officials }
 }
 export function withDirectoryNames(rows: EmployeeCard[], directories: RegistryDirectories) {
   const departments = new Map(directories.department.map(({ id, name }) => [id, name]))

@@ -225,8 +225,14 @@
 .personnel-dictionary-table tr.is-drag-over > td { box-shadow: inset 0 2px var(--accent); }
 
 .employee-registry { grid-template-columns: minmax(0, 1fr); }
-.employee-registry .employee-registry-modes { width: min(100%, 22rem); }
 .employee-registry .personnel-registry-table { min-width: 46rem; }
+.personnel-registry-table .dictionary-actions-cell { padding-inline: 6px; }
+.employee-registry .employee-registry-summary { grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; }
+.employee-registry-summary .info-item-emphasis { padding-block: var(--space-3); }
+.employee-registry-summary .info-item-emphasis dd { font-size: 24px; }
+@container info-section (max-width: 440px) {
+  .employee-registry .employee-registry-summary { grid-template-columns: minmax(0, 1fr); }
+}
 .personnel-registry-table tbody th.employee-department-heading {
   padding: var(--space-2) var(--space-3);
   text-align: left;
