@@ -12,15 +12,16 @@ export function DictionarySearch({ value, onChange, label, placeholder }: { valu
   return <SearchField className="dictionary-search" value={value} onChange={onChange} label={label} placeholder={placeholder}/>
 }
 
-export default function DictionaryTable({ label, className = '', columns, children, empty, loading = false, filtered = false, error, onRetry }: {
-  label: string; className?: string; columns: { label: ReactNode; width?: string; className?: string; sort?: 'ascending' | 'descending' }[]; children?: ReactNode; empty?: string; loading?: boolean; filtered?: boolean; error?: string; onRetry?: () => void
+export default function DictionaryTable({ label, className = '', columns, children, rowGroups, empty, loading = false, filtered = false, error, onRetry }: {
+  label: string; className?: string; columns: { label: ReactNode; width?: string; className?: string; sort?: 'ascending' | 'descending' }[]; children?: ReactNode; rowGroups?: ReactNode; empty?: string; loading?: boolean; filtered?: boolean; error?: string; onRetry?: () => void
 }) {
   if (loading && Boolean(empty)) return <TableSkeleton columns={columns.length} label="Завантажуємо записи…"/>
   return <div className="dictionary-table-wrap" role="region" aria-label={label} tabIndex={0}>
     <table className={`dictionary-table ${className}`} aria-label={label} aria-busy={loading}>
       <colgroup>{columns.map((column, index) => <col key={index} style={column.width ? { width: column.width } : undefined}/>)}</colgroup>
       <thead><tr>{columns.map((column, index) => <th key={index} scope="col" aria-sort={column.sort} className={column.className}>{column.label}</th>)}</tr></thead>
-      <tbody>{empty || error ? <tr><td colSpan={columns.length}>{error ? <Alert variant="error" action={onRetry && <button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert> : <DataState kind={filtered ? 'search' : 'empty'} message={empty} description={filtered ? 'Змініть або очистіть пошуковий запит.' : undefined}/>}</td></tr> : children}</tbody>
+      {rowGroups && !empty && !error ? rowGroups :
+        <tbody>{empty || error ? <tr><td colSpan={columns.length}>{error ? <Alert variant="error" action={onRetry && <button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert> : <DataState kind={filtered ? 'search' : 'empty'} message={empty} description={filtered ? 'Змініть або очистіть пошуковий запит.' : undefined}/>}</td></tr> : children}</tbody>}
     </table>
   </div>
 }

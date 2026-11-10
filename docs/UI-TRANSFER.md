@@ -511,3 +511,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.9.2 – Робочий розділ довідників
 
 На SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` звірено `src/Dictionaries.tsx`, `src/components/ProgramsCatalog.tsx` і `src/styles.css` HromadaAID. Відтворено вкладки, ручку, стан переміщення й клавіатурний сценарій на спільних DictionaryTable, DirectoryForm, ConfirmDialog і фіолетових токенах HromadaHR. Кадрові Select використовують порядок Main.
+
+## 4.9.3 – Структура реєстру працівників
+
+На SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` звірено `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx` та `src/components/ProgramsCatalog.tsx` HromadaAID. Повторно використано реєстрові фільтри, заголовки сортування, табличні дії та наявну локальну прокрутку HromadaHR. Структурний режим додає один `tbody` на підрозділ з `th scope="rowgroup"`, а порядок визначають кадрові довідники.

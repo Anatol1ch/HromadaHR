@@ -156,3 +156,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.9.2 – Упорядкування довідників
 
 Звірено read-only `src/Dictionaries.tsx`, `src/components/ProgramsCatalog.tsx`, `src/styles.css`, `shared/api-contract.ts` та `electron/catalog-order.ts` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано ручку перетягування, Alt + ↑ / ↓, підсвічування цілі, передачу повного порядку з ревізією, IMMEDIATE-транзакцію й перечитування після відмови. HromadaHR застосовує незалежні кадрові довідники, типізовані локальні IPC і числові ревізії.
+
+## 4.9.3 – Структурований реєстр
+
+Звірено read-only `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx` і `src/components/ProgramsCatalog.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Збережено вже адаптовані таблицю, фільтри й кнопки дій. Організаційні групи та кадровий порядок реалізовано на основі чинних даних HromadaHR.

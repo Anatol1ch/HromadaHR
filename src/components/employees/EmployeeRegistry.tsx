@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import { FilterX, ListRestart, Plus, SlidersHorizontal } from 'lucide-react'
 import type { EmployeeCard, EmployeeType } from '../../../shared/personnel'
-import { employeeCounts, employeeGroups, registryOptions } from '../../employees/registry.ts'
-import type { RegistryState, SortKey } from '../../employees/registry.ts'
+import { employeeStructure, filterEmployees, registryOptions, sortEmployees, withDirectoryNames } from '../../employees/registry.ts'
+import type { RegistryDirectories, RegistryState, SortKey } from '../../employees/registry.ts'
 import Alert from '../Alert'
 import SearchField from '../SearchField'
 import Select from '../Select'
@@ -11,16 +11,24 @@ import type { EmployeeActions } from './EmployeeGroupTable'
 
 type Props = EmployeeActions & {
   employees: EmployeeCard[]; loading: boolean; error: string; state: RegistryState
-  onState: (value: Partial<RegistryState>) => void; onSort: (type: EmployeeType, key: SortKey) => void
+  directories?: RegistryDirectories; directoriesLoading: boolean; directoriesError: string
+  onState: (value: Partial<RegistryState>) => void; onSort: (key: SortKey) => void; onRetryDirectories: () => void
   onResetSort: () => void; onClear: () => void; onRetry: () => void; onCreate: () => void
 }
-export default function EmployeeRegistry({ employees, loading, error, state, onState, onSort, onResetSort, onClear, onRetry, onCreate, ...actions }: Props) {
+export default function EmployeeRegistry({ employees, loading, error, state, directories, directoriesLoading, directoriesError,
+  onState, onSort, onResetSort, onClear, onRetry, onRetryDirectories, onCreate, ...actions }: Props) {
   const panelId = useId()
-  const groups = employeeGroups(employees, state)
-  const counts = employeeCounts(employees)
-  const activeFilters = Number(!!state.departmentId) + Number(!!state.positionId)
+  const structured = state.mode === 'structure'
+  const filteredRows = filterEmployees(employees, state)
+  const matches = directories ? withDirectoryNames(filteredRows, directories) : filteredRows
+  const groups = structured && directories ? employeeStructure(matches, directories) : null
+  const missingOrder = structured && !!directories && !groups && !directoriesLoading
+  const orderError = directoriesError || (missingOrder ? 'Довідники й кадрові дані не збігаються. Оновіть реєстр.' : '')
+  const tableError = error || (structured ? orderError : '')
+  const tableLoading = loading || (structured && directoriesLoading && !groups)
+  const activeFilters = Number(!!state.departmentId) + Number(!!state.positionId) + Number(!!state.employeeType)
   const filtered = !!state.query.trim() || activeFilters > 0
-  const sorted = Object.values(state.sorts).some(sort => sort.key !== 'fullName' || sort.direction !== 'asc')
+  const sorted = state.sort.key !== 'fullName' || state.sort.direction !== 'asc'
   return <section className="employee-registry" aria-labelledby="employees-title">
     <div className="page-heading employee-heading">
       <div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
@@ -34,19 +42,28 @@ export default function EmployeeRegistry({ employees, loading, error, state, onS
           {activeFilters > 0 && <span className="aid-filter-count" aria-label={`Застосовано фільтрів: ${activeFilters}`}>{activeFilters}</span>}
         </button>
         <button type="button" className="secondary-button aid-filter-reset" disabled={!filtered} onClick={onClear}><FilterX size={17} aria-hidden="true"/>Очистити фільтри</button>
-        <button type="button" className="secondary-button aid-sort-reset" disabled={!sorted} onClick={onResetSort}><ListRestart size={17} aria-hidden="true"/>Скинути сортування</button>
-        <button type="button" className="primary-button" onClick={onCreate}><Plus size={18} aria-hidden="true"/>Додати працівника</button>
+        {!structured && <button type="button" className="secondary-button aid-sort-reset" disabled={!sorted} onClick={onResetSort}><ListRestart size={17} aria-hidden="true"/>Скинути сортування</button>}
+        <button type="button" className="primary-button" disabled={loading} onClick={onCreate}><Plus size={18} aria-hidden="true"/>Додати працівника</button>
       </div>
       <div id={panelId} className="aid-filter-panel" hidden={!state.filtersOpen}><div className="aid-filter-grid">
         <div className="employee-field"><span>Підрозділ</span><Select label="Фільтр за підрозділом" value={state.departmentId} onChange={departmentId => onState({ departmentId })}
-          options={registryOptions(employees, 'department', state.departmentId)} advanceOnSelect={false}/></div>
+          options={registryOptions(directories?.department ?? [], 'department', state.departmentId)} disabled={!directories} advanceOnSelect={false}/></div>
         <div className="employee-field"><span>Посада</span><Select label="Фільтр за посадою" value={state.positionId} onChange={positionId => onState({ positionId })}
-          options={registryOptions(employees, 'position', state.positionId)} advanceOnSelect={false}/></div>
+          options={registryOptions(directories?.position ?? [], 'position', state.positionId)} disabled={!directories} advanceOnSelect={false}/></div>
+        <div className="employee-field"><span>Тип працівника</span><Select label="Фільтр за типом працівника" value={state.employeeType}
+          onChange={value => onState({ employeeType: value as EmployeeType | '' })} advanceOnSelect={false}
+          options={[{ value: '', label: 'Усі' }, { value: 'official', label: 'Посадові особи ОМС' }, { value: 'staff', label: 'Інші працівники' }]}/></div>
       </div></div>
     </section>
     {error && <Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити завантаження</button>}>{error}</Alert>}
-    {(['official', 'staff'] as const).map(type => <EmployeeGroupTable key={type} title={type === 'official' ? 'Посадові особи місцевого самоврядування' : 'Інші працівники'}
-      rows={error ? [] : groups[type]} total={counts[type]} loading={loading} error={error} filtered={filtered} sort={state.sorts[type]}
-      onSort={key => onSort(type, key)} {...actions}/>)}
+    {orderError && <Alert variant="error" action={<button type="button" onClick={missingOrder ? onRetry : onRetryDirectories}>Повторити завантаження довідників</button>}>{orderError}</Alert>}
+    <div className="settings-section-nav employee-registry-modes" role="group" aria-label="Режим реєстру">
+      {(['structure', 'list'] as const).map(mode => <button key={mode} type="button" aria-pressed={state.mode === mode}
+        className={'settings-section-current' + (state.mode === mode ? ' is-selected' : '')}
+        onClick={() => onState({ mode })}>{mode === 'structure' ? 'За структурою' : 'Загальний список'}</button>)}
+    </div>
+    <EmployeeGroupTable rows={tableError ? [] : structured ? matches : sortEmployees(matches, state.sort)}
+      groups={structured ? groups ?? [] : undefined} total={employees.length} loading={tableLoading}
+      error={tableError} filtered={filtered} sort={state.sort} onSort={onSort} {...actions}/>
   </section>
 }

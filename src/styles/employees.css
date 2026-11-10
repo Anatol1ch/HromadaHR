@@ -223,3 +223,17 @@
 .dictionary-sort-handle[draggable="true"] { cursor: grab; }
 .personnel-dictionary-table tr.is-dragging { opacity: .65; }
 .personnel-dictionary-table tr.is-drag-over > td { box-shadow: inset 0 2px var(--accent); }
+
+.employee-registry { grid-template-columns: minmax(0, 1fr); }
+.employee-registry .employee-registry-modes { width: min(100%, 22rem); }
+.employee-registry .personnel-registry-table { min-width: 46rem; }
+.personnel-registry-table tbody th.employee-department-heading {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  background: var(--tab-active-background);
+  border-block: 1px solid var(--border-surface);
+}
+.employee-department-heading > strong { color: var(--tab-active-text); }
+.employee-department-heading > span { color: var(--color-text-secondary); font-weight: 400; }
