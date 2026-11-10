@@ -86,7 +86,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
         active={section==='journal'} onChanged={refresh} onRegister={register} history={history} context={journalContext}
         onResume={() => setJournalContext(null)}/> : !history.error && <DataState kind="loading" message="Завантаження журналу…"/>}
     </div>
-    {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={(id,accepted)=>navigationGuard.current(()=>{setSelected(id);accepted()})}/>}
+    {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={id=>{if(id!==selected)navigationGuard.current(()=>setSelected(id))}}/>}
     <div id={navId+'balances-panel'} role="tabpanel" aria-labelledby={navId+'balances'} hidden={section!=='balances'}>
       {section === 'balances' && employee ? <div className="leave-balances-workbench">
         <LeaveTypeNavigation value={periodType} onChange={type => {

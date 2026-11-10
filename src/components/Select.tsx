@@ -9,10 +9,12 @@ type Props = {
   placeholder?: string; required?: boolean; disabled?: boolean; searchable?: boolean; error?: string
   advanceOnSelect?: boolean
   onClear?: () => void; clearLabel?: string
+  actionLabel?: string
+  matchesSearch?: (option: SelectOption, query: string) => boolean
 }
 
 /** Controlled values and native form validity are shared by searchable and short lists. */
-export default function Select({ label, value, options, onChange, placeholder = 'Оберіть значення', required = false, disabled = false, searchable, error, advanceOnSelect = true, onClear, clearLabel = 'Очистити вибір' }: Props) {
+export default function Select({ label, value, options, onChange, placeholder = 'Оберіть значення', required = false, disabled = false, searchable, error, advanceOnSelect = true, onClear, clearLabel = 'Очистити вибір', actionLabel, matchesSearch }: Props) {
   const id = useId()
   const root = useRef<HTMLSpanElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -26,7 +28,9 @@ export default function Select({ label, value, options, onChange, placeholder = 
   const [invalid, setInvalid] = useState(false)
   const selected = options.find((option) => option.value === value && !option.disabled)
   const canSearch = searchable ?? options.length > 7
-  const visible = options.filter((option) => `${option.label} ${option.searchText ?? ''}`.toLocaleLowerCase('uk').includes(query.trim().toLocaleLowerCase('uk')))
+  const visible = options.filter((option) => matchesSearch
+    ? matchesSearch(option, query)
+    : `${option.label} ${option.searchText ?? ''}`.toLocaleLowerCase('uk').includes(query.trim().toLocaleLowerCase('uk')))
   const enabled = visible.filter((option) => !option.disabled)
   const activeValue = enabled.some((option) => option.value === active) ? active : enabled[0]?.value
   const message = error || (value && !selected ? 'Оберіть доступне значення зі списку.' : required && !value ? `Заповніть поле «${label}».` : '')
@@ -94,7 +98,7 @@ export default function Select({ label, value, options, onChange, placeholder = 
       const anchor = trigger.current.getBoundingClientRect()
       const margin = 10, gap = 6
       const viewport = document.documentElement
-      const width = Math.min(Math.max(anchor.width, 240), viewport.clientWidth - margin * 2)
+      const width = Math.min(Math.max(anchor.width, actionLabel ? 360 : 240), viewport.clientWidth - margin * 2)
       panel.style.width = `${width}px`
       const desiredHeight = Math.min(340, panel.offsetHeight - list.offsetHeight + list.scrollHeight)
       const above = Math.max(0, Math.min(anchor.top - gap, viewport.clientHeight - margin) - margin)
@@ -126,7 +130,7 @@ export default function Select({ label, value, options, onChange, placeholder = 
       document.removeEventListener('focusin', outside)
       if (panel.matches(':popover-open')) panel.hidePopover()
     }
-  }, [open, host, canSearch])
+  }, [open, host, canSearch, Boolean(actionLabel)])
   useEffect(() => {
     if (!open) return
     const list = popup.current?.querySelector<HTMLElement>('.app-select-options')
@@ -142,13 +146,13 @@ export default function Select({ label, value, options, onChange, placeholder = 
   const listId = `${id}-list`
   const canClear = !!value && !!onClear && !disabled
   return <span ref={root} className={`app-select${invalid || error ? ' app-select-invalid' : ''}${canClear ? ' app-select-clearable' : ''}`}>
-    <button ref={trigger} id={id} type="button" className="app-select-trigger" role="combobox" aria-label={label} aria-valuetext={selected?.label ?? placeholder} title={selected?.label} aria-expanded={open} aria-controls={listId} aria-haspopup="listbox" aria-required={required} aria-invalid={invalid || !!error} aria-describedby={invalid || error ? `${id}-error` : undefined} aria-activedescendant={open && !canSearch && activeOption ? optionId(activeOption) : undefined} disabled={disabled} onClick={() => open ? close() : show()} onKeyDown={keyboard}>
-      <span className={!selected ? 'app-select-placeholder' : undefined}>{selected?.label ?? placeholder}</span>{!canClear && <ChevronDown size={17} aria-hidden="true"/>}
+    <button ref={trigger} id={id} type="button" className={actionLabel ? 'secondary-button app-select-action' : 'app-select-trigger'} role="combobox" aria-label={actionLabel ?? label} aria-valuetext={selected?.label ?? placeholder} title={actionLabel ? undefined : selected?.label} aria-expanded={open} aria-controls={open ? listId : undefined} aria-haspopup="listbox" aria-required={required} aria-invalid={invalid || !!error} aria-describedby={invalid || error ? `${id}-error` : undefined} aria-activedescendant={open && !canSearch && activeOption ? optionId(activeOption) : undefined} disabled={disabled} onClick={() => open ? close() : show()} onKeyDown={keyboard}>
+      {actionLabel && <Search size={16} aria-hidden="true"/>}<span className={!actionLabel && !selected ? 'app-select-placeholder' : undefined}>{actionLabel ?? selected?.label ?? placeholder}</span>{!actionLabel && !canClear && <ChevronDown size={17} aria-hidden="true"/>}
     </button>
     {canClear && <span className="app-select-icon-group"><button type="button" className="app-select-clear-button" title={clearLabel} aria-label={clearLabel} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); clearSelection() }}><X size={15} aria-hidden="true"/></button><ChevronDown size={17} aria-hidden="true"/></span>}
     <input ref={validity} className="app-select-validity" tabIndex={-1} aria-hidden="true" value={selected?.value ?? ''} onChange={() => {}} required={required} disabled={disabled} onInvalid={(event) => { event.preventDefault(); setInvalid(true); trigger.current?.focus() }}/>
     {(invalid || error) && <span className="app-select-error" id={`${id}-error`} role="alert">{message}</span>}
-    {open && !disabled && host && createPortal(<div ref={popup} data-keyboard-popup={id} className="app-select-popup" popover="manual" onKeyDown={keyboard} onClick={(event) => event.stopPropagation()}>
+    {open && !disabled && host && createPortal(<div ref={popup} data-keyboard-popup={id} className={actionLabel ? 'app-select-popup app-select-action-popup' : 'app-select-popup'} popover="manual" onKeyDown={keyboard} onClick={(event) => event.stopPropagation()}>
       {canSearch && <div className="app-select-search"><Search size={16} aria-hidden="true"/><input ref={search} role="combobox" aria-label={`Пошук: ${label}`} aria-expanded="true" aria-controls={listId} aria-autocomplete="list" aria-activedescendant={activeOption ? optionId(activeOption) : undefined} placeholder="Пошук…" value={query} onChange={(event) => { setQuery(event.target.value); setActive('') }}/></div>}
       <div id={listId} role="listbox" aria-label={label} className="app-select-options">
         {visible.map((option) => <div key={option.value} id={optionId(option)} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-active={option.value === activeValue} className="app-select-option" onPointerMove={() => { if (!option.disabled) setActive(option.value) }} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}><span>{option.label}{option.description && <small className="app-select-description">{option.description}</small>}</span>{option.value === value && <Check size={16} aria-hidden="true"/>}</div>)}

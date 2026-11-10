@@ -46,7 +46,7 @@ test('three sections share employee context; general registration starts empty a
   assert.match(nav,/periodLeaveTypes/)
   assert.doesNotMatch(nav,/eventLeaveTypes/)
   assert.ok(source.includes('<EmployeeChooser'))
-  assert.ok(source.includes('navigationGuard.current(()=>{setSelected(id);accepted()})'))
+  assert.ok(source.includes('if(id!==selected)navigationGuard.current(()=>setSelected(id))'))
   assert.ok(source.includes('navigationGuard.current(()=>openSection(value))'))
   const rights=readFileSync(new URL('../src/components/leave/LeaveRights.tsx',import.meta.url),'utf8')
   assert.doesNotMatch(rights,/Періоди та залишки|onPeriods/)

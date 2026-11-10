@@ -183,19 +183,13 @@
 .leave-right-status { display:block; width:fit-content; font-size:.75rem; line-height:1.5; padding:2px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); }
 .leave-right-status.is-has_right { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
 .leave-right-status.is-no_right { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
-.leave-employee-chooser { padding:var(--space-3); min-width:0; }
+.leave-employee-chooser { display:grid; gap:var(--space-2); padding:var(--space-3); min-width:0; }
 .leave-chosen-person { display:flex; align-items:center; gap:var(--space-3); min-width:0; }
 .leave-chosen-person > div { flex:1; min-width:0; overflow-wrap:anywhere; }
-.leave-chosen-person small,.leave-employee-results small { display:block; color:var(--color-text-secondary); font-size:.8125rem; margin-top:3px; }
-.leave-chosen-person > button { flex-shrink:0; }
-.leave-change-employee.secondary-button { color:var(--tab-active-text); border-color:var(--tab-active-border); white-space:normal; max-width:100%; }
-.leave-employee-search { display:grid; gap:var(--space-2); min-width:0; }
-.leave-chosen-person + .leave-employee-search { margin-top:var(--space-3); }
-.leave-employee-search .ui-search { width:100%; max-width:none; min-width:0; }
-.leave-employee-results { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-1); max-height:18rem; overflow:auto; overscroll-behavior:contain; }
-.leave-employee-results > button { min-width:0; width:100%; padding:var(--space-2) var(--space-3); border:1px solid transparent; border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); text-align:left; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
-.leave-employee-results > button:hover { background:var(--surface-panel); }
-.leave-employee-results > button:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; background:var(--tab-active-background); }
+.leave-chosen-person small { display:block; color:var(--color-text-secondary); font-size:.8125rem; margin-top:3px; }
+.leave-chosen-person > .app-select { flex-shrink:0; max-width:100%; }
+.leave-chosen-person .app-select-action { height:auto; min-height:var(--control-height-legacy); max-width:100%; white-space:normal; }
+.app-select-action-popup .app-select-option > span { min-width:0; overflow-wrap:anywhere; }
 .leave-layout .leave-period-table { table-layout:fixed; min-width:40rem; }
 .leave-layout .leave-period-table .leave-days-column { text-align:center; }
 .leave-actions-column { text-align:center; }
@@ -221,7 +215,8 @@
 .leave-rights-footer .primary-button { margin-inline-start:auto; }
 @container leave-workspace (max-width:52rem) { .leave-rights-list .leave-right-row { grid-template-columns:minmax(0,1fr); } }
 @container leave-workspace (max-width:30rem) { .leave-rights-footer .primary-button { width:100%; white-space:normal; } }
-@container leave-workspace (max-width:38rem) { .leave-chosen-person { flex-wrap:wrap; } .leave-chosen-person > button { margin-inline-start:auto; } }
+@container leave-workspace (max-width:38rem) { .leave-chosen-person { flex-wrap:wrap; } .leave-chosen-person > .app-select { margin-inline-start:auto; } }
+@container leave-workspace (max-width:28rem) { .leave-chosen-person > div { flex-basis:calc(100% - 3rem); } }
 
 /* Shared information sections applied to the leave overview and two dialogs. */
 .leave-overview-item { display:grid; align-content:center; gap:var(--space-2); min-height:64px; container:leave-tile / inline-size; }

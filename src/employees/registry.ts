@@ -6,6 +6,7 @@ export interface RegistryState {
   employeeType: EmployeeType | ''
 }
 export type RegistryDirectories = { department: DictionaryEntry[]; position: DictionaryEntry[] }
+export type DirectoryOrder = Record<keyof RegistryDirectories, Pick<DictionaryEntry, 'id' | 'name'>[]>
 export const initialRegistry = (): RegistryState => ({ query: '', departmentId: '', positionId: '', filtersOpen: false,
   employeeType: '' })
 const collator = new Intl.Collator('uk', { sensitivity: 'base' })
@@ -20,7 +21,7 @@ export function employeeSummary(rows: EmployeeCard[]) {
   const officials = rows.filter(row => row.employeeType === 'official').length
   return { total: rows.length, officials, staff: rows.length - officials }
 }
-export function withDirectoryNames(rows: EmployeeCard[], directories: RegistryDirectories) {
+export function withDirectoryNames(rows: EmployeeCard[], directories: DirectoryOrder) {
   const departments = new Map(directories.department.map(({ id, name }) => [id, name]))
   const positions = new Map(directories.position.map(({ id, name }) => [id, name]))
   return rows.map(row => ({ ...row,
@@ -29,7 +30,7 @@ export function withDirectoryNames(rows: EmployeeCard[], directories: RegistryDi
   }))
 }
 
-export function employeeStructure(rows: EmployeeCard[], directories: RegistryDirectories) {
+export function employeeStructure(rows: EmployeeCard[], directories: DirectoryOrder) {
   const groups = new Map(directories.department.map(({ id, name }) => [id, { id, name, rows: [] as EmployeeCard[] }]))
   const positions = new Map(directories.position.map(({ id }, rank) => [id, rank]))
   for (const row of rows) {
