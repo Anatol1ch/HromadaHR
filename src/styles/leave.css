@@ -343,12 +343,48 @@
 .leave-accounting-values { display:grid; gap:var(--space-1); margin:0; }
 .leave-accounting-values .info-item { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:var(--space-1) var(--space-2); padding:var(--space-1) 0; border-top:1px solid var(--border-surface); border-radius:0; }
 .leave-accounting-values .info-item dd { margin:0; }
-.leave-accounting-more { justify-self:start; margin-top:var(--space-1); }
 .leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
 .leave-accounting-history { display:grid; gap:var(--space-1); padding:0; margin:var(--space-2) 0 0; list-style:none; }
 .leave-accounting-history li { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-1) var(--space-3); padding-block:var(--space-1); border-top:1px solid var(--border-surface); }
 @container info-section (max-width: 550px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
 
-.leave-overview-more { justify-self:start; height:auto; min-height:var(--control-height-compact); max-width:100%; white-space:normal; }
 .leave-overview-item .leave-overview-details > div { min-width:0; overflow-wrap:anywhere; }
+
+.leave-type-card {
+  position:relative;
+  padding:var(--space-3);
+  padding-inline-end:calc(var(--space-3) + 20px);
+  border:1px solid var(--border-surface);
+  transition:transform var(--motion-duration-page) ease, border-color var(--motion-duration-page) ease, box-shadow var(--motion-duration-page) ease;
+}
+.leave-type-card-trigger {
+  position:absolute;
+  inset:0;
+  border:0;
+  border-radius:inherit;
+  padding:0;
+  background:transparent;
+  color:var(--accent);
+  cursor:pointer;
+}
+.leave-type-card-trigger svg {
+  position:absolute;
+  inset-block-start:var(--space-3);
+  inset-inline-end:var(--space-2);
+  transition:transform var(--motion-duration-page) ease;
+}
+.leave-type-card > .leave-type-card-trigger:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+@media (hover:hover) {
+  .leave-type-card:hover { transform:translateY(-2px); border-color:var(--tab-active-border); box-shadow:0 3px 9px color-mix(in srgb, var(--accent) 15%, transparent); }
+  .leave-type-card:hover .leave-type-card-trigger svg { transform:translateX(2px); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .leave-type-card, .leave-type-card-trigger svg { transition:none; }
+  .leave-type-card:hover, .leave-type-card:hover .leave-type-card-trigger svg { transform:none; }
+}
+.leave-event-compact > .info-section { gap:var(--space-2); }
+.leave-event-compact .info-section-heading { flex-wrap:nowrap; }
+.leave-event-compact .info-section-action { flex:none; }
+.leave-event-compact .leave-accounting-actions { margin-block-start:var(--space-1); }
+.leave-event-compact .leave-accounting-actions .secondary-button { min-height:var(--control-height-compact); }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, LayoutGrid } from 'lucide-react'
+import { LayoutGrid } from 'lucide-react'
 import { isPeriodLeave, type LeaveType, type PeriodBalance, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
@@ -7,6 +7,7 @@ import DataState from '../DataState'
 import InfoItem from '../InfoItem'
 import InfoSection from '../InfoSection'
 import LeaveTypeIcon from './LeaveTypeIcon'
+import LeaveTypeCard from './LeaveTypeCard'
 import { AccountingHistoryState, AccountingYearPicker, annualScope, type AccountingHistory, type AccountingYear } from './LeaveEventAccounting'
 import { leaveOptions } from './presentation'
 import { balanceSummary, formatLeaveDays } from './summary'
@@ -68,7 +69,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
         const usage = !isPeriodLeave(type) && !history.loading && !history.error
           ? annualUsage(history.records, employeeId, type, calendar.year) : undefined
         const historical = isHistorical(type)
-        return <article className="info-item leave-accounting-card" key={type}>
+        return <LeaveTypeCard className="leave-accounting-card" key={type} label={label} onOpen={() => onDetails(type)}>
           <div className="leave-overview-details"><LeaveTypeIcon type={type}/><div><h4>{label}</h4>{rightFor(type)}</div></div>
           {summary && (summary.count > 0 ? <>
             <dl className="leave-accounting-values">
@@ -83,9 +84,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
             <InfoItem label="Активні надання" value={usage.activeCount}/>
             <InfoItem label="Зареєстровано за рік" value={formatLeaveDays(usage.days)} emphasis/>
           </dl>}
-          <button type="button" className="secondary-button leave-accounting-more" aria-label={'Детальніше: ' + label}
-            onClick={() => onDetails(type)}>Детальніше<ArrowRight size={15} aria-hidden="true"/></button>
-        </article>
+        </LeaveTypeCard>
       })}
     </div>
   </InfoSection>

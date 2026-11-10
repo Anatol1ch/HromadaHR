@@ -1,4 +1,5 @@
 import LeaveTypeIcon from './LeaveTypeIcon'
+import LeaveTypeCard from './LeaveTypeCard'
 import LeaveStatus from './LeaveStatus'
 import { ArrowRight, History, ShieldCheck, Wallet } from 'lucide-react'
 import InfoSection from '../InfoSection'
@@ -49,7 +50,8 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
     <div className="info-grid info-grid-two">{leaveOptions.map(option => {
       const right = data.rights.find(item => item.leaveType === option.value)
       const summary = isPeriodLeave(option.value) ? balanceSummary(option.value, data.balances, data.proposals.filter(p=>p.periodStart<=throughDate)) : null
-      return <article className="info-item leave-overview-item" key={option.value}>
+      return <LeaveTypeCard className="leave-overview-item" key={option.value} label={option.label}
+        onOpen={() => onOpen({ section: 'balances', type: option.value })}>
         <div className={summary ? 'leave-overview-content has-balance' : 'leave-overview-content'}>
           <div className="leave-overview-details">
             <LeaveTypeIcon type={option.value}/>
@@ -66,9 +68,7 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
             </> : <small className="leave-muted">Залишки ще не внесено</small>}
           </div>}
         </div>
-        <button type="button" className="secondary-button leave-overview-more" aria-label={'Детальніше: ' + option.label}
-          onClick={() => onOpen({ section: 'balances', type: option.value })}>Детальніше<ArrowRight size={15} aria-hidden="true"/></button>
-      </article>
+      </LeaveTypeCard>
     })}</div>
     </InfoSection>
     <InfoSection title="Останні зареєстровані відпустки" icon={<History size={17}/>}>

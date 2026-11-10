@@ -36,11 +36,12 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
 }) {
   const usage = !history.loading && !history.error ? annualUsage(history.records, employeeId, type, calendar.year) : undefined
   const recent = usage && [...usage.history].sort((a, b) => b.startDate.localeCompare(a.startDate) || a.id.localeCompare(b.id)).slice(0, 5)
-  return <InfoSection title={leaveLabels[type]} icon={<LeaveTypeIcon type={type}/>} action={<AccountingYearPicker {...calendar}/>}>
+  const compact = noRight && usage?.history.length === 0
+  return <div className={compact ? 'leave-event-compact' : undefined}><InfoSection title={leaveLabels[type]} icon={<LeaveTypeIcon type={type}/>} action={<AccountingYearPicker {...calendar}/>}>
     <div>{right}</div>
-    <p className="leave-muted leave-accounting-note">{annualScope}</p>
+    {!compact && <p className="leave-muted leave-accounting-note">{annualScope}</p>}
     <AccountingHistoryState history={history}/>
-    {usage && !(noRight && !recent?.length) && <dl className="info-grid">
+    {usage && !compact && <dl className="info-grid">
       <InfoItem label="Активні надання" value={usage.activeCount}/>
       <InfoItem label="Зареєстровано за рік" value={formatLeaveDays(usage.days)} emphasis/>
       <InfoItem label="Скасовані реєстрації" value={usage.cancelledCount}/>
@@ -54,5 +55,5 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
       </li>)}</ul>
     </div> : usage && !noRight && <DataState kind="empty" compact message="За обраний рік реєстрацій немає."/>}
     {actions}
-  </InfoSection>
+  </InfoSection></div>
 }
