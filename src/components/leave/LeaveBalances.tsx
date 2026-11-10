@@ -6,6 +6,7 @@ import { Fragment, useEffect, useId, useRef, useState, type RefObject, type Reac
 import { CalendarDays, Pencil, Trash2 } from 'lucide-react'
 import { type PeriodLeaveType, type ConfirmedLeavePeriod, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
+import { formatDate } from '../../lib/dates'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import InfoItem from '../InfoItem'
@@ -16,7 +17,6 @@ import DictionaryTable from '../DictionaryTable'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import BalanceEditor, { periodLabel } from './BalanceEditor'
-import ServiceLeaveDate from './ServiceLeaveDate'
 import { historicalBalancePeriods, type Period } from './draft'
 
 const columns = [{ label: 'Обліковий період', width: '38%' },
@@ -147,7 +147,9 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
           {selectedSummary.incomplete && !historicalOnly && <Alert variant="warning">Залишки внесено лише за частиною періодів.</Alert>}
         </>}
       {rightNotice}
-      {data?.serviceStart !== undefined && <ServiceLeaveDate employeeId={employeeId} saved={data.serviceStart} navigationGuard={navigationGuard} onSaved={refresh}/>}
+      {data?.serviceStart !== undefined && <dl className="info-grid">
+        <InfoItem label="Дата набуття права за стаж" value={data.serviceStart ? formatDate(data.serviceStart) : 'Не внесено'}/>
+      </dl>}
     </InfoSection>
     {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
@@ -176,12 +178,18 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     </DictionaryTable>}
     </section>}
     {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
-      onClose={() => { setEditing(false); editorPeriods.current=null }} onSaved={() => {
+      serviceStart={data?.serviceStart} manualProposals={manualProposals}
+      onClose={dateWritten => {
+        setEditing(false)
+        editorPeriods.current = null
+        if (dateWritten) { focusAfterRefresh.current = true; refresh() }
+      }} onSaved={daysWritten => {
         setEditing(false)
         editorPeriods.current=null
         focusAfterRefresh.current = true
         refresh()
-        notifySystemToast('success', 'Залишки збережено', 'Підтверджені величини оновлено.')
+        notifySystemToast('success', daysWritten ? 'Залишки збережено' : 'Дату набуття права збережено',
+          daysWritten ? 'Підтверджені величини оновлено.' : 'Пропозиції періодів оновлено.')
       }} />}
     {deleting && <ConfirmDialog title="Вилучити підтвердження?" confirmLabel="Вилучити" error={deleteError}
       message={`Підтверджені дні за період ${periodLabel(deleting)} буде вилучено. Підтвердження можна внести повторно за чинними правилами.`}

@@ -140,3 +140,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.8.2 – Контекстний редактор залишків
 
 Звірено read-only `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано принцип локальної чернетки й явного завершення контекстної дії. Реалізація повторно використовує наявні форми й захист HromadaHR.
+
+## 4.8.3 – Спільна дата в редакторі
+
+Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Застосовано наявний DateField у формі та спільні компоненти HromadaHR. Послідовність записів і календарні правила належать HromadaHR.

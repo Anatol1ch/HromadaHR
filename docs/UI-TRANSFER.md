@@ -495,3 +495,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.8.2 – Повернення з редактора днів
 
 Звірено `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Для збереження локальної чернетки використано чинні Modal, BalanceEditor, DateField та підтвердження незбережених змін HromadaHR. Контекстні діалоги відкриваються послідовно.
+
+## 4.8.3 – Дата, періоди та дні в одному редакторі
+
+Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Редактор використовує чинні DateField, DictionaryTable, Modal і спільні стилі футера HromadaHR. Дату за стаж можна ввести та перевірити разом із днями.

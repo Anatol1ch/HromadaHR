@@ -6,7 +6,7 @@ import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
 import type { ConfirmedLeavePeriod, LeaveErrorCode, LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from '../../shared/leave.js'
 import * as schemas from './schemas.js'
-import { accountingBasisForPeriod, isCanonicalPeriod, proposedPeriods } from './periods.js'
+import { accountingBasisForPeriod, isCanonicalPeriod, proposedPeriods, serviceLeaveProposals } from './periods.js'
 
 export class LeaveError extends Error {
   constructor(readonly code: LeaveErrorCode) { super(code) }
@@ -114,8 +114,7 @@ export class LeaveService {
         if (!start) return []
         const existing = db.prepare<[string], { period_start: string; period_end: string }>(
           "SELECT period_start, period_end FROM leave_period_balances WHERE employee_id=? AND leave_type='oms_service_additional'").all(employeeId)
-        return proposedPeriods(type, start, date).filter(period =>
-          !existing.some(row => row.period_start <= period.periodEnd && row.period_end >= period.periodStart))
+        return serviceLeaveProposals(start, date, existing.map(row => ({ periodStart: row.period_start, periodEnd: row.period_end })))
       }
       if (Number(date.slice(0, 4)) - Number(employee.hireDate.slice(0, 4)) > 199) throw new LeaveError('INVALID_ARGUMENTS')
       return proposedPeriods(type, employee.hireDate, date)
