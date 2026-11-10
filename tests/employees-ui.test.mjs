@@ -1,11 +1,11 @@
-import { filterEmployees, sortEmployees } from '../src/employees/registry.ts'
-const selectEmployees = (rows, query, departmentId, descending) => sortEmployees(filterEmployees(rows, { query, departmentId, positionId: '' }), { key: 'fullName', direction: descending ? 'desc' : 'asc' })
+import { employeeStructure, filterEmployees } from '../src/employees/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { employeeInput, dictionaryName, fullName,
   validateEmployee, validDate, valuesForEmployee, emptyValues } from '../src/employees/model.ts'
 import { employeeDetails, departmentInput } from '../dist-electron/electron/personnel/schemas.js'
 
+const selectEmployees = (rows, query, departmentId) => filterEmployees(rows, { query, departmentId, positionId: '', employeeType: '' })
 const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333']
 const values = { ...emptyValues, lastName: 'Тестовий', firstName: 'Умовний', hireDate: '2026-01-01', departmentId: ids[0], positionId: ids[1] }
 function card(id, lastName, departmentId = ids[0], middleName = null) {
@@ -16,18 +16,18 @@ function card(id, lastName, departmentId = ids[0], middleName = null) {
 
 test('employee search handles Ukrainian case, canonical Unicode, name combinations and department intersection', () => {
   const employees = [card('b', 'Ятест', ids[1], 'Тестович'), card('a', 'Йтест'), card('c', 'Атест')]
-  assert.deepEqual(selectEmployees(employees, '  УМОВНЕ   И\u0306ТЕСТ ', '', false).map(e => e.id), ['a'])
-  assert.deepEqual(selectEmployees(employees, 'ТЕСТОВИЧ ятест', '', false).map(e => e.id), ['b'])
-  assert.deepEqual(selectEmployees(employees, 'умовне', ids[1], false).map(e => e.id), ['b'])
-  assert.deepEqual(selectEmployees(employees, 'Йтест', ids[1], false), [])
-  assert.deepEqual(selectEmployees(employees, 'неіснуючий', '', false), [])
+  assert.deepEqual(selectEmployees(employees, '  УМОВНЕ   И\u0306ТЕСТ ', '').map(e => e.id), ['a'])
+  assert.deepEqual(selectEmployees(employees, 'ТЕСТОВИЧ ятест', '').map(e => e.id), ['b'])
+  assert.deepEqual(selectEmployees(employees, 'умовне', ids[1]).map(e => e.id), ['b'])
+  assert.deepEqual(selectEmployees(employees, 'Йтест', ids[1]), [])
+  assert.deepEqual(selectEmployees(employees, 'неіснуючий', ''), [])
   assert.equal(fullName(employees[1]), 'Йтест Умовне')
 })
 
-test('Ukrainian name sorting is reversible and never mutates the IPC list', () => {
+test('Ukrainian name sorting within a position never mutates the IPC list', () => {
   const employees = [card('c', 'Ятест'), card('b', 'Йтест'), card('a', 'Атест')]
-  assert.deepEqual(selectEmployees(employees, '', '', false).map(e => e.id), ['a', 'b', 'c'])
-  assert.deepEqual(selectEmployees(employees, '', '', true).map(e => e.id), ['c', 'b', 'a'])
+  const [group] = employeeStructure(employees, { department: [employees[0].department], position: [employees[0].position] })
+  assert.deepEqual(group.rows.map(e => e.id), ['a', 'b', 'c'])
   assert.deepEqual(employees.map(e => e.id), ['c', 'b', 'a'])
 })
 

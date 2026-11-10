@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { annualUsage, matchesEmployeeName, sortedLeaveYears } from '../src/components/leave/usage.ts'
+import { accountingYears, annualUsage, matchesEmployeeName, sortedLeaveYears } from '../src/components/leave/usage.ts'
 
 test('leave year selectors list distinct years in ascending order', () => {
   assert.deepEqual(sortedLeaveYears(['2029','2027','2028','2027']), ['2027','2028','2029'])
@@ -57,9 +57,9 @@ test('employee search matches all name parts without choosing a default employee
   assert.equal(matchesEmployeeName('Коваль Олена Іванівна','Петро'),false)
   const source=readFileSync(new URL('../src/components/leave/EmployeeChooser.tsx',import.meta.url),'utf8')
   assert.doesNotMatch(source,/onSelect\(results\[0\]|onSelect\(employees\[0\]/)
-  assert.match(source,/onSelect\(person.id, \(\) =>/)
-  assert.match(source,/ArrowDown/)
-  assert.match(source,/Escape/)
+  assert.match(source,/onChange=\{onSelect\}/)
+  assert.match(source,/searchable matchesSearch=\{matchesEmployeeOption\}/)
+  assert.match(source,/<Select/)
 })
 
 test('editor actions are contextual and rights keep a single guarded explicit save', () => {
@@ -73,4 +73,10 @@ test('editor actions are contextual and rights keep a single guarded explicit sa
   assert.match(rights,/disabled=\{!saved\|\|!changes.length\|\|busy\}/)
   assert.equal((rights.match(/saveRights\(/g)??[]).length,1)
   assert.doesNotMatch(rights,/<Select/)
+})
+
+test('accounting years include the operating range and later recorded start years for the selected employee', () => {
+  const records = [record(), record({ startDate: '2032-01-01' }), record({ employeeId: 'b', startDate: '2033-01-01' })]
+  assert.deepEqual(accountingYears(records, 'a', '2029'), ['2027', '2028', '2029', '2030', '2032'])
+  assert.deepEqual(accountingYears([], 'a', '2027'), ['2027', '2028'])
 })

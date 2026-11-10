@@ -4,6 +4,13 @@ export function sortedLeaveYears(years: string[]) {
   return [...new Set(years)].sort()
 }
 
+export function accountingYears(records: LeaveRecord[], employeeId: string, currentYear: string) {
+  const years = Array.from({ length: Number(currentYear) - 2027 + 2 }, (_, index) => String(2027 + index))
+  return sortedLeaveYears([...years,
+    ...records.filter(record => record.employeeId === employeeId).map(record => record.startDate.slice(0, 4))]
+    .filter(year => year >= '2027'))
+}
+
 /** Full registered durations attributed once to the start year, not calendar-day splitting. */
 export function annualUsage(records: LeaveRecord[], employeeId: string, type: LeaveType, year: string) {
   const history = records.filter(record => record.employeeId === employeeId && record.leaveType === type && record.startDate.slice(0, 4) === year)

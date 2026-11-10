@@ -160,3 +160,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.9.3 – Структурований реєстр
 
 Звірено read-only `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx` і `src/components/ProgramsCatalog.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Збережено вже адаптовані таблицю, фільтри й кнопки дій. Організаційні групи та кадровий порядок реалізовано на основі чинних даних HromadaHR.
+
+## 4.9.5 – Єдиний облік відпусток
+
+Звірено read-only `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Повторно використано патерн вибору року й контекстних фільтрів у спільному реєстрі. Перенесено лише поведінку інтерфейсу. Дані, локальний рік, підсумки та правила відпусток належать HromadaHR.

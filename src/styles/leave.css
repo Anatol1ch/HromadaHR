@@ -333,3 +333,19 @@
 @container info-section (max-width: 465px) {
   .leave-confirmation-summary .info-grid-two { grid-template-columns: minmax(0, 1fr); }
 }
+
+.leave-accounting-year { display:grid; gap:var(--space-1); min-width:8rem; font-size:13px; }
+.leave-accounting-note { margin:0; overflow-wrap:anywhere; }
+.leave-accounting-card { display:grid; align-content:start; grid-template-rows:auto; gap:var(--space-2); min-width:0; }
+.leave-accounting-grid { align-items:stretch; }
+.leave-accounting-card > .leave-overview-details { align-items:start; }
+.leave-accounting-card > .leave-overview-details > div { min-width:0; }
+.leave-accounting-values { display:grid; gap:var(--space-1); margin:0; }
+.leave-accounting-values .info-item { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:var(--space-1) var(--space-2); padding:var(--space-1) 0; border-top:1px solid var(--border-surface); border-radius:0; }
+.leave-accounting-values .info-item dd { margin:0; }
+.leave-accounting-more { justify-self:start; margin-top:var(--space-1); }
+.leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
+.leave-accounting-history { display:grid; gap:var(--space-1); padding:0; margin:var(--space-2) 0 0; list-style:none; }
+.leave-accounting-history li { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-1) var(--space-3); padding-block:var(--space-1); border-top:1px solid var(--border-surface); }
+@container info-section (max-width: 550px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
