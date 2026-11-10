@@ -65,7 +65,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
         const usage = !isPeriodLeave(type) && !history.loading && !history.error
           ? annualUsage(history.records, employeeId, type, calendar.year) : undefined
         const metric = summary ? <LeaveBalanceMetric {...summary} historical={isHistorical(type)}/>
-          : usage ? <><strong>{formatLeaveDays(usage.days)}</strong><small>Зареєстровано за рік</small></>
+          : usage ? <><strong>{formatLeaveDays(usage.days)}</strong><small><span className="visually-hidden">Зареєстровано </span>за рік</small></>
           : isPeriodLeave(type) && !balances ? <small>Завантаження…</small> : undefined
         return <LeaveTypeCard key={type} type={type} right={rightFor(type)} metric={metric} onOpen={() => onDetails(type)}/>
       })}

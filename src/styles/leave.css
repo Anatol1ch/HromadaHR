@@ -139,7 +139,7 @@
 .leave-person-list small,.leave-rights-list small { display:block; color:var(--color-text-secondary); font-size:.8125rem; }
 .leave-person-content { display:grid; align-content:start; gap:var(--space-4); min-width:0; }
 .leave-rights-panel { display:grid; gap:var(--space-2); padding:var(--space-3); min-width:0; }
-.leave-rights-list { display:grid; gap:0; }
+.leave-rights-list { display:grid; grid-auto-rows:1fr; gap:0; }
 
 .leave-right-history { font-size:.8125rem; }
 .leave-person-content .leave-balance-choice[aria-pressed="true"] { background:var(--tab-active-background); border-color:var(--tab-active-border); box-shadow:none; }
@@ -201,7 +201,6 @@
 .leave-right-switch input:checked + span { border-color:var(--tab-active-border); background:var(--tab-active-background); color:var(--tab-active-text); font-weight:600; }
 .leave-right-switch input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
 .leave-right-switch input:disabled + span { opacity:.6; cursor:default; }
-.leave-right-row > .leave-right-history { grid-column:1/-1; margin:0; }
 .leave-rights-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-2); padding-top:var(--space-3); border-top:1px solid var(--border-surface); }
 .leave-rights-footer .primary-button { margin-inline-start:auto; }
 @container leave-workspace (max-width:52rem) { .leave-rights-list .leave-right-row { grid-template-columns:minmax(0,1fr); } }
@@ -326,8 +325,6 @@
 .leave-accounting-grid { align-items:stretch; }
 .leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
-.leave-accounting-history { display:grid; gap:var(--space-1); padding:0; margin:var(--space-2) 0 0; list-style:none; }
-.leave-accounting-history li { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-1) var(--space-3); padding-block:var(--space-1); border-top:1px solid var(--border-surface); }
 @container info-section (max-width: 590px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
 
 
@@ -335,9 +332,9 @@
   position:relative;
   padding:var(--space-3);
   display:grid;
-  grid-template-columns:minmax(0,1fr) fit-content(40%) 16px;
+  grid-template-columns:minmax(0,1fr) fit-content(34%) 16px;
   align-items:center;
-  gap:var(--space-2);
+  gap:var(--space-2) var(--space-1);
   min-height:64px;
   border:1px solid var(--border-surface);
   transition:transform var(--motion-duration-page) ease, border-color var(--motion-duration-page) ease, box-shadow var(--motion-duration-page) ease;
@@ -354,7 +351,7 @@
 }
 .leave-type-card-identity { grid-column:1; display:flex; align-items:center; gap:var(--space-2); min-width:0; }
 .leave-type-card-identity > div { min-width:0; overflow-wrap:anywhere; }
-.leave-type-card-identity h4 { margin:0; font-size:13px; line-height:1.4; }
+.leave-type-card-identity h4 { margin:0; font-size:13px; line-height:1.4; text-wrap:balance; }
 .leave-type-card-metric { grid-column:2; display:grid; justify-items:end; min-width:0; text-align:end; overflow-wrap:anywhere; }
 .leave-type-card-metric strong { color:var(--accent-hover); font-size:17px; font-variant-numeric:tabular-nums; }
 .leave-type-card-metric small { color:var(--color-text-secondary); font-size:12px; line-height:1.35; }
@@ -371,7 +368,7 @@
 }
 .leave-event-accounting .info-section-heading { flex-wrap:nowrap; }
 .leave-event-accounting .info-section-action { flex:none; }
-.leave-event-content { display:grid; gap:var(--space-2); min-width:0; }
+.leave-event-content { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); min-width:0; }
 .leave-event-context {
   display:flex;
   flex-wrap:wrap;
@@ -395,6 +392,9 @@
 .leave-event-metrics .info-item dd { margin:0; }
 .leave-event-history { padding:var(--space-2) var(--space-3); border-radius:var(--radius-control); background:var(--surface-card); }
 .leave-event-history > p { font-size:12px; }
+.leave-event-history .dictionary-table-wrap { margin-block-start:var(--space-2); }
+.leave-event-history-table { min-width:22rem; }
+.leave-event-history-table .leave-event-history-days { text-align:right; font-variant-numeric:tabular-nums; }
 @container info-section (max-width: 280px) {
   .leave-event-accounting .info-section-heading { flex-wrap:wrap; }
 }

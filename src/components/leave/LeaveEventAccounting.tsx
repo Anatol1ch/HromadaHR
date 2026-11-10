@@ -1,6 +1,7 @@
 import { formatDate } from '../../lib/dates'
 import Alert from '../Alert'
 import DataState from '../DataState'
+import DictionaryTable from '../DictionaryTable'
 import InfoItem from '../InfoItem'
 import InfoSection from '../InfoSection'
 import Select from '../Select'
@@ -43,7 +44,6 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
       <div className="leave-event-context">
         <div className="leave-event-state">
           {right}
-          {empty && <small className="leave-muted">За обраний рік реєстрацій немає.</small>}
           {empty && showLimit && !noRight && usage.limit !== null &&
             <small className="leave-muted">Облікова межа тривалості · {formatLeaveDays(usage.limit)}</small>}
         </div>
@@ -60,10 +60,17 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
         <div className="leave-event-history">
           <h4 className="leave-accounting-note">Останні надання за рік</h4>
           <p className="leave-muted leave-accounting-note">{annualScope}</p>
-          <ul className="leave-accounting-history">{recent.map(record => <li key={record.id}>
-            <span>{formatDate(record.startDate)}–{formatDate(record.endDate)}</span>
-            <span>{formatLeaveDays(record.usedDays)}</span><LeaveStatus status={record.status}/>
-          </li>)}</ul>
+          <DictionaryTable label="Останні надання за рік" className="leave-event-history-table" columns={[
+            { label: 'Дати відпустки', sort: 'descending' },
+            { label: 'Кількість днів', className: 'leave-event-history-days' },
+            { label: 'Статус' },
+          ]}>
+            {recent.map(record => <tr key={record.id}>
+              <td>{formatDate(record.startDate)}–{formatDate(record.endDate)}</td>
+              <td className="leave-event-history-days">{record.usedDays}</td>
+              <td><LeaveStatus status={record.status}/></td>
+            </tr>)}
+          </DictionaryTable>
         </div>
       </>}
     </div>

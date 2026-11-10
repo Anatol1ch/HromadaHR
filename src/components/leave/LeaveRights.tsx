@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { CircleHelp, CircleCheck, CircleX } from 'lucide-react'
-import type { EmployeeLeaveRight, LeaveRightInput, LeaveRecord } from '../../../shared/leave'
+import type { EmployeeLeaveRight, LeaveRightInput } from '../../../shared/leave'
 import { leaveOptions, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 import Alert from '../Alert'
@@ -14,7 +14,7 @@ const rightStates = [
   { value: 'has_right', label: rightLabels.has_right, Icon: CircleCheck },
   { value: 'no_right', label: rightLabels.no_right, Icon: CircleX },
 ] as const
-export default function LeaveRights({employeeId,records,navigationGuard,onSaved}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void}) {
+export default function LeaveRights({employeeId,navigationGuard,onSaved}: {employeeId:string;navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void}) {
   const radioId=useId()
   const [saved,setSaved]=useState<EmployeeLeaveRight[]>()
   const [draft,setDraft]=useState<Record<string,string>>({})
@@ -45,8 +45,6 @@ export default function LeaveRights({employeeId,records,navigationGuard,onSaved}
             <span><Icon size={16} aria-hidden="true"/>{label}</span>
           </label>)}
         </div>
-        {value === 'no_right' && records.some(record => record.employeeId === employeeId && record.leaveType === option.value) &&
-          <p className="leave-right-history leave-muted">Є попередні реєстрації цього виду.</p>}
       </div>
     })}</div>
     {error && saved && <Alert variant="error">{error}</Alert>}
