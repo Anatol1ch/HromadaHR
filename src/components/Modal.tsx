@@ -21,13 +21,14 @@ type ModalProps = {
   headerIcon?: ReactNode
   busy?: boolean
   dismissible?: boolean
+  returnFocus?: HTMLElement | null
 }
 
 let modalSequence = 0
 const openModalStack: number[] = []
 let initialBodyOverflow = ''
 
-export default function Modal({ title, description, children, footer, onClose, dirty = false, size = 'compact', labelledBy, role = 'dialog', className = '', describedBy, headerIcon, busy = false, dismissible = true }: ModalProps) {
+export default function Modal({ title, description, children, footer, onClose, dirty = false, size = 'compact', labelledBy, role = 'dialog', className = '', describedBy, headerIcon, busy = false, dismissible = true, returnFocus }: ModalProps) {
   const id = useId()
   const titleId = labelledBy ?? `modal-title-${id}`
   const descriptionId = `modal-description-${id}`
@@ -35,6 +36,7 @@ export default function Modal({ title, description, children, footer, onClose, d
   const lastFieldRef = useRef<HTMLElement | null>(null)
   // Capture the opener before a child's autoFocus runs during the commit.
   const openerRef = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
+  const returnFocusRef = useRef(returnFocus)
   const closeRef = useRef(onClose)
   const dirtyRef = useRef(dirty)
   const busyRef = useRef(busy)
@@ -93,7 +95,8 @@ export default function Modal({ title, description, children, footer, onClose, d
       document.body.style.overflow = openModalStack.length ? 'hidden' : initialBodyOverflow
       if (previousModal) previousModal.inert = previousInert
       if (dialog) cancelCloseConfirmation(dialog)
-      if (previousFocus?.isConnected && !previousFocus.matches(':disabled') && !previousFocus.closest('[inert]') && previousFocus.getClientRects().length > 0) previousFocus.focus()
+      const target = returnFocusRef.current ?? previousFocus
+      if (target?.isConnected && !target.matches(':disabled') && !target.closest('[inert]') && target.getClientRects().length > 0) target.focus()
     }
   }, [dismissible])
 

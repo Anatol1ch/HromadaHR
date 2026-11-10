@@ -17,7 +17,7 @@ export function formatLeaveDays(days: number | bigint) {
   return `${days.toLocaleString('uk-UA')} ${unit}`
 }
 
-export function allocationDraft(available: PeriodBalance[], drafts: Record<string, string>, days: number) {
+export function allocationDraft(available: PeriodBalance[], drafts: Record<string, string>, days: number, requireAvailableDrafts = false) {
   const values = available.map(period => {
     const text = drafts[period.id] || '0'
     const value = Number(text)
@@ -26,11 +26,13 @@ export function allocationDraft(available: PeriodBalance[], drafts: Record<strin
   const invalid = new Set(values.filter((entry, index) => entry.days === null || entry.days > available[index]!.availableDays).map(entry => entry.periodId))
   const total = values.reduce((sum, entry) => sum + (entry.days ?? 0), 0)
   const capacity = available.reduce((sum, period) => Math.min(days, sum + period.availableDays), 0)
+  const ignored = Object.entries(drafts).some(([id, value]) => value !== '' && value !== '0' && !available.some(period => period.id === id))
   return {
     values: values.flatMap(entry => entry.days !== null && entry.days > 0 ? [{ periodId: entry.periodId, days: entry.days }] : []),
-    invalid, total, shortfall: days - capacity, complete: invalid.size === 0 && total === days,
-    ignored: Object.entries(drafts).some(([id, value]) => value !== '' && value !== '0' && !available.some(period => period.id === id)),
+    invalid, total, shortfall: days - capacity, complete: invalid.size === 0 && total === days && (!requireAvailableDrafts || !ignored),
+    ignored,
     message: invalid.size > 0 ? 'Вкажіть ціле число від нуля до доступного залишку.' :
+      requireAvailableDrafts && ignored ? 'Перевірте недоступні списання.' :
       total > days ? 'Потрібно прибрати ' + formatLeaveDays(total - days) :
       total < days ? 'Залишилося розподілити ' + formatLeaveDays(days - total) : 'Розподіл завершено',
   }

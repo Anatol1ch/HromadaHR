@@ -18,12 +18,12 @@ import { notifySystemToast } from '../SystemToastHost'
 export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{navigationGuard:RefObject<NavigationGuard>;initialEmployeeId?:string}) {
   const navId=useId()
   const rightsTab = useRef<HTMLButtonElement>(null)
+  const registerButton = useRef<HTMLElement | null>(null)
   const [periodType,setPeriodType]=useState<PeriodLeaveType>('annual_main')
   const [section,setSection]=useState<'journal'|'balances'|'rights'>(initialEmployeeId?'balances':'journal')
   const [employees,setEmployees]=useState<EmployeeCard[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [records,setRecords]=useState<LeaveRecord[]>([]),[recordsLoaded,setRecordsLoaded]=useState(false),[recordsError,setRecordsError]=useState(''),[revision,setRevision]=useState(0)
   const [selected,setSelected]=useState(initialEmployeeId),[creating,setCreating]=useState(false),[createEmployee,setCreateEmployee]=useState('')
-  const [editorRequest, setEditorRequest] = useState<{ id: string; type: PeriodLeaveType } | null>(null)
   const [rightsRevision, setRightsRevision] = useState(0)
   const [rights, setRights] = useState<{ key: string; data?: EmployeeLeaveRight[]; error?: string }>()
   const rightsKey = JSON.stringify([selected, rightsRevision])
@@ -45,7 +45,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
     {rightStatus === 'has_right' ? 'Право підтверджено' : 'Не перевірено'}
   </span>
   function openSection(value: typeof section) {
-    setEditorRequest(null)
+    setCreating(false)
     setSection(value)
   }
   const rightNotice = noRight && <Alert variant="info" className="leave-right-notice" action={<button type="button" className="secondary-button"
@@ -61,37 +61,30 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
   useEffect(()=>{let active=true;setRecordsError('');void window.hromadaHR.leave.listRecords(null).then(result=>{if(!active)return;if(result.ok){setRecords(result.data);setRecordsLoaded(true)}else setRecordsError(personnelMessage(result.error.code))}).catch(()=>{if(active)setRecordsError('Не вдалося завантажити журнал.')});return()=>{active=false}},[revision])
   const employee=employees.find(p=>p.id===selected),person=employees.find(p=>p.id===createEmployee)
   const refresh=()=>setRevision(v=>v+1)
-  const register=()=>{setCreateEmployee('');setCreating(true)}
-  function balances(id: string, type: PeriodLeaveType, openEditor = false) {
-    setSelected(id)
-    setPeriodType(type)
-    setEditorRequest(openEditor ? { id, type } : null)
-    setSection('balances')
-  }
+  const register=()=>{registerButton.current=document.activeElement instanceof HTMLElement ? document.activeElement : null;setCreateEmployee('');setCreating(true)}
   return <div className="page-transition leave-workspace"><header className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Відпустки</h1></div></header>
     <nav className="settings-section-nav leave-section-nav" role="tablist" aria-label="Розділи відпусток" onKeyDown={navigateTabs}>{(['journal','balances','rights'] as const).map(value=><button key={value} ref={value === 'rights' ? rightsTab : undefined} id={navId+value} role="tab" aria-selected={section===value} aria-controls={navId+value+'-panel'} tabIndex={section===value?0:-1} className={'settings-section-current'+(section===value?' is-selected':'')} onClick={()=>navigationGuard.current(()=>openSection(value))}>{value==='journal'?'Журнал відпусток':value==='balances'?'Залишки відпусток':'Права на відпустки'}</button>)}</nav>
     {error&&<Alert variant="error" action={<button type="button" onClick={()=>{setError('');setRetry(v=>v+1)}}>Повторити</button>}>{error}</Alert>}
     <div id={navId+'journal-panel'} role="tabpanel" aria-labelledby={navId+'journal'} hidden={section!=='journal'}>
-      {recordsError?<Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>:!recordsLoaded||!loaded?<DataState kind="loading" message="Завантаження журналу…"/>:<LeaveJournal records={records} employeeRows={employees} navigationGuard={navigationGuard} active={section==='journal'} onChanged={refresh} onRegister={register} onBalances={balances}/>}
+      {recordsError?<Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{recordsError}</Alert>:!recordsLoaded||!loaded?<DataState kind="loading" message="Завантаження журналу…"/>:<LeaveJournal records={records} employeeRows={employees} navigationGuard={navigationGuard} active={section==='journal'} onChanged={refresh} onRegister={register}/>}
     </div>
-    {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={(id,accepted)=>navigationGuard.current(()=>{setEditorRequest(null);setSelected(id);accepted()})}/>}
+    {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={(id,accepted)=>navigationGuard.current(()=>{setSelected(id);accepted()})}/>}
     <div id={navId+'balances-panel'} role="tabpanel" aria-labelledby={navId+'balances'} hidden={section!=='balances'}>
       {section === 'balances' && employee ? <div className="leave-balances-workbench">
         <LeaveTypeNavigation value={periodType} onChange={type => {
-          if (type !== periodType) navigationGuard.current(() => { setEditorRequest(null); setPeriodType(type) })
+          if (type !== periodType) navigationGuard.current(() => { setPeriodType(type) })
         }}/>
         <div className="leave-balances-detail">
           {currentRights?.error && <Alert variant="error" action={<button type="button" onClick={refreshRights}>Повторити</button>}>{currentRights.error}</Alert>}
           <LeaveBalances key={employee.id + periodType} type={periodType}
             employeeId={employee.id} employeeName={fullName(employee)} hireDate={employee.hireDate} navigationGuard={navigationGuard}
-            openEditor={editorRequest?.id === employee.id && editorRequest.type === periodType ? () => setEditorRequest(null) : undefined}
             refreshRevision={revision} rightsReady={Boolean(currentRights?.data)} historicalOnly={noRight} rightBadge={rightBadge} rightNotice={rightNotice}/>
         </div>
       </div> : <DataState kind="empty" message="Оберіть працівника для роботи із залишками."/>}
     </div>
     <div id={navId+'rights-panel'} role="tabpanel" aria-labelledby={navId+'rights'} hidden={section!=='rights'}>{section==='rights'&&employee?<LeaveRights key={employee.id} employeeId={employee.id} records={records} navigationGuard={navigationGuard} onSaved={refreshRights}/>:<DataState kind="empty" message="Оберіть працівника для перевірки прав."/>}</div>
-    {creating&&<LeaveRegistrationForm key={createEmployee||'new'} employeeId={person?.id??''} employeeName={person?fullName(person):undefined} hireDate={person?.hireDate??'0001-01-01'} initialType="annual_main" navigationGuard={navigationGuard}
+    {creating&&<LeaveRegistrationForm key={createEmployee||'new'} employeeId={person?.id??''} employeeName={person?fullName(person):undefined} hireDate={person?.hireDate??'0001-01-01'} initialType="annual_main" navigationGuard={navigationGuard} returnFocus={registerButton.current}
       employeePicker={<div className="recipient-field"><span>Працівник</span><Select label="Працівник для нової відпустки" required searchable value={createEmployee} options={employees.map(p=>({value:p.id,label:fullName(p)}))} advanceOnSelect={false} onChange={id=>navigationGuard.current(()=>setCreateEmployee(id))}/>{!employees.length&&<p>Додайте працівника до кадрового реєстру.</p>}</div>}
-      onClose={()=>setCreating(false)} onSaved={()=>{setCreating(false);refresh();notifySystemToast('success','Відпустку зареєстровано','Дані оновлено.')}} onBalances={(type, openEditor)=>{setCreating(false);if(person)balances(person.id, type, openEditor)}}/>}
+      onClose={()=>setCreating(false)} onSaved={()=>{setCreating(false);refresh();notifySystemToast('success','Відпустку зареєстровано','Дані оновлено.')}}/>}
   </div>
 }

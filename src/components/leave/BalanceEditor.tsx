@@ -17,10 +17,10 @@ import { buildChanges, cutoff, hasNewEntitlement, setManualStart, suggestedPerio
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly }: {
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly, closeLabel = 'Скасувати' }: {
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: () => void
-  rightsReady?: boolean; historicalOnly?: boolean
+  rightsReady?: boolean; historicalOnly?: boolean; closeLabel?: string
 }) {
   const {today}=useAccountingDate()
   const initial = useRef<Draft[]>(periods.filter(period => type !== 'children_social_additional' || period.status === 'confirmed').map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
@@ -137,7 +137,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         <div className="recipient-form-actions leave-editor-actions">
           {type !== 'children_social_additional' && <button type="button" className="secondary-button" disabled={busy || !zeroCount} onClick={() => setConfirmZeros(true)}>Заповнити порожні нулями ({zeroCount})</button>}
           <div className="leave-save-actions">
-            <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>Скасувати</button>
+            <button type="button" className="secondary-button" disabled={busy} onClick={() => close(onClose)}>{closeLabel}</button>
             <button type="submit" className="primary-button" disabled={busy}><Check size={16} aria-hidden="true" />{busy ? 'Збереження…' : 'Зберегти'}</button>
           </div>
         </div>

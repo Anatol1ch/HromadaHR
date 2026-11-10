@@ -8,6 +8,7 @@ import { calendarDate, mondayIndex, monthGrid, monthNames, shiftDays, shiftMonth
 
 type DatePickerProps = {
   value: string
+  initialDraft?: string
   onChange: (value: string) => void
   onDraftChange?: (display: string) => void
   required?: boolean
@@ -21,7 +22,7 @@ type DatePickerProps = {
   max?: string
 }
 
-export default function DatePicker({ value, onChange, onDraftChange, required = false, disabled = false, error, 'aria-describedby': describedBy, autoFocus = false, id, list, min = '0001-01-01', max = '9999-12-31' }: DatePickerProps) {
+export default function DatePicker({ value, initialDraft, onChange, onDraftChange, required = false, disabled = false, error, 'aria-describedby': describedBy, autoFocus = false, id, list, min = '0001-01-01', max = '9999-12-31' }: DatePickerProps) {
   const calendarId = useId()
   const inputId = id ?? `${calendarId}-input`
   const root = useRef<HTMLSpanElement>(null)
@@ -29,7 +30,8 @@ export default function DatePicker({ value, onChange, onDraftChange, required = 
   const popup = useRef<HTMLSpanElement>(null)
   const focusCalendar = useRef(false)
   const [host, setHost] = useState<HTMLElement | null>(null)
-  const [text, setText] = useState(formatDateInput(value))
+  const [text, setText] = useState(initialDraft ?? formatDateInput(value))
+  const previousValue = useRef(value)
   const [open, setOpen] = useState(false)
   const [touched, setTouched] = useState(false)
   const [yearsOpen, setYearsOpen] = useState(false)
@@ -49,8 +51,9 @@ export default function DatePicker({ value, onChange, onDraftChange, required = 
   useEffect(() => { if (disabled) setOpen(false) }, [disabled])
 
   useEffect(() => {
-    const display = formatDateInput(value)
-    setText(display)
+    if (previousValue.current === value) return
+    previousValue.current = value
+    setText(formatDateInput(value))
   }, [value])
   // Constraint changes must validate, rather than erase, an in-progress draft.
   useEffect(() => { input.current?.setCustomValidity(validationMessage(text)) }, [text, required, lower, upper])

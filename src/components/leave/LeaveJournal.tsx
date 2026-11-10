@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type RefObject } from 'react'
 import { Eye, Pencil, Ban, Plus, SlidersHorizontal, FilterX, ListRestart } from 'lucide-react'
-import type { LeaveRecord, PeriodLeaveType } from '../../../shared/leave'
+import type { LeaveRecord } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import { formatDate } from '../../lib/dates'
@@ -12,8 +12,8 @@ import LeaveRecordAction from './LeaveRecordAction'
 import { leaveLabels, leaveGroupOptions } from './presentation'
 import { recordCountLabel, journalRows, emptyLeaveFilters, personName, type LeaveSortKey } from './registry'
 import { sortedLeaveYears } from './usage'
-export default function LeaveJournal({records,employeeRows=[],employees, navigationGuard,onChanged,onRegister,onBalances,active=true}: {
-  records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; onBalances?:(id:string,type:PeriodLeaveType,openEditor?:boolean)=>void; active?:boolean
+export default function LeaveJournal({records,employeeRows=[],employees, navigationGuard,onChanged,onRegister,active=true}: {
+  records:LeaveRecord[]; employeeRows?:EmployeeCard[]; employees?:Map<string,string>; compact?:boolean; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void; active?:boolean
 }) {
   const panelId=useId()
   const [filters,setFilters]=useState(emptyLeaveFilters)
@@ -50,6 +50,6 @@ export default function LeaveJournal({records,employeeRows=[],employees, navigat
         <td><div className="registry-row-actions"><HelpTip label="Переглянути відпустку" text="Переглянути" icon={<Eye size={17}/>} onClick={()=>setAction({id:record.id,kind:'view'})}/>{record.status==='active'&&<><HelpTip label="Редагувати відпустку" text="Редагувати" icon={<Pencil size={16}/>} onClick={()=>setAction({id:record.id,kind:'edit'})}/><HelpTip label="Скасувати реєстрацію" text="Скасувати реєстрацію" icon={<Ban size={16}/>} onClick={()=>setAction({id:record.id,kind:'cancel'})}/></>}</div></td>
       </tr>})}
     </DictionaryTable></section>
-    {action&&<LeaveRecordAction key={action.id+action.kind} {...action} navigationGuard={navigationGuard} onClose={()=>setAction(null)} onChanged={onChanged} onBalances={onBalances}/>}
+    {action&&<LeaveRecordAction key={action.id+action.kind} {...action} navigationGuard={navigationGuard} onClose={()=>setAction(null)} onChanged={onChanged}/>}
   </section>
 }

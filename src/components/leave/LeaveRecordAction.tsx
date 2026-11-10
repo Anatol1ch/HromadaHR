@@ -7,7 +7,7 @@ import LeaveTypeIcon from './LeaveTypeIcon'
 import { formatLeaveDays } from './summary'
 import HelpTip from './HelpTip'
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import type { LeaveRecord, PeriodBalance, PeriodLeaveType } from '../../../shared/leave'
+import type { LeaveRecord, PeriodBalance } from '../../../shared/leave'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName, personnelMessage } from '../../employees/model'
 import { formatDate, formatDateTime } from '../../lib/dates'
@@ -21,13 +21,19 @@ import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsaved
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { leaveLabels } from './presentation'
 
-export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, onBalances }: {
+export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged }: {
   id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
-  onClose: () => void; onChanged: () => void; onBalances?: (employeeId: string, type: PeriodLeaveType, openEditor?: boolean) => void
+  onClose: () => void; onChanged: () => void
 }) {
   const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const opener = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
+  function reload() {
+    setData(undefined)
+    setError('')
+    setRetry(value => value + 1)
+  }
   useEffect(() => {
     let active = true
     async function load() {
@@ -56,7 +62,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     notifySystemToast('success', kind === 'edit' ? 'Відпустку виправлено' : 'Реєстрацію скасовано', data?.record.allocations.length ? (kind === 'edit' ? 'Залишки перераховано.' : 'Списані дні знову доступні.') : 'Журнал оновлено.')
   }
   if (!data || error) return <Modal title="Зареєстрована відпустка" onClose={onClose}>
-    {error ? <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert> :
+    {error ? <Alert variant="error" action={<button type="button" onClick={reload}>Повторити</button>}>{error}</Alert> :
       <DataState kind="loading" message="Завантаження актуальних відомостей…" />}
   </Modal>
   if (kind === 'view') {
@@ -107,7 +113,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   </Modal>
   return kind === 'edit' ? <LeaveRegistrationForm employeeId={data.employee.id} employeeName={fullName(data.employee)}
     hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} navigationGuard={navigationGuard}
-    onClose={refreshAndClose} onSaved={changed} onBalances={(type, openEditor) => { refreshAndClose(); onBalances?.(data.employee.id, type, openEditor) }} /> :
+    onClose={refreshAndClose} onSaved={changed} onReloadRecord={reload} returnFocus={opener.current} /> :
     <CancelRegistration record={data.record} employeeName={fullName(data.employee)} navigationGuard={navigationGuard} onClose={refreshAndClose} onChanged={changed} />
 }
 

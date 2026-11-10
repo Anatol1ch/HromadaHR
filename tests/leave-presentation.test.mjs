@@ -43,6 +43,19 @@ test('manual allocation starts empty, validates row limits and counts only eligi
   assert.deepEqual(draft, { old: '2', next: '4' })
 })
 
+test('resumed allocation requires explicit removal of unavailable period values', () => {
+  const rows = [{ id: 'retained', availableDays: 6 }]
+  const draft = { retained: '6', removed: '1' }
+  assert.equal(allocationDraft(rows, draft, 6).complete, true)
+  const resumed = allocationDraft(rows, draft, 6, true)
+  assert.equal(resumed.ignored, true)
+  assert.equal(resumed.complete, false)
+  assert.match(resumed.message, /недоступні списання/)
+  assert.equal(allocationDraft(rows, { retained: '6' }, 6, true).complete, true)
+  assert.equal(allocationDraft([{ ...rows[0], availableDays: 5 }], draft, 6, true).complete, false)
+  assert.deepEqual(draft, { retained: '6', removed: '1' })
+})
+
 test('future proposal remains informational until a saved period exists, including confirmed zero', () => {
   const first = { leaveType: 'annual_main', periodStart: '2027-01-01', status: 'proposed' }
   const next = { ...first, periodStart: '2028-01-01' }
