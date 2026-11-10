@@ -3,12 +3,9 @@ import { LayoutGrid } from 'lucide-react'
 import { isPeriodLeave, type LeaveType, type PeriodBalance, type ProposedLeavePeriod } from '../../../shared/leave'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
-import DataState from '../DataState'
-import InfoItem from '../InfoItem'
 import InfoSection from '../InfoSection'
-import LeaveTypeIcon from './LeaveTypeIcon'
-import LeaveTypeCard from './LeaveTypeCard'
-import { AccountingHistoryState, AccountingYearPicker, annualScope, type AccountingHistory, type AccountingYear } from './LeaveEventAccounting'
+import LeaveTypeCard, { LeaveBalanceMetric } from './LeaveTypeCard'
+import { AccountingHistoryState, AccountingYearPicker, type AccountingHistory, type AccountingYear } from './LeaveEventAccounting'
 import { leaveOptions } from './presentation'
 import { balanceSummary, formatLeaveDays } from './summary'
 import { annualUsage } from './usage'
@@ -50,8 +47,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
   }, [employeeId, throughDate, proposalAttempt])
 
   const currentProposals = proposals?.throughDate === throughDate ? proposals : undefined
-  return <InfoSection title="Усі види відпусток" icon={<LayoutGrid size={18}/>} action={<AccountingYearPicker {...calendar}/>}>
-    <p className="leave-muted leave-accounting-note">{annualScope}</p>
+  return <InfoSection title="Усі види відпусток" icon={<LayoutGrid size={18}/>} action={<AccountingYearPicker {...calendar} compact/>}>
     {balances?.error && <Alert variant="error" action={<button type="button" onClick={() => {
       setBalances(undefined)
       setBalanceAttempt(value => value + 1)
@@ -62,29 +58,16 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
     </Alert>}
     <AccountingHistoryState history={history}/>
     <div className="info-grid info-grid-two leave-accounting-grid">
-      {leaveOptions.map(({ value: type, label }) => {
+      {leaveOptions.map(({ value: type }) => {
         const proposal = type === 'annual_main' ? currentProposals?.annual : type === 'oms_service_additional' ? currentProposals?.service : undefined
         const summary = isPeriodLeave(type) && balances?.data
           ? balanceSummary(type, balances.data, proposal?.data?.filter(period => period.periodStart <= throughDate) ?? []) : undefined
         const usage = !isPeriodLeave(type) && !history.loading && !history.error
           ? annualUsage(history.records, employeeId, type, calendar.year) : undefined
-        const historical = isHistorical(type)
-        return <LeaveTypeCard className="leave-accounting-card" key={type} label={label} onOpen={() => onDetails(type)}>
-          <div className="leave-overview-details"><LeaveTypeIcon type={type}/><div><h4>{label}</h4>{rightFor(type)}</div></div>
-          {summary && (summary.count > 0 ? <>
-            <dl className="leave-accounting-values">
-              <InfoItem label={historical ? 'Історичний залишок' : 'Доступний залишок'} value={formatLeaveDays(summary.remaining)} emphasis/>
-              <InfoItem label="Внесено до обліку" value={formatLeaveDays(summary.entered)}/>
-              <InfoItem label="Використано за періодами" value={formatLeaveDays(summary.accounted)}/>
-            </dl>
-            {summary.incomplete && !historical && <small>Облік внесено лише за частиною періодів.</small>}
-          </> : !historical && <DataState kind="empty" compact message="Залишки ще не внесено."/>)}
-          {isPeriodLeave(type) && !balances && <DataState kind="loading" compact message="Завантаження залишків…"/>}
-          {usage && <dl className="leave-accounting-values">
-            <InfoItem label="Активні надання" value={usage.activeCount}/>
-            <InfoItem label="Зареєстровано за рік" value={formatLeaveDays(usage.days)} emphasis/>
-          </dl>}
-        </LeaveTypeCard>
+        const metric = summary ? <LeaveBalanceMetric {...summary} historical={isHistorical(type)}/>
+          : usage ? <><strong>{formatLeaveDays(usage.days)}</strong><small>Зареєстровано за рік</small></>
+          : isPeriodLeave(type) && !balances ? <small>Завантаження…</small> : undefined
+        return <LeaveTypeCard key={type} type={type} right={rightFor(type)} metric={metric} onOpen={() => onDetails(type)}/>
       })}
     </div>
   </InfoSection>

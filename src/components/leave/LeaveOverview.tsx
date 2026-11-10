@@ -1,5 +1,4 @@
-import LeaveTypeIcon from './LeaveTypeIcon'
-import LeaveTypeCard from './LeaveTypeCard'
+import LeaveTypeCard, { LeaveBalanceMetric } from './LeaveTypeCard'
 import LeaveStatus from './LeaveStatus'
 import { ArrowRight, History, ShieldCheck, Wallet } from 'lucide-react'
 import InfoSection from '../InfoSection'
@@ -7,7 +6,7 @@ import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
 import { useEffect, useState } from 'react'
 import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight } from '../../../shared/leave'
-import { balanceSummary, formatLeaveDays } from './summary'
+import { balanceSummary } from './summary'
 import { leaveLabels, leaveOptions, periodLeaveOptions, rightLabels } from './presentation'
 import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
@@ -47,28 +46,14 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
   if (!data) return <DataState kind="loading" message="Завантаження відпусток…" />
   return <section className="leave-layout leave-overview" aria-label="Огляд відпусток">
     <InfoSection title="Права та залишки відпусток" icon={<Wallet size={17}/>}>
-    <div className="info-grid info-grid-two">{leaveOptions.map(option => {
+    <div className="info-grid info-grid-two leave-accounting-grid">{leaveOptions.map(option => {
       const right = data.rights.find(item => item.leaveType === option.value)
       const summary = isPeriodLeave(option.value) ? balanceSummary(option.value, data.balances, data.proposals.filter(p=>p.periodStart<=throughDate)) : null
-      return <LeaveTypeCard className="leave-overview-item" key={option.value} label={option.label}
-        onOpen={() => onOpen({ section: 'balances', type: option.value })}>
-        <div className={summary ? 'leave-overview-content has-balance' : 'leave-overview-content'}>
-          <div className="leave-overview-details">
-            <LeaveTypeIcon type={option.value}/>
-            <div>
-              <h4>{option.label}</h4>
-              <span className={'leave-right-status is-'+(right?.status??'unknown')}>{rightLabels[right?.status ?? 'unknown']}</span>
-            </div>
-          </div>
-          {summary && (summary.count > 0 || right?.status !== 'no_right') && <div className="leave-overview-balance">
-            {summary.count > 0 ? <>
-              <strong className="leave-overview-number">{formatLeaveDays(summary.remaining)}</strong>
-              {right?.status === 'no_right' ? <small>Історичний залишок</small>
-                : summary.incomplete && <small>Лише за внесеними періодами</small>}
-            </> : <small className="leave-muted">Залишки ще не внесено</small>}
-          </div>}
-        </div>
-      </LeaveTypeCard>
+      const status = right?.status ?? 'unknown'
+      return <LeaveTypeCard key={option.value} type={option.value}
+        right={<span className={'leave-right-status is-' + status}>{rightLabels[status]}</span>}
+        metric={summary && <LeaveBalanceMetric {...summary} historical={status === 'no_right'}/>}
+        onOpen={() => onOpen({ section: 'balances', type: option.value })}/>
     })}</div>
     </InfoSection>
     <InfoSection title="Останні зареєстровані відпустки" icon={<History size={17}/>}>

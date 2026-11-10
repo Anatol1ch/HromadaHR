@@ -171,15 +171,6 @@
 
 /* 4.6.6: shared employee search, compact rights, and distinct accounting modes. */
 .leave-type-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.125rem; width:2.125rem; height:2.125rem; border-radius:var(--radius-control); color:var(--accent-hover); background:var(--tab-active-background); }
-.leave-overview-content { display:grid; gap:var(--space-2); align-items:center; }
-.leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr) minmax(0,auto); }
-.leave-overview-details { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
-.leave-overview-balance { display:grid; align-content:center; gap:var(--space-1); min-width:0; }
-.leave-overview-balance { text-align:end; max-inline-size:9rem; overflow-wrap:anywhere; }
-@container leave-tile (max-width:250px) {
-  .leave-overview-content.has-balance { grid-template-columns:minmax(0,1fr); }
-  .leave-overview-balance { text-align:start; max-inline-size:none; }
-}
 .leave-right-status { display:block; width:fit-content; font-size:.75rem; line-height:1.5; padding:2px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); }
 .leave-right-status.is-has_right { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
 .leave-right-status.is-no_right { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
@@ -219,10 +210,6 @@
 @container leave-workspace (max-width:28rem) { .leave-chosen-person > div { flex-basis:calc(100% - 3rem); } }
 
 /* Shared information sections applied to the leave overview and two dialogs. */
-.leave-overview-item { display:grid; align-content:center; gap:var(--space-2); min-height:64px; container:leave-tile / inline-size; }
-.leave-overview-details h4 { margin:0; font-size:13px; line-height:1.4; }
-.leave-overview-item small { color:var(--color-text-secondary); font-size:12px; }
-.leave-overview-number { color:var(--accent-hover); font-size:17px; font-variant-numeric:tabular-nums; }
 .leave-recent-table { min-width:490px; }
 .leave-layout :is(.leave-recent-table, .leave-registration .leave-table) .leave-days-column { text-align:center; }
 .leave-registration .leave-days-field { margin-inline:auto; }
@@ -336,25 +323,22 @@
 
 .leave-accounting-year { display:grid; gap:var(--space-1); min-width:8rem; font-size:13px; }
 .leave-accounting-note { margin:0; overflow-wrap:anywhere; }
-.leave-accounting-card { display:grid; align-content:start; grid-template-rows:auto; gap:var(--space-2); min-width:0; }
 .leave-accounting-grid { align-items:stretch; }
-.leave-accounting-card > .leave-overview-details { align-items:start; }
-.leave-accounting-card > .leave-overview-details > div { min-width:0; }
-.leave-accounting-values { display:grid; gap:var(--space-1); margin:0; }
-.leave-accounting-values .info-item { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:var(--space-1) var(--space-2); padding:var(--space-1) 0; border-top:1px solid var(--border-surface); border-radius:0; }
-.leave-accounting-values .info-item dd { margin:0; }
 .leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
 .leave-accounting-history { display:grid; gap:var(--space-1); padding:0; margin:var(--space-2) 0 0; list-style:none; }
 .leave-accounting-history li { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-1) var(--space-3); padding-block:var(--space-1); border-top:1px solid var(--border-surface); }
-@container info-section (max-width: 550px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
+@container info-section (max-width: 590px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
 
-.leave-overview-item .leave-overview-details > div { min-width:0; overflow-wrap:anywhere; }
 
 .leave-type-card {
   position:relative;
   padding:var(--space-3);
-  padding-inline-end:calc(var(--space-3) + 20px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) fit-content(40%) 16px;
+  align-items:center;
+  gap:var(--space-2);
+  min-height:64px;
   border:1px solid var(--border-surface);
   transition:transform var(--motion-duration-page) ease, border-color var(--motion-duration-page) ease, box-shadow var(--motion-duration-page) ease;
 }
@@ -368,23 +352,49 @@
   color:var(--accent);
   cursor:pointer;
 }
-.leave-type-card-trigger svg {
-  position:absolute;
-  inset-block-start:var(--space-3);
-  inset-inline-end:var(--space-2);
-  transition:transform var(--motion-duration-page) ease;
-}
+.leave-type-card-identity { grid-column:1; display:flex; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-type-card-identity > div { min-width:0; overflow-wrap:anywhere; }
+.leave-type-card-identity h4 { margin:0; font-size:13px; line-height:1.4; }
+.leave-type-card-metric { grid-column:2; display:grid; justify-items:end; min-width:0; text-align:end; overflow-wrap:anywhere; }
+.leave-type-card-metric strong { color:var(--accent-hover); font-size:17px; font-variant-numeric:tabular-nums; }
+.leave-type-card-metric small { color:var(--color-text-secondary); font-size:12px; line-height:1.35; }
+.leave-type-card-metric .leave-type-card-note { font-size:11px; }
+.leave-type-card-arrow { grid-column:3; color:var(--accent); transition:transform var(--motion-duration-page) ease; }
 .leave-type-card > .leave-type-card-trigger:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
 @media (hover:hover) {
   .leave-type-card:hover { transform:translateY(-2px); border-color:var(--tab-active-border); box-shadow:0 3px 9px color-mix(in srgb, var(--accent) 15%, transparent); }
-  .leave-type-card:hover .leave-type-card-trigger svg { transform:translateX(2px); }
+  .leave-type-card:hover .leave-type-card-arrow { transform:translateX(2px); }
 }
 @media (prefers-reduced-motion:reduce) {
-  .leave-type-card, .leave-type-card-trigger svg { transition:none; }
-  .leave-type-card:hover, .leave-type-card:hover .leave-type-card-trigger svg { transform:none; }
+  .leave-type-card, .leave-type-card-arrow { transition:none; }
+  .leave-type-card:hover, .leave-type-card:hover .leave-type-card-arrow { transform:none; }
 }
-.leave-event-compact > .info-section { gap:var(--space-2); }
-.leave-event-compact .info-section-heading { flex-wrap:nowrap; }
-.leave-event-compact .info-section-action { flex:none; }
-.leave-event-compact .leave-accounting-actions { margin-block-start:var(--space-1); }
-.leave-event-compact .leave-accounting-actions .secondary-button { min-height:var(--control-height-compact); }
+.leave-event-accounting .info-section-heading { flex-wrap:nowrap; }
+.leave-event-accounting .info-section-action { flex:none; }
+.leave-event-content { display:grid; gap:var(--space-2); min-width:0; }
+.leave-event-context {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--space-2) var(--space-3);
+}
+.leave-event-state { display:grid; justify-items:start; gap:var(--space-1); min-width:0; }
+.leave-event-context .leave-accounting-actions { align-items:stretch; }
+.leave-event-context .leave-accounting-actions .secondary-button { min-height:var(--control-height-compact); }
+.leave-event-metrics {
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-2) var(--space-4);
+  margin:0;
+  padding:var(--space-2) var(--space-3);
+  border-radius:var(--radius-control);
+  background:var(--surface-card);
+}
+.leave-event-metrics .info-item { padding:0; background:transparent; }
+.leave-event-metrics .info-item dd { margin:0; }
+.leave-event-history { padding:var(--space-2) var(--space-3); border-radius:var(--radius-control); background:var(--surface-card); }
+.leave-event-history > p { font-size:12px; }
+@container info-section (max-width: 280px) {
+  .leave-event-accounting .info-section-heading { flex-wrap:wrap; }
+}
