@@ -26,7 +26,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, rightNotice }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -36,7 +36,6 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   rightsReady: boolean
   historicalOnly: boolean
   rightBadge?: ReactNode
-  rightNotice?: ReactNode
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -139,14 +138,13 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         : selectedSummary.count === 0 ? !historicalOnly && <div className="info-item"><DataState kind="empty" compact message="Залишки ще не внесено."/></div>
         : <>
           <dl className="leave-metric-grid leave-metric-grid-two">
-            <InfoItem label={historicalOnly ? 'Залишок за підтвердженими періодами' : selectedSummary.incomplete ? 'Доступно за внесеними періодами' : 'Доступно'}
+            <InfoItem label={historicalOnly ? 'Історичний залишок' : selectedSummary.incomplete ? 'Доступно за внесеними періодами' : 'Доступно'}
               value={formatLeaveDays(selectedSummary.remaining)} emphasis/>
             <InfoItem label="Внесено до обліку" value={formatLeaveDays(selectedSummary.entered)}/>
             <InfoItem label="Враховано у відпустках" value={formatLeaveDays(selectedSummary.accounted)}/>
           </dl>
           {selectedSummary.incomplete && !historicalOnly && <Alert variant="warning">Залишки внесено лише за частиною періодів.</Alert>}
         </>}
-      {rightNotice}
       {data?.serviceStart !== undefined && <dl className="info-grid">
         <InfoItem label="Дата набуття права за стаж" value={data.serviceStart ? formatDate(data.serviceStart) : 'Не внесено'}/>
       </dl>}

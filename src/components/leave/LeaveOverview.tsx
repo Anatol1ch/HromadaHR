@@ -7,7 +7,7 @@ import { isPeriodLeave } from '../../../shared/leave'
 import { useEffect, useState } from 'react'
 import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight } from '../../../shared/leave'
 import { balanceSummary, formatLeaveDays } from './summary'
-import { leaveLabels, leaveOptions, periodLeaveOptions } from './presentation'
+import { leaveLabels, leaveOptions, periodLeaveOptions, rightLabels } from './presentation'
 import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
@@ -54,15 +54,15 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
             <LeaveTypeIcon type={option.value}/>
             <div>
               <h4>{option.label}</h4>
-              <span className={'leave-right-status is-'+(right?.status??'unknown')}>{right?.status === 'has_right' ? 'Право підтверджено' : right?.status === 'no_right' ? 'Права немає' : 'Не перевірено'}</span>
+              <span className={'leave-right-status is-'+(right?.status??'unknown')}>{rightLabels[right?.status ?? 'unknown']}</span>
             </div>
           </div>
           {summary && (summary.count > 0 || right?.status !== 'no_right') && <div className="leave-overview-balance">
             {summary.count > 0 ? <>
               <strong className="leave-overview-number">{formatLeaveDays(summary.remaining)}</strong>
-              {right?.status === 'no_right' ? <small>За підтвердженими періодами</small>
+              {right?.status === 'no_right' ? <small>Історичний залишок</small>
                 : summary.incomplete && <small>Лише за внесеними періодами</small>}
-            </> : <small className="leave-muted">Не внесено</small>}
+            </> : <small className="leave-muted">Залишки ще не внесено</small>}
           </div>}
         </div>
       </article>

@@ -14,6 +14,7 @@ test('event accounting attributes a full duration once to the start year, exclud
   const usage = annualUsage(records,'a','veteran_special_leave','2027')
   assert.equal(usage.history.length,2)
   assert.equal(usage.activeCount,1)
+  assert.equal(usage.cancelledCount,1)
   assert.equal(usage.days,14)
   assert.equal(usage.limit,14)
   assert.equal(usage.alreadyGranted,true)
@@ -27,6 +28,18 @@ test('event accounting attributes a full duration once to the start year, exclud
   assert.equal(cancelledOnly.alreadyGranted,false)
   assert.equal(cancelledOnly.history.length,1)
   assert.equal(cancelledOnly.days,0)
+  assert.equal(cancelledOnly.cancelledCount,1)
+})
+
+test('editing and cancellation change the active summary without hiding the cancelled record', () => {
+  const original = record({ leaveType: 'study_leave', usedDays: 5 })
+  const edited = { ...original, usedDays: 3 }
+  const cancelled = { ...edited, status: 'cancelled' }
+  assert.equal(annualUsage([original], 'a', 'study_leave', '2027').days, 5)
+  assert.equal(annualUsage([edited], 'a', 'study_leave', '2027').days, 3)
+  const summary = annualUsage([cancelled], 'a', 'study_leave', '2027')
+  assert.deepEqual([summary.activeCount, summary.days, summary.cancelledCount], [0, 0, 1])
+  assert.deepEqual(summary.history, [cancelled])
 })
 
 test('study counts separate events without a universal limit or fictitious available balance', () => {

@@ -2,6 +2,7 @@ import { allocationDraft, formatLeaveDays, futureAllocationPeriod } from './summ
 import useAccountingDate from './useAccountingDate'
 import HelpTip from './HelpTip'
 import InfoSection from '../InfoSection'
+import InfoItem from '../InfoItem'
 import { CalendarDays, FileText, List, Wallet } from 'lucide-react'
 import { isPeriodLeave, specialLeaveLimit, type PeriodLeaveType } from '../../../shared/leave'
 import type { LeaveRecord, LeaveUpdate } from '../../../shared/leave'
@@ -12,6 +13,7 @@ import { calendarDays } from '../../../shared/leave-calculations'
 import { formatDate, parseDateInput } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
+import DataState from '../DataState'
 import ConfirmDialog from '../ConfirmDialog'
 import RegistrationBalanceEditor from './RegistrationBalanceEditor'
 import DateField from '../DateField'
@@ -21,11 +23,14 @@ import Select from '../Select'
 import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import { leaveLabels, leaveGroupOptions, specialOptions, groupForType, selectedLeaveType, type LeaveGroup } from './presentation'
+import { annualUsage } from './usage'
+import type { RegistrationHistory } from './registry'
 
-export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onReloadRecord, record, employeePicker, returnFocus }: {
+export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onReloadRecord, record, employeePicker, returnFocus, history }: {
   record?: LeaveRecord; employeePicker?: ReactNode
   employeeId: string; employeeName?: string; hireDate: string; initialType: LeaveType; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: (type: LeaveType) => void; onReloadRecord?: () => void; returnFocus?: HTMLElement | null
+  history: RegistrationHistory
 }) {
   const formId = useId()
   const { today, throughDate } = useAccountingDate()
@@ -65,6 +70,8 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   const operation = useRef<{ payload: string; id: string } | null>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const start = parseDateInput(dates.start)
+  const eventYear = !periodic && (group !== 'other' || subtypeChosen) && employeeId && start ? start.slice(0, 4) : null
+  const eventUsage = eventYear && !history.error && !history.loading ? annualUsage(history.records, employeeId, type, eventYear) : null
   const end = parseDateInput(dates.end)
   const range = JSON.stringify([start, end])
   const length = start && end && end >= start ? calendarDays(start, end) : 0
@@ -188,6 +195,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
     } catch { if (alive.current) setError('Перевірка результату недоступна. Чернетку збережено.') }
   }
 
+  if (history.suspended) return null
   if (balanceEditor) return <RegistrationBalanceEditor employeeId={employeeId} employeeName={employeeName} type={balanceEditor}
     throughDate={throughDate} navigationGuard={navigationGuard} onReturn={saved => {
       setResumedType(balanceEditor)
@@ -239,14 +247,21 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       {!periodic && <>
         <label className="recipient-field">Підстава надання<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
           value={grantBasis} onChange={event => setGrantBasis(event.target.value)} /></label>
-        <p className="leave-muted">Право та документи перевіряє кадровик. Накопичуваного залишку немає. <HelpTip label="Подієва відпустка" text="Для цього виду не ведеться накопичення днів за робочими роками." /></p>
-        {limit !== null && <Alert variant="info">Не більше {limit} календарних днів, одне активне надання за рік початку{start ? ' – ' + start.slice(0,4) : ''}. Невикористані дні не переносяться.
-          {type === 'chernobyl_special_leave' && ' Орієнтир: 14 робочих (16 календарних) днів для визначених законом категорій.'}
-        </Alert>}
+        {limit !== null && <p className="leave-muted">До {limit} календарних днів, одне активне надання за рік початку.</p>}
         {limit !== null && days > 0 && days < limit && <Alert variant="warning">Менша тривалість потребує пояснення. Система не встановлює права на використання решти окремою частиною.</Alert>}
         {limit !== null && days > limit && <Alert variant="warning">Для цього виду допустимо не більше {limit} календарних днів.</Alert>}
       </>}
       </InfoSection>
+      {eventYear && <InfoSection title={'Надання за ' + eventYear + ' рік'} action={eventUsage && <button type="button" className="secondary-button"
+        disabled={busy || !!uncertain} onClick={() => history.open({ employeeId, type, year: eventYear })}>Переглянути в журналі</button>}>
+        {history.error ? <Alert variant="error" action={<button type="button" onClick={history.retry}>Повторити</button>}>Не вдалося завантажити історію надань.</Alert>
+          : history.loading ? <DataState kind="loading" compact message="Завантаження історії надань…"/>
+          : eventUsage && <dl className="info-grid">
+            <InfoItem label="Активні надання" value={eventUsage.activeCount}/>
+            <InfoItem label="Зареєстровані календарні дні" value={eventUsage.days}/>
+            <InfoItem label="Скасовані надання" value={eventUsage.cancelledCount}/>
+          </dl>}
+      </InfoSection>}
       {periodic && current?.error && <Alert variant="error" action={<button type="button" disabled={busy || !!uncertain} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{current.error}</Alert>}
       {periodic && start && start >= '2027-01-01' && start >= hireDate && end && end >= start && days > 0 && days <= length && days <= 3652059 && !current && <p role="status">Отримання доступних днів…</p>}
       {periodic && current?.value && <InfoSection title="Розподіл днів" icon={<List size={17}/>}

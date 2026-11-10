@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { CircleHelp, CircleCheck, CircleX } from 'lucide-react'
 import type { EmployeeLeaveRight, LeaveRightInput, LeaveRecord } from '../../../shared/leave'
-import { leaveOptions } from './presentation'
+import { leaveOptions, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 import Alert from '../Alert'
 import { formatDateTime } from '../../lib/dates'
@@ -10,9 +10,9 @@ import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 
 const rightStates = [
-  { value: '', label: 'Не перевірено', Icon: CircleHelp },
-  { value: 'has_right', label: 'Право є', Icon: CircleCheck },
-  { value: 'no_right', label: 'Права немає', Icon: CircleX },
+  { value: '', label: rightLabels.unknown, Icon: CircleHelp },
+  { value: 'has_right', label: rightLabels.has_right, Icon: CircleCheck },
+  { value: 'no_right', label: rightLabels.no_right, Icon: CircleX },
 ] as const
 export default function LeaveRights({employeeId,records,navigationGuard,onSaved}: {employeeId:string;records:LeaveRecord[];navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void}) {
   const radioId=useId()
@@ -35,18 +35,18 @@ export default function LeaveRights({employeeId,records,navigationGuard,onSaved}
       return <div className="leave-right-row" key={option.value}>
         <div className="leave-right-description"><LeaveTypeIcon type={option.value}/><div>
           <strong id={radioId + option.value}>{option.label}</strong>
-          {value !== savedValue && <small>Збережений стан — {savedState?.label}</small>}
-          {right && <small>Попередня перевірка — {formatDateTime(right.checkedAt)}</small>}
+          {value !== savedValue && <small>Збережений стан – {savedState?.label}</small>}
+          {right && <small>Попередня перевірка – {formatDateTime(right.checkedAt)}</small>}
         </div></div>
         <div role="radiogroup" aria-labelledby={radioId + option.value} className="leave-right-switch">
           {rightStates.map(({ value: state, label, Icon }) => <label key={state}>
-            <input type="radio" name={radioId + option.value} value={state} checked={value === state} disabled={!saved || busy}
+            <input type="radio" name={radioId + option.value} value={state} checked={!!saved && value === state} disabled={!saved || busy}
               onChange={() => setDraft(current => ({ ...current, [option.value]: state }))}/>
             <span><Icon size={16} aria-hidden="true"/>{label}</span>
           </label>)}
         </div>
         {value === 'no_right' && records.some(record => record.employeeId === employeeId && record.leaveType === option.value) &&
-          <p className="leave-right-warning">Є попередні реєстрації цього виду. Перевірте відповідність поточного стану.</p>}
+          <p className="leave-right-history leave-muted">Є попередні реєстрації цього виду.</p>}
       </div>
     })}</div>
     {error && saved && <Alert variant="error">{error}</Alert>}

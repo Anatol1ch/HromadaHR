@@ -1,4 +1,9 @@
-import { leaveTypes, periodLeaveTypes, type LeaveType } from '../../../shared/leave.ts'
+import { leaveTypes, periodLeaveTypes, type EmployeeLeaveRight, type LeaveType } from '../../../shared/leave.ts'
+export const rightLabels = {
+  has_right: 'Право підтверджено',
+  no_right: 'Права немає',
+  unknown: 'Право не перевірено',
+} satisfies Record<EmployeeLeaveRight['status'] | 'unknown', string>
 export const leaveLabels = {
   study_leave: 'Додаткова на навчання',
   veteran_special_leave: 'Для УБД та інших категорій за статтею 16-2',

@@ -144,3 +144,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.8.3 – Спільна дата в редакторі
 
 Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Застосовано наявний DateField у формі та спільні компоненти HromadaHR. Послідовність записів і календарні правила належать HromadaHR.
+
+## 4.8.4 – Контекстні фільтри чинного журналу
+
+Звірено `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано ідею відкриття чинного реєстру із зовнішнім контекстом і редагованими фільтрами. Використано таблицю, фільтри та чернетку HromadaHR.

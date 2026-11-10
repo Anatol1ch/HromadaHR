@@ -20,10 +20,11 @@ import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { leaveLabels } from './presentation'
+import type { RegistrationHistory } from './registry'
 
-export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged }: {
+export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, history }: {
   id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
-  onClose: () => void; onChanged: () => void
+  onClose: () => void; onChanged: () => void; history: RegistrationHistory
 }) {
   const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
   const [error, setError] = useState('')
@@ -67,7 +68,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   </Modal>
   if (kind === 'view') {
     const { record, employee, balances } = data
-    return <Modal title="Перегляд відпустки" onClose={onClose} size="wide" className="leave-editor-modal leave-design-dialog"
+    return <Modal title="Перегляд відпустки" onClose={onClose} size="wide" className="leave-editor-modal leave-design-dialog" returnFocus={opener.current}
       footer={<div className="leave-dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>Закрити</button></div>}>
       <div className="leave-record-card">
         <InfoSection title={leaveLabels[record.leaveType]} icon={<LeaveTypeIcon type={record.leaveType}/>} action={<LeaveStatus status={record.status}/>}>
@@ -113,7 +114,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   </Modal>
   return kind === 'edit' ? <LeaveRegistrationForm employeeId={data.employee.id} employeeName={fullName(data.employee)}
     hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} navigationGuard={navigationGuard}
-    onClose={refreshAndClose} onSaved={changed} onReloadRecord={reload} returnFocus={opener.current} /> :
+    onClose={refreshAndClose} onSaved={changed} onReloadRecord={reload} returnFocus={opener.current} history={history} /> :
     <CancelRegistration record={data.record} employeeName={fullName(data.employee)} navigationGuard={navigationGuard} onClose={refreshAndClose} onChanged={changed} />
 }
 

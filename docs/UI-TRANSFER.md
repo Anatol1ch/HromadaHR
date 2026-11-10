@@ -499,3 +499,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.8.3 – Дата, періоди та дні в одному редакторі
 
 Звірено `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Редактор використовує чинні DateField, DictionaryTable, Modal і спільні стилі футера HromadaHR. Дату за стаж можна ввести та перевірити разом із днями.
+
+## 4.8.4 – Журнал із контексту форми
+
+Звірено `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Контекст надань використовує чинні InfoSection та InfoItem. Перехід застосовує звичайну панель фільтрів журналу, а повернення відновлює чинний Modal із чернеткою.

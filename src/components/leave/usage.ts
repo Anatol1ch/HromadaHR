@@ -9,7 +9,7 @@ export function annualUsage(records: LeaveRecord[], employeeId: string, type: Le
   const history = records.filter(record => record.employeeId === employeeId && record.leaveType === type && record.startDate.slice(0, 4) === year)
   const active = history.filter(record => record.status === 'active')
   const limit = specialLeaveLimit(type)
-  return { history, activeCount: active.length, days: active.reduce((sum, record) => sum + record.usedDays, 0), limit,
+  return { history, activeCount: active.length, cancelledCount: history.length - active.length, days: active.reduce((sum, record) => sum + record.usedDays, 0), limit,
     alreadyGranted: limit !== null && active.length > 0 }
 }
 
