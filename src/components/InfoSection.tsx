@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 
 export default function InfoSection({ title, icon, action, help, children }: {
-  title: string
+  title: ReactNode
   icon?: ReactNode
   action?: ReactNode
   help?: ReactNode

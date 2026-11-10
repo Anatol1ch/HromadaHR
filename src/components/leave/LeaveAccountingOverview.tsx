@@ -47,7 +47,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
   }, [employeeId, throughDate, proposalAttempt])
 
   const currentProposals = proposals?.throughDate === throughDate ? proposals : undefined
-  return <InfoSection title="Усі види відпусток" icon={<LayoutGrid size={18}/>} action={<AccountingYearPicker {...calendar} compact/>}>
+  return <InfoSection title="Усі види відпусток" icon={<LayoutGrid size={18}/>} action={<AccountingYearPicker {...calendar}/>}>
     {balances?.error && <Alert variant="error" action={<button type="button" onClick={() => {
       setBalances(undefined)
       setBalanceAttempt(value => value + 1)

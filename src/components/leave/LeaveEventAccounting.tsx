@@ -18,8 +18,8 @@ export type AccountingHistory = Pick<RegistrationHistory, 'records' | 'loading' 
 export type AccountingYear = { year: string; years: string[]; onYear: (year: string) => void }
 const annualScope = 'Річні показники охоплюють реєстрації в HromadaHR за роком початку відпустки.'
 
-export function AccountingYearPicker({ year, years, onYear, compact = false }: AccountingYear & { compact?: boolean }) {
-  return <div className="leave-accounting-year">{!compact && <span>Календарний рік</span>}
+export function AccountingYearPicker({ year, years, onYear }: AccountingYear) {
+  return <div className="leave-accounting-year">
     <Select label="Календарний рік" value={year} options={years.map(value => ({ value, label: value }))}
       onChange={onYear} advanceOnSelect={false}/>
   </div>
@@ -38,17 +38,10 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
   const usage = !history.loading && !history.error ? annualUsage(history.records, employeeId, type, calendar.year) : undefined
   const recent = usage && [...usage.history].sort((a, b) => b.startDate.localeCompare(a.startDate) || a.id.localeCompare(b.id)).slice(0, 5)
   const empty = usage?.history.length === 0
-  return <div className="leave-event-accounting"><InfoSection title={leaveLabels[type]}
+  return <div className="leave-event-accounting"><InfoSection
+    title={<span className="leave-event-title"><span>{leaveLabels[type]}</span>{right}</span>}
     icon={<LeaveTypeIcon type={type}/>} action={<AccountingYearPicker {...calendar}/>}>
     <div className="leave-event-content">
-      <div className="leave-event-context">
-        <div className="leave-event-state">
-          {right}
-          {empty && showLimit && !noRight && usage.limit !== null &&
-            <small className="leave-muted">Облікова межа тривалості · {formatLeaveDays(usage.limit)}</small>}
-        </div>
-        {actions}
-      </div>
       <AccountingHistoryState history={history}/>
       {usage && recent && recent.length > 0 && <>
         <dl className="leave-event-metrics">
@@ -73,6 +66,11 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
           </DictionaryTable>
         </div>
       </>}
+      <div className="leave-event-context">
+        {empty && showLimit && !noRight && usage.limit !== null &&
+          <small className="leave-muted">Облікова межа тривалості · {formatLeaveDays(usage.limit)}</small>}
+        {actions}
+      </div>
     </div>
   </InfoSection></div>
 }
