@@ -227,11 +227,20 @@
 .employee-registry { grid-template-columns: minmax(0, 1fr); }
 .employee-registry .personnel-registry-table { min-width: 46rem; }
 .personnel-registry-table .dictionary-actions-cell { padding-inline: 6px; }
-.employee-registry .employee-registry-summary { grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); align-items: center; }
-.employee-registry-summary .info-item-emphasis { padding-block: var(--space-3); }
+.employee-registry .employee-registry-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+.employee-registry-summary .info-item-emphasis {
+  grid-row: span 2;
+  display: grid;
+  align-content: center;
+  padding-block: var(--space-3);
+}
 .employee-registry-summary .info-item-emphasis dd { font-size: 24px; }
 @container info-section (max-width: 440px) {
   .employee-registry .employee-registry-summary { grid-template-columns: minmax(0, 1fr); }
+  .employee-registry-summary .info-item-emphasis { grid-row: auto; }
 }
 .personnel-registry-table tbody th.employee-department-heading {
   padding: var(--space-2) var(--space-3);
