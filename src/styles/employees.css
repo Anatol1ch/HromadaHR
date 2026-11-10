@@ -209,3 +209,17 @@
 @container employee-card (max-width: 440px) {
   .employee-card .employee-card-fields { grid-template-columns: minmax(0, 1fr); }
 }
+
+.personnel-dictionaries { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); min-width: 0; }
+.personnel-dictionaries .settings-section-nav { flex-wrap: wrap; }
+.personnel-dictionary-panel { min-width: 0; }
+.personnel-dictionary-panel .employee-group-heading { flex-wrap: wrap; gap: var(--space-2); }
+.personnel-dictionary-panel > [role="status"]:empty { display: none; }
+.personnel-dictionary-table { min-width: 26rem; }
+.personnel-dictionary-table .dictionary-entry-name { overflow-wrap: anywhere; }
+.personnel-dictionary-table :is(th, td):nth-child(n + 3) { text-align: center; }
+.personnel-dictionary-table .registry-row-actions { justify-content: center; }
+.dictionary-sort-handle { padding: var(--space-1); min-width: 2rem; height: 2rem; }
+.dictionary-sort-handle[draggable="true"] { cursor: grab; }
+.personnel-dictionary-table tr.is-dragging { opacity: .65; }
+.personnel-dictionary-table tr.is-drag-over > td { box-shadow: inset 0 2px var(--accent); }

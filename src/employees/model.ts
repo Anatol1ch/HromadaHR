@@ -66,6 +66,8 @@ export function personnelMessage(code: IpcErrorCode): string {
     case 'TRANSITION_LEAVE': return 'Відпустка з початком до 01.01.2027 потребує окремої перевірки початкових залишків.'
 
     case 'HIRE_DATE_HAS_LEAVE_PERIODS': return 'Дату прийняття не можна змінити, поки є підтверджені періоди відпусток.'
+    case 'DICTIONARY_STALE': return 'Довідник уже змінився. Перевірте актуальні дані.'
+    case 'DICTIONARY_IN_USE': return 'Запис використовується у кадрових відомостях. Його можна перейменувати.'
     case 'BUSY': return 'Зараз триває інша операція зі сховищем. Зачекайте й повторіть спробу.'
     case 'CONFLICT': return 'Виник конфлікт даних. Перевірте відомості та повторіть спробу.'
     case 'NOT_FOUND': return 'Запис більше не знайдено. Поверніться до реєстру та оновіть дані.'

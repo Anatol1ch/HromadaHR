@@ -216,6 +216,8 @@ test('every personnel channel enforces sender/frame/URL and strict argument sche
     updateEmployee: [id, details], listDepartments: [],
     createDepartment: [{ name: 'Тест' }],
     listPositions: [], createPosition: [{ name: 'Тест' }],
+    getDictionary: ['department'], renameDictionaryEntry: ['department', id, 'Тест', 0],
+    deleteDictionaryEntry: ['position', id, 0], reorderDictionary: ['position', [id], 0],
   }
   for (const [method, args] of Object.entries(operations)) {
     const call = fixture.handlers.get(`personnel:${method}`)
@@ -256,9 +258,11 @@ test('preload personnel methods expose exactly the allowlist and fixed argument 
   const api = preload(async (channel, ...args) => { calls.push([channel, ...args]); return { ok: true, data: null } })
   const methods = Object.values(ipcChannels).filter(c => c.startsWith('personnel:')).map(c => c.split(':')[1])
   assert.deepEqual(Object.keys(api.personnel).sort(), methods.sort())
+  const sizes = { getDictionary: 1, renameDictionaryEntry: 4, deleteDictionaryEntry: 3, reorderDictionary: 3 }
   for (const method of methods) {
-    await api.personnel[method]('id', 'input', 'extra')
-    const expectedArgs = method.startsWith('list') ? [] : (method.startsWith('update')) ? ['id', 'input'] : ['id']
+    const args = ['id', 'input', 'third', 'fourth', 'extra']
+    await api.personnel[method](...args)
+    const expectedArgs = args.slice(0, sizes[method] ?? (method.startsWith('list') ? 0 : method.startsWith('update') ? 2 : 1))
     assert.deepEqual(calls.at(-1), [`personnel:${method}`, ...expectedArgs])
   }
   for (const key of ['invoke', 'sql', 'fs', 'database', 'send']) assert.equal(api.personnel[key], undefined)
@@ -297,7 +301,13 @@ test('built preload → IPC → personnel → isolated SQLite supports current e
   assert.equal((await api.getEmployee(id)).error.code, 'NOT_FOUND')
   assert.equal((await api.listDepartments()).data.length, 1)
   assert.equal((await api.listPositions()).data.length, 2)
-  assert.equal(Object.keys(api).length, 9)
+  assert.equal((await api.getDictionary('invalid')).error.code, 'INVALID_ARGUMENTS')
+  const directory = (await api.getDictionary('position')).data
+  assert.equal((await api.reorderDictionary('position', [newPosition.id, newPosition.id], directory.revision)).error.code, 'INVALID_ARGUMENTS')
+  assert.deepEqual((await api.reorderDictionary('position', [newPosition.id, position.id], directory.revision)).data.entries.map(row => row.id), [newPosition.id, position.id])
+  assert.equal((await api.renameDictionaryEntry('position', newPosition.id, 'Перейменована посада', 0)).ok, true)
+  assert.equal((await api.deleteDictionaryEntry('position', newPosition.id, 1)).ok, true)
+  assert.equal(Object.keys(api).length, 13)
   for (const method of ['getHistory', 'createAssignment', 'updateAssignment', 'deleteAssignment']) {
     assert.equal(api[method], undefined)
     assert.equal(f.handlers.has('personnel:' + method), false)

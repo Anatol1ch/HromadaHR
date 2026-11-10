@@ -1,3 +1,4 @@
+import { seedDirectories } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -35,8 +36,7 @@ function fixture(t) {
 }
 async function employee(connection, hireDate = '2023-06-15') {
   const personnel = new PersonnelService({ getDatabase: () => connection.database }, () => false)
-  const department = personnel.createDepartment({ name: 'Відділ' })
-  const position = personnel.createPosition({ name: 'Посада' })
+  const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const data = { lastName: 'Тестовий', firstName: 'Працівник', middleName: null, birthDate: null,
     employeeType: 'official', hireDate, positionId: position.id, departmentId: department.id }
   return { personnel, department, position, employee: personnel.createEmployee(data), data }
@@ -101,7 +101,7 @@ test('v10 restore preserves old periods and the v11 service date survives reopen
   f.handles.push({ close: () => { secondBackup.stop(); secondBackup.invalidateSelections(); second.close() } })
   await second.initializeSafely(() => join(f.root, 'second', 'app.db'))
   const dated = await secondBackup.chooseRestore(async () => snapshot)
-  assert.equal(dated.schemaVersion, 11)
+  assert.equal(dated.schemaVersion, 12)
   await secondBackup.confirmRestore(dated.token, async () => true)
   const restored = new LeaveService(second, () => secondBackup.isBusy())
   assert.equal(restored.getServiceLeaveStart(person.id), '2025-01-03')
@@ -109,14 +109,14 @@ test('v10 restore preserves old periods and the v11 service date survives reopen
   assert.deepEqual(second.getDatabase().pragma('foreign_key_check'), [])
 })
 
-test('v5 to v11 migration keeps live personnel and directories and protects the source image', async t => {
+test('v5 to v12 migration keeps live personnel and directories and protects the source image', async t => {
   const f = fixture(t)
   const old = await f.open(migrations.slice(0, 5))
   const created = await employee(old)
   old.close()
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 11)
+  assert.equal(current.schemaVersion, 12)
   assert.equal(db.prepare('SELECT id FROM employees').get().id, created.employee.id)
   assert.equal(db.prepare('SELECT id FROM departments').get().id, created.department.id)
   assert.equal(db.prepare('SELECT id FROM positions').get().id, created.position.id)
@@ -157,11 +157,11 @@ test('restoring a supported v5 copy migrates the active database and leaves the 
   const backups = new BackupService(storage)
   await storage.initializeSafely(() => join(f.root, 'active', 'hromadahr.db'))
   f.handles.push({ close: () => { backups.stop(); backups.invalidateSelections(); storage.close() } })
-  assert.equal(storage.getStatus().schemaVersion, 11)
+  assert.equal(storage.getStatus().schemaVersion, 12)
   const selected = await backups.chooseRestore(async () => sourceFile)
   assert.equal(selected.schemaVersion, 5)
   assert.deepEqual(await backups.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 11)
+  assert.equal(storage.getStatus().schemaVersion, 12)
   assert.equal(new PersonnelService(storage, () => backups.isBusy()).getEmployee(created.employee.id).id, created.employee.id)
   assert.deepEqual(readFileSync(sourceFile), sourceBytes)
 })

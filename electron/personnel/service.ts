@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
-import type { Department, EmployeeCard, EmployeeDetails, PersonnelErrorCode, Position } from '../../shared/personnel.js'
+import type { DictionaryEntry, DictionaryKind, DictionarySnapshot, EmployeeCard, EmployeeDetails, PersonnelErrorCode } from '../../shared/personnel.js'
 import * as schemas from './schemas.js'
 
 export class PersonnelError extends Error {
@@ -13,6 +13,10 @@ const employeeQuery = `SELECT e.id, e.last_name AS lastName, e.first_name AS fir
   e.hire_date AS hireDate, e.position_id AS positionId, e.department_id AS departmentId,
   p.name AS positionName, d.name AS departmentName
   FROM employees e JOIN positions p ON p.id=e.position_id JOIN departments d ON d.id=e.department_id`
+const dictionaries = {
+  department: { table: 'departments', reference: 'department_id' },
+  position: { table: 'positions', reference: 'position_id' },
+} as const
 
 function toCard({ positionName, departmentName, ...employee }: EmployeeRow): EmployeeCard {
   return { ...employee, position: { id: employee.positionId, name: positionName },
@@ -92,22 +96,90 @@ export class PersonnelService {
       return null
     }).immediate())
   }
-  listDepartments = () => this.run(db => db.prepare<[], Department>('SELECT id, name FROM departments ORDER BY name_key, id').all())
-  listPositions = () => this.run(db => db.prepare<[], Position>('SELECT id, name FROM positions ORDER BY name_key, id').all())
-  createDepartment = (input: Omit<Department, 'id'>) => {
-    const value = this.parse(schemas.departmentInput, input)
-    return this.run(db => {
-      const result = { id: randomUUID(), ...value }
-      db.prepare('INSERT INTO departments(id, name, name_key) VALUES (?, ?, ?)').run(result.id, result.name, schemas.nameKey(result.name))
+  private listDirectory(kind: DictionaryKind) {
+    return this.run(db => db.prepare<[], { id: string; name: string }>(
+      `SELECT id, name FROM ${dictionaries[kind].table} ORDER BY sort_order, id`).all())
+  }
+  listDepartments = () => this.listDirectory('department')
+  listPositions = () => this.listDirectory('position')
+  createDepartment = (input: { name: string }) => this.createEntry('department', this.parse(schemas.departmentInput, input).name)
+  createPosition = (input: { name: string }) => this.createEntry('position', this.parse(schemas.positionInput, input).name)
+
+  private bumpOrder(db: Database.Database, kind: DictionaryKind) {
+    db.prepare('UPDATE personnel_dictionary_order SET revision=revision+1 WHERE kind=?').run(kind)
+  }
+
+  private createEntry(kind: DictionaryKind, name: string) {
+    const { table } = dictionaries[kind]
+    return this.run(db => db.transaction(() => {
+      const result = { id: randomUUID(), name }
+      db.prepare(`INSERT INTO ${table}(id, name, name_key, sort_order)
+        VALUES (?, ?, ?, (SELECT coalesce(max(sort_order)+1,0) FROM ${table}))`).run(result.id, name, schemas.nameKey(name))
+      this.bumpOrder(db, kind)
       return result
+    }).immediate())
+  }
+
+  private snapshot(db: Database.Database, kind: DictionaryKind): DictionarySnapshot {
+    const { table, reference } = dictionaries[kind]
+    const order = db.prepare<[DictionaryKind], { revision: number }>('SELECT revision FROM personnel_dictionary_order WHERE kind=?').get(kind)!
+    const entries = db.prepare<[], DictionaryEntry>(`SELECT d.id, d.name, d.revision,
+      (SELECT count(*) FROM employees e WHERE e.${reference}=d.id) AS employeeCount
+      FROM ${table} d ORDER BY d.sort_order, d.id`).all()
+    return { revision: order.revision, entries }
+  }
+
+  getDictionary = (kind: DictionaryKind) => {
+    this.parse(schemas.dictionaryKind, kind)
+    return this.run(db => db.transaction(() => this.snapshot(db, kind))())
+  }
+
+  private changeEntry(kind: DictionaryKind, id: string, expectedRevision: number,
+    change: (db: Database.Database, entry: { sortOrder: number }) => void) {
+    this.parse(schemas.dictionaryKind, kind)
+    this.parse(schemas.id, id)
+    this.parse(schemas.revision, expectedRevision)
+    return this.run(db => db.transaction(() => {
+      const entry = db.prepare<[string], { revision: number; sortOrder: number }>(
+        `SELECT revision, sort_order AS sortOrder FROM ${dictionaries[kind].table} WHERE id=?`).get(id)
+      if (!entry) throw new PersonnelError('NOT_FOUND')
+      if (entry.revision !== expectedRevision) throw new PersonnelError('DICTIONARY_STALE')
+      change(db, entry)
+      return this.snapshot(db, kind)
+    }).immediate())
+  }
+
+  renameDictionaryEntry = (kind: DictionaryKind, id: string, input: string, expectedRevision: number) => {
+    const name = this.parse(schemas.dictionaryName, input)
+    return this.changeEntry(kind, id, expectedRevision, db => {
+      db.prepare(`UPDATE ${dictionaries[kind].table} SET name=?, name_key=?, revision=revision+1 WHERE id=?`)
+        .run(name, schemas.nameKey(name), id)
     })
   }
-  createPosition = (input: Omit<Position, 'id'>) => {
-    const value = this.parse(schemas.positionInput, input)
-    return this.run(db => {
-      const result = { id: randomUUID(), ...value }
-      db.prepare('INSERT INTO positions(id, name, name_key) VALUES (?, ?, ?)').run(result.id, result.name, schemas.nameKey(result.name))
-      return result
+
+  deleteDictionaryEntry = (kind: DictionaryKind, id: string, expectedRevision: number) =>
+    this.changeEntry(kind, id, expectedRevision, (db, entry) => {
+      const { table, reference } = dictionaries[kind]
+      if (db.prepare(`SELECT 1 FROM employees WHERE ${reference}=? LIMIT 1`).get(id)) throw new PersonnelError('DICTIONARY_IN_USE')
+      db.prepare(`DELETE FROM ${table} WHERE id=?`).run(id)
+      db.prepare(`UPDATE ${table} SET sort_order=sort_order-1 WHERE sort_order>?`).run(entry.sortOrder)
+      this.bumpOrder(db, kind)
     })
+
+  reorderDictionary = (kind: DictionaryKind, ids: string[], expectedRevision: number) => {
+    this.parse(schemas.dictionaryKind, kind)
+    this.parse(schemas.dictionaryIds, ids)
+    this.parse(schemas.revision, expectedRevision)
+    return this.run(db => db.transaction(() => {
+      const current = this.snapshot(db, kind)
+      if (current.revision !== expectedRevision) throw new PersonnelError('DICTIONARY_STALE')
+      const known = new Set(current.entries.map(entry => entry.id))
+      if (ids.length !== known.size || ids.some(id => !known.has(id))) throw new PersonnelError('INVALID_ARGUMENTS')
+      if (ids.every((id, index) => current.entries[index]?.id === id)) return current
+      const update = db.prepare(`UPDATE ${dictionaries[kind].table} SET sort_order=? WHERE id=?`)
+      ids.forEach((id, index) => update.run(index, id))
+      this.bumpOrder(db, kind)
+      return this.snapshot(db, kind)
+    }).immediate())
   }
 }

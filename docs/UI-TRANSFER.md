@@ -507,3 +507,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.9.1 – Компактне підтвердження відпустки
 
 Звірено `src/components/ConfirmDialog.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Опційний режим підсумку використовує штатний футер Modal, InfoSection, InfoItem і чинні семантичні токени. Інші підтвердження залишаються на своєму стандартному компонуванні.
+
+## 4.9.2 – Робочий розділ довідників
+
+На SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` звірено `src/Dictionaries.tsx`, `src/components/ProgramsCatalog.tsx` і `src/styles.css` HromadaAID. Відтворено вкладки, ручку, стан переміщення й клавіатурний сценарій на спільних DictionaryTable, DirectoryForm, ConfirmDialog і фіолетових токенах HromadaHR. Кадрові Select використовують порядок Main.

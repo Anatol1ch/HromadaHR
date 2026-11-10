@@ -19,6 +19,10 @@ const api: HromadaHRApi = {
     createDepartment: (input) => call(ipcChannels.personnelCreateDepartment, input),
     listPositions: () => call(ipcChannels.personnelListPositions),
     createPosition: (input) => call(ipcChannels.personnelCreatePosition, input),
+    getDictionary: kind => call(ipcChannels.personnelGetDictionary, kind),
+    renameDictionaryEntry: (kind, id, name, revision) => call(ipcChannels.personnelRenameDictionaryEntry, kind, id, name, revision),
+    deleteDictionaryEntry: (kind, id, revision) => call(ipcChannels.personnelDeleteDictionaryEntry, kind, id, revision),
+    reorderDictionary: (kind, ids, revision) => call(ipcChannels.personnelReorderDictionary, kind, ids, revision),
   },
   leave: {
     listRights: id => call(ipcChannels.leaveListRights,id),

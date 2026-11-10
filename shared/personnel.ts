@@ -18,7 +18,10 @@ export interface EmployeeCard extends EmployeeDetails {
   position: Position
   department: Department
 }
-export type PersonnelErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'HIRE_DATE_HAS_LEAVE_PERIODS'
+export type DictionaryKind = 'department' | 'position'
+export interface DictionaryEntry { id: string; name: string; revision: number; employeeCount: number }
+export interface DictionarySnapshot { entries: DictionaryEntry[]; revision: number }
+export type PersonnelErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'HIRE_DATE_HAS_LEAVE_PERIODS' | 'DICTIONARY_STALE' | 'DICTIONARY_IN_USE'
 export interface PersonnelApi {
   deleteEmployee: (employeeId: string) => Promise<IpcResult<null>>
   listEmployees: () => Promise<IpcResult<EmployeeCard[]>>
@@ -29,4 +32,8 @@ export interface PersonnelApi {
   createDepartment: (input: Omit<Department, 'id'>) => Promise<IpcResult<Department>>
   listPositions: () => Promise<IpcResult<Position[]>>
   createPosition: (input: Omit<Position, 'id'>) => Promise<IpcResult<Position>>
+  getDictionary: (kind: DictionaryKind) => Promise<IpcResult<DictionarySnapshot>>
+  renameDictionaryEntry: (kind: DictionaryKind, id: string, name: string, expectedRevision: number) => Promise<IpcResult<DictionarySnapshot>>
+  deleteDictionaryEntry: (kind: DictionaryKind, id: string, expectedRevision: number) => Promise<IpcResult<DictionarySnapshot>>
+  reorderDictionary: (kind: DictionaryKind, ids: string[], expectedRevision: number) => Promise<IpcResult<DictionarySnapshot>>
 }

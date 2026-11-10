@@ -1,3 +1,4 @@
+import { seedDirectories } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -24,8 +25,7 @@ async function fixture(t, manifest = migrations) {
   })
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
-  const department = personnel.createDepartment({ name: 'Відділ' })
-  const position = personnel.createPosition({ name: 'Посада' })
+  const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const person = (hireDate = '2024-01-01') => personnel.createEmployee({ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
     employeeType: 'official', hireDate, positionId: position.id, departmentId: department.id })
   const employee = person()
@@ -121,7 +121,7 @@ test('employee deletion cascades registrations and allocations atomically',async
   assert.equal(f.personnel.getEmployee(other.id).id,other.id)
   assert.deepEqual(f.connection.database.pragma('foreign_key_check'),[])
 })
-test('v6 to v11 preserves balances and fails closed without protective snapshot',async t=>{
+test('v6 to v12 preserves balances and fails closed without protective snapshot',async t=>{
   const f=await fixture(t,migrations.slice(0,6))
   const db=f.connection.database
   db.prepare(`INSERT INTO leave_period_balances VALUES (?,?,?,?,?,?,?,?)`).run(randomUUID(),f.employee.id,'annual_main','2024-01-01','2024-12-31','initial_balance',7,null)
@@ -143,7 +143,7 @@ test('v6 to v11 preserves balances and fails closed without protective snapshot'
   unchanged.close()
   const updated=await openStorageSafely(f.file)
   f.handles.push(updated)
-  assert.equal(updated.schemaVersion,11)
+  assert.equal(updated.schemaVersion,12)
   assert.equal(updated.database.prepare('SELECT confirmed_days FROM leave_period_balances').get().confirmed_days,7)
   assert.deepEqual(updated.database.prepare('SELECT * FROM schema_migrations WHERE version<=6 ORDER BY version').all(),ledger)
   assert.ok(readdirSync(protection).some(name=>name.includes('protect-migration-v7-')))

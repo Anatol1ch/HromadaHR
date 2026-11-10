@@ -1,3 +1,4 @@
+import { seedDirectories } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -25,8 +26,7 @@ async function fixture(t, manifest=migrations) {
   })
   const storage={getDatabase:()=>connection.database}
   const personnel=new PersonnelService(storage,()=>false)
-  const department=personnel.createDepartment({name:'Відділ'})
-  const position=personnel.createPosition({name:'Посада'})
+  const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const details={lastName:'Тест',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',
     hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
   const employee=personnel.createEmployee(details)
@@ -159,7 +159,7 @@ test('v7 migration preserves legacy mismatches and restore migrates the immutabl
   assert.deepEqual(restored.allocations,[{periodId,days:2}])
   assert.equal(restored.usedDays,2)
   assert.deepEqual(readFileSync(f.file),original)
-  assert.equal(storage.getStatus().schemaVersion,11)
+  assert.equal(storage.getStatus().schemaVersion,12)
 })
 test('v8 requires protection, rolls back failed SQL and preserves all rows',async t=>{
   const f=await fixture(t,migrations.slice(0,7))
@@ -178,7 +178,7 @@ test('v8 requires protection, rolls back failed SQL and preserves all rows',asyn
   const latest=await openStorageSafely(f.file)
   f.handles.push(latest)
   assert.deepEqual(latest.database.prepare('SELECT * FROM employees').all(),before)
-  assert.equal(latest.schemaVersion,11)
+  assert.equal(latest.schemaVersion,12)
   const snapshot=join(protection,readdirSync(protection).find(name=>name.includes('protect-migration-v8-')))
   assert.equal(inspectDatabase(snapshot),7)
 })

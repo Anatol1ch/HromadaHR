@@ -3,7 +3,7 @@ import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, Alloca
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
 import type { ContactId } from './contacts.js'
-import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, EmployeeDetails, Department, Position } from './personnel.js'
+import type { PersonnelApi, PersonnelErrorCode, EmployeeCard, EmployeeDetails, Department, Position, DictionaryKind, DictionarySnapshot } from './personnel.js'
 import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from './leave.js'
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
@@ -20,6 +20,10 @@ export const ipcChannels = {
   personnelCreateEmployee: 'personnel:createEmployee',
   personnelUpdateEmployee: 'personnel:updateEmployee',
   personnelListDepartments: 'personnel:listDepartments',
+  personnelGetDictionary: 'personnel:getDictionary',
+  personnelRenameDictionaryEntry: 'personnel:renameDictionaryEntry',
+  personnelDeleteDictionaryEntry: 'personnel:deleteDictionaryEntry',
+  personnelReorderDictionary: 'personnel:reorderDictionary',
   personnelCreateDepartment: 'personnel:createDepartment',
   personnelListPositions: 'personnel:listPositions',
   personnelCreatePosition: 'personnel:createPosition',
@@ -78,6 +82,10 @@ export interface IpcOperations {
   [ipcChannels.personnelCreateEmployee]: { args: [EmployeeDetails]; result: EmployeeCard }
   [ipcChannels.personnelUpdateEmployee]: { args: [string, EmployeeDetails]; result: EmployeeCard }
   [ipcChannels.personnelListDepartments]: { args: []; result: Department[] }
+  [ipcChannels.personnelGetDictionary]: { args: [DictionaryKind]; result: DictionarySnapshot }
+  [ipcChannels.personnelRenameDictionaryEntry]: { args: [DictionaryKind, string, string, number]; result: DictionarySnapshot }
+  [ipcChannels.personnelDeleteDictionaryEntry]: { args: [DictionaryKind, string, number]; result: DictionarySnapshot }
+  [ipcChannels.personnelReorderDictionary]: { args: [DictionaryKind, string[], number]; result: DictionarySnapshot }
   [ipcChannels.personnelCreateDepartment]: { args: [Omit<Department, 'id'>]; result: Department }
   [ipcChannels.personnelListPositions]: { args: []; result: Position[] }
   [ipcChannels.personnelCreatePosition]: { args: [Omit<Position, 'id'>]; result: Position }

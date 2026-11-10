@@ -102,6 +102,14 @@ export function registerIpcHandlers(
     (_args) => personnel.listPositions())
   register(ipcChannels.personnelCreatePosition, z.tuple([personnelSchemas.positionInput]), personnelSchemas.position,
     ([input]) => personnel.createPosition(input))
+  register(ipcChannels.personnelGetDictionary, z.tuple([personnelSchemas.dictionaryKind]), personnelSchemas.dictionarySnapshot,
+    ([kind]) => personnel.getDictionary(kind))
+  register(ipcChannels.personnelRenameDictionaryEntry, z.tuple([personnelSchemas.dictionaryKind, personnelSchemas.id, personnelSchemas.dictionaryName, personnelSchemas.revision]), personnelSchemas.dictionarySnapshot,
+    args => personnel.renameDictionaryEntry(...args))
+  register(ipcChannels.personnelDeleteDictionaryEntry, z.tuple([personnelSchemas.dictionaryKind, personnelSchemas.id, personnelSchemas.revision]), personnelSchemas.dictionarySnapshot,
+    args => personnel.deleteDictionaryEntry(...args))
+  register(ipcChannels.personnelReorderDictionary, z.tuple([personnelSchemas.dictionaryKind, personnelSchemas.dictionaryIds, personnelSchemas.revision]), personnelSchemas.dictionarySnapshot,
+    args => personnel.reorderDictionary(...args))
 
   register(ipcChannels.leaveListRights, z.tuple([leaveSchemas.id]), leaveSchemas.employeeRight.array(), ([id]) => leave.listRights(id))
   register(ipcChannels.leaveSaveRights, z.tuple([leaveSchemas.id,leaveSchemas.rightsInput]), leaveSchemas.employeeRight.array(), ([id,input]) => leave.saveRights(id,input))

@@ -1,3 +1,4 @@
+import { seedDirectories } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -26,8 +27,7 @@ async function fixture(t, manifest=migrations) {
   })
   const storage={getDatabase:()=>connection.database}
   const personnel=new PersonnelService(storage,()=>false)
-  const department=personnel.createDepartment({name:'Відділ'})
-  const position=personnel.createPosition({name:'Посада'})
+  const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const details={lastName:'Тест',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',
     hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
   const employee=personnel.createEmployee(details)
@@ -198,7 +198,7 @@ async function legacyV8(t,version=8) {
 test('v8 rebuild preserves every row, relation, trigger, cancellation and legacy idempotency',async t=>{
   const f=await legacyV8(t)
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,11)
+  assert.equal(upgraded.schemaVersion,12)
   const db=upgraded.database,service=new LeaveService({getDatabase:()=>db},()=>false)
   assert.deepEqual(db.prepare('SELECT * FROM leave_records ORDER BY id').all().map(({grant_basis,...row})=>{assert.equal(grant_basis,null);return row}),f.rows)
   assert.deepEqual(db.prepare('SELECT * FROM leave_allocations ORDER BY record_id').all(),f.allocations)
@@ -252,7 +252,7 @@ test('restore v7 and v8 migrates immutable sources, including edited/cancelled r
     assert.equal(selection.schemaVersion,version)
     await backup.confirmRestore(selection.token,async()=>true)
     assert.deepEqual(readFileSync(f.file),before)
-    assert.equal(storage.getStatus().schemaVersion,11)
+    assert.equal(storage.getStatus().schemaVersion,12)
     const service=new LeaveService(storage,()=>backup.isBusy())
     assert.equal(service.registerLeave(f.input).id,f.activeId)
     assert.equal(service.getRecord(f.cancelledId).status,'cancelled')

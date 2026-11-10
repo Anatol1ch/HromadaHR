@@ -139,6 +139,21 @@ CREATE TABLE employee_service_leave_start (
     AND substr(acquired_on, 1, 4) != '0000' AND coalesce(date(acquired_on, '+0 days') = acquired_on, 0))
 ) STRICT;
 `,
+}, { version: 12, name: 'personnel_dictionary_order', requiresBackup: true, sql: `
+ALTER TABLE departments ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0 CHECK(sort_order >= 0);
+ALTER TABLE positions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0 CHECK(sort_order >= 0);
+ALTER TABLE departments ADD COLUMN revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0);
+ALTER TABLE positions ADD COLUMN revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0);
+WITH ranked AS MATERIALIZED (SELECT id, row_number() OVER (ORDER BY name_key, id) - 1 AS position FROM departments)
+UPDATE departments SET sort_order=(SELECT position FROM ranked WHERE ranked.id=departments.id);
+WITH ranked AS MATERIALIZED (SELECT id, row_number() OVER (ORDER BY name_key, id) - 1 AS position FROM positions)
+UPDATE positions SET sort_order=(SELECT position FROM ranked WHERE ranked.id=positions.id);
+CREATE TABLE personnel_dictionary_order (
+  kind TEXT PRIMARY KEY NOT NULL CHECK(kind IN ('department', 'position')),
+  revision INTEGER NOT NULL CHECK(revision >= 0)
+) STRICT;
+INSERT INTO personnel_dictionary_order VALUES ('department', 0), ('position', 0);
+`,
 }]
 
 function checksum(migration: Migration) {

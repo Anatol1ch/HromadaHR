@@ -152,3 +152,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.9.1 – Підсумок підтвердження
 
 Звірено `src/components/ConfirmDialog.tsx` і застосування в `src/Dictionaries.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Використано чинні ConfirmDialog і Modal HromadaHR. Додано опційне компонування зі штатним футером і структурованим підсумком.
+
+## 4.9.2 – Упорядкування довідників
+
+Звірено read-only `src/Dictionaries.tsx`, `src/components/ProgramsCatalog.tsx`, `src/styles.css`, `shared/api-contract.ts` та `electron/catalog-order.ts` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано ручку перетягування, Alt + ↑ / ↓, підсвічування цілі, передачу повного порядку з ревізією, IMMEDIATE-транзакцію й перечитування після відмови. HromadaHR застосовує незалежні кадрові довідники, типізовані локальні IPC і числові ревізії.

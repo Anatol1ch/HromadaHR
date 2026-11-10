@@ -20,7 +20,14 @@ export function normalizeName(value: string) {
 export function nameKey(value: string) {
   return normalizeName(value).toUpperCase().toLowerCase().normalize('NFC')
 }
-const dictionaryName = z.string().transform(normalizeName).pipe(text)
+export const dictionaryName = z.string().transform(normalizeName).pipe(text)
+export const dictionaryKind = z.enum(['department', 'position'])
+export const revision = z.number().int().nonnegative()
+export const dictionaryIds = z.array(id).refine(ids => new Set(ids).size === ids.length)
+export const dictionarySnapshot = z.strictObject({
+  revision,
+  entries: z.array(z.strictObject({ id, name: text, revision, employeeCount: revision })),
+})
 export const departmentInput = z.strictObject({ name: dictionaryName })
 export const positionInput = z.strictObject({ name: dictionaryName })
 export const department = z.strictObject({ id, name: text })

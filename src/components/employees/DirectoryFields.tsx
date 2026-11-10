@@ -58,8 +58,8 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
   }
   function created(entry: Department | Position) {
     if (!draft) return
-    if (draft === 'department') { setDepartments(current => [...current, entry].sort((a,b) => a.name.localeCompare(b.name, 'uk'))); onDepartment(entry.id) }
-    else { setPositions(current => [...current, entry].sort((a,b) => a.name.localeCompare(b.name, 'uk'))); onPosition(entry.id) }
+    if (draft === 'department') { setDepartments(current => [...current, entry]); onDepartment(entry.id) }
+    else { setPositions(current => [...current, entry]); onPosition(entry.id) }
     returnFocus.current = draft
     setDraft(null)
     notifySystemToast('success', 'Запис створено', 'Новий запис створено та вибрано.')

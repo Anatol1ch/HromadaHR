@@ -2,9 +2,10 @@ import StartupScreen from './components/StartupScreen'
 import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
+import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
 import LeaveWorkspace from './components/leave/LeaveWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Award, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, Award, BookOpen, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
 import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
@@ -20,13 +21,15 @@ const sections = [
   { id: 'leave', label: 'Відпустки', icon: CalendarDays },
   { id: 'service', label: 'Стаж і ранги', icon: Award },
   { id: 'documents', label: 'Документи', icon: FileText },
+  { id: 'dictionaries', label: 'Довідники', icon: BookOpen },
   { id: 'settings', label: 'Налаштування', icon: Settings },
 ] as const
 
 type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
-const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'leave' | 'settings'>, string> = {
+const settingsSection = sections.find(section => section.id === 'settings')!
+const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'leave' | 'settings' | 'dictionaries'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
   service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
@@ -177,7 +180,7 @@ export default function App() {
         <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
         <div className="nav-label">СИСТЕМА</div>
         <nav aria-label="Система">
-          <NavigationItem section={sections[6]} active={active} onNavigate={navigate} />
+          <NavigationItem section={settingsSection} active={active} onNavigate={navigate} />
         </nav>
       </div>
     </aside>
@@ -198,6 +201,7 @@ export default function App() {
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace onOpenLeave={id => navigationGuard.current(() => { setLeaveEmployee(id); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
           <LeaveWorkspace initialEmployeeId={leaveEmployee} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :
           <div className="page-transition">
             <div className="page-heading">
               <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
