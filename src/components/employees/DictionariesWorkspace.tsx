@@ -108,7 +108,7 @@ function PersonnelDictionary({ kind, navigationGuard }: { kind: DictionaryKind; 
     </header>
     {error && <Alert variant="error">{error}</Alert>}
     {loadError && <Alert variant="error" action={<button type="button" onClick={() => void reload()}>Повторити завантаження</button>}>{loadError}</Alert>}
-    <p className="leave-muted" role="status">{busy ? 'Збереження…' : loading ? 'Завантаження…' : entries.length > 1 ? 'Перетягніть за ручку або натисніть Alt + ↑ / ↓.' : ''}</p>
+    <p className="leave-muted" role="status">{busy ? 'Збереження…' : loading ? 'Завантаження…' : ''}</p>
     {loading && !snapshot ? <DataState kind="loading" compact message="Завантаження довідника…"/>
       : snapshot && <DictionaryTable label={tabs[kind]} className="personnel-dictionary-table" loading={loading || busy}
         columns={[{ label: <span className="visually-hidden">Порядок</span>, width: '3rem' }, { label: 'Назва' },
@@ -149,7 +149,7 @@ function PersonnelDictionary({ kind, navigationGuard }: { kind: DictionaryKind; 
       }} onClose={() => setEditor(null)}
       edit={editor !== 'create' ? { entry: editor, onSaved: data => { setSnapshot(data); setEditor(null) },
         onReload: () => { setEditor(null); void reload() } } : undefined}/>}
-    {deleting && <ConfirmDialog title="Видалити запис?" message={deleting.name} confirmLabel="Видалити" error={deleteError}
+    {deleting && <ConfirmDialog title="Видалити запис?" message={deleting.name} confirmLabel="Видалити" error={deleteError} layout="footer"
       onCancel={() => setDeleting(null)}
       onConfirm={() => mutate(() => window.hromadaHR.personnel.deleteDictionaryEntry(kind, deleting.id, deleting.revision), true)}/>}
   </section>

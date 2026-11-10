@@ -47,8 +47,8 @@
 .confirm-dialog-detail { margin: 14px 0 0; color: var(--color-text-secondary); font-size: 13px; }
 .confirm-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 23px; }
 .confirm-dialog-actions button { min-height: var(--control-height); height: auto; padding-block: 10px; font-size: 12px; line-height: 1.4; }
-.confirm-dialog-summary .app-modal-footer .confirm-dialog-actions { margin-top: 0; flex-direction: row; }
-.confirm-dialog-summary .app-modal-footer .confirm-dialog-actions button { width: auto; max-width: 100%; white-space: normal; }
+.confirm-dialog-with-footer .app-modal-footer .confirm-dialog-actions { margin-top: 0; flex-direction: row; }
+.confirm-dialog-with-footer .app-modal-footer .confirm-dialog-actions button { width: auto; max-width: 100%; white-space: normal; }
 .confirm-dialog-confirm { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding-inline: var(--space-4); border: 1px solid var(--confirm-color); border-radius: var(--radius-control); background: var(--confirm-color); color: var(--surface-card); font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .confirm-dialog-confirm > svg { flex: none; }
 .confirm-dialog-confirm:hover:not(:disabled):not([aria-busy="true"]):not([aria-disabled="true"]) { background: var(--confirm-hover); border-color: var(--confirm-hover); }

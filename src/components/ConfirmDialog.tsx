@@ -16,7 +16,7 @@ type ConfirmDialogProps = {
   busyLabel?: string
   confirmDisabled?: boolean
   error?: string
-  layout?: 'summary'
+  layout?: 'summary' | 'footer'
   onConfirm: () => void | Promise<void>
   onCancel: () => void
 }
@@ -40,13 +40,13 @@ export default function ConfirmDialog({ title, description, message, children, v
     <button type="button" className="confirm-dialog-confirm" disabled={busy || confirmDisabled} onClick={() => void confirmAction()}>{confirmIcon ?? <Check size={17} aria-hidden="true"/>}{busy ? busyLabel : confirmLabel}</button>
   </div>
   return <Modal title={title} description={description} onClose={cancel} busy={busy}
-    role={variant === 'primary' ? 'dialog' : 'alertdialog'} className={`confirm-dialog confirm-dialog-${variant}${layout === 'summary' ? ' confirm-dialog-summary' : ''}`}
+    role={variant === 'primary' ? 'dialog' : 'alertdialog'} className={`confirm-dialog confirm-dialog-${variant}${layout ? ' confirm-dialog-with-footer' : ''}`}
     describedBy={layout === 'summary' ? undefined : messageId} headerIcon={<HeaderIcon size={23} aria-hidden="true"/>}
-    footer={layout === 'summary' ? actions : undefined}>
+    footer={layout ? actions : undefined}>
     <div className="confirm-dialog-message" id={messageId}>{message}</div>
     {children}
     {(error || operationError) && <Alert variant="error">{error || operationError}</Alert>}
-    {layout !== 'summary' && actions}
+    {!layout && actions}
   </Modal>
 }
 
