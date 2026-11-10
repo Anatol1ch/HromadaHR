@@ -1,6 +1,6 @@
 import LeaveTypeIcon from './LeaveTypeIcon'
 import LeaveStatus from './LeaveStatus'
-import { ArrowRight, History, Wallet } from 'lucide-react'
+import { ArrowRight, History, ShieldCheck, Wallet } from 'lucide-react'
 import InfoSection from '../InfoSection'
 import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
@@ -13,9 +13,10 @@ import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import DictionaryTable from '../DictionaryTable'
+import type { LeaveDestination } from './navigation'
 
 /** Employee card overview: no mutation components or callbacks are mounted here. */
-export default function LeaveOverview({ employeeId, revision, onOpen }: { employeeId: string; revision: number; onOpen: () => void }) {
+export default function LeaveOverview({ employeeId, revision, onOpen }: { employeeId: string; revision: number; onOpen: (destination: LeaveDestination) => void }) {
   const {throughDate}=useAccountingDate()
   const [data, setData] = useState<{ balances: PeriodBalance[]; proposals: ProposedLeavePeriod[]; records: LeaveRecord[]; rights: EmployeeLeaveRight[] }>()
   const [error, setError] = useState('')
@@ -65,6 +66,8 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
             </> : <small className="leave-muted">Залишки ще не внесено</small>}
           </div>}
         </div>
+        <button type="button" className="secondary-button leave-overview-more" aria-label={'Детальніше: ' + option.label}
+          onClick={() => onOpen({ section: 'balances', type: option.value })}>Детальніше<ArrowRight size={15} aria-hidden="true"/></button>
       </article>
     })}</div>
     </InfoSection>
@@ -81,6 +84,9 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
         </tr>)}
       </DictionaryTable> : <div className="info-item"><DataState kind="empty" compact message="Відпусток ще не зареєстровано."/></div>}
     </InfoSection>
-    <div className="leave-dialog-actions"><button type="button" className="primary-button" onClick={onOpen}><ArrowRight size={16} aria-hidden="true"/>Перейти до відпусток</button></div>
+    <div className="leave-dialog-actions">
+      <button type="button" className="secondary-button" onClick={() => onOpen({ section: 'rights' })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити права</button>
+      <button type="button" className="primary-button" onClick={() => onOpen({ section: 'balances' })}><ArrowRight size={16} aria-hidden="true"/>Перейти до обліку</button>
+    </div>
   </section>
 }

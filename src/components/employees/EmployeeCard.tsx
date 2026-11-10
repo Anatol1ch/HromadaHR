@@ -3,6 +3,7 @@ import { navigateTabs } from '../../lib/tabNavigation'
 import { useEffect, useId, useState, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import LeaveOverview from '../leave/LeaveOverview'
+import type { LeaveNavigationIntent } from '../leave/navigation'
 import { BriefcaseBusiness, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
@@ -11,7 +12,7 @@ import DataState from '../DataState'
 
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
 export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision, onOpenLeave }: {
-  onOpenLeave: (id: string) => void; id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
+  onOpenLeave: (intent: LeaveNavigationIntent) => void; id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
   navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
@@ -97,7 +98,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
               {fields.map(([field, value]) => <div key={field}><dt>{field}</dt><dd>{value}</dd></div>)}
             </dl>
           </section>)}
-        </div> : index === 1 ? (tab === 1 && <LeaveOverview onOpen={() => onOpenLeave(id)} employeeId={id} revision={revision} />)
+        </div> : index === 1 ? (tab === 1 && <LeaveOverview onOpen={destination => onOpenLeave({ ...destination, employeeId: id })} employeeId={id} revision={revision} />)
           : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
       </div>)}
     </article>

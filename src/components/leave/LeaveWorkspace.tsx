@@ -19,38 +19,55 @@ import LeaveJournal from './LeaveJournal'
 import LeaveRights from './LeaveRights'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { notifySystemToast } from '../SystemToastHost'
-import { rightLabels } from './presentation'
+import { leaveLabels, rightLabels } from './presentation'
+import { initialLeaveNavigation, type LeaveNavigationIntent, type LeaveSection } from './navigation'
 import type { LeaveJournalContext, RegistrationHistory } from './registry'
-export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{navigationGuard:RefObject<NavigationGuard>;initialEmployeeId?:string}) {
+export default function LeaveWorkspace({navigationGuard,initialIntent}:{navigationGuard:RefObject<NavigationGuard>;initialIntent?:LeaveNavigationIntent}) {
   const navId=useId()
+  const [initial] = useState(() => initialLeaveNavigation(initialIntent))
+  const pendingFocus = useRef(initialIntent?.section)
+  const accountingPanel = useRef<HTMLDivElement>(null)
+  const rightsPanel = useRef<HTMLDivElement>(null)
   const rightsTab = useRef<HTMLButtonElement>(null)
   const registerButton = useRef<HTMLElement | null>(null)
   const accountingTab = useRef<HTMLButtonElement>(null)
   const accountingDetail = useRef<HTMLDivElement>(null)
-  const [accountingView, setAccountingView] = useState<AccountingView>('overview')
+  const [accountingView, setAccountingView] = useState<AccountingView>(initial.accountingView)
   const [chosenYear, setChosenYear] = useState('')
   const { throughDate } = useAccountingDate()
-  const [section,setSection]=useState<'journal'|'balances'|'rights'>(initialEmployeeId?'balances':'journal')
+  const [section,setSection]=useState<LeaveSection>(initial.section)
   const [employees,setEmployees]=useState<EmployeeCard[]>([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
   const [records,setRecords]=useState<LeaveRecord[]>([]),[recordsLoaded,setRecordsLoaded]=useState(false),[recordsError,setRecordsError]=useState(''),[revision,setRevision]=useState(0)
   const [recordsRevision, setRecordsRevision] = useState(-1)
-  const [selected,setSelected]=useState(initialEmployeeId),[creating,setCreating]=useState(false),[createEmployee,setCreateEmployee]=useState('')
+  const [selected,setSelected]=useState(initial.selected),[creating,setCreating]=useState(false),[createEmployee,setCreateEmployee]=useState('')
   const [rightsRevision, setRightsRevision] = useState(0)
   const [journalContext, setJournalContext] = useState<LeaveJournalContext | null>(null)
   const [accountingContext, setAccountingContext] = useState<LeaveJournalContext | null>(null)
   const [rights, setRights] = useState<{ key: string; data?: EmployeeLeaveRight[]; error?: string }>()
+  const employee=employees.find(p=>p.id===selected),person=employees.find(p=>p.id===createEmployee)
+  const employeeId = employee?.id
+  const missingEmployee = loaded && !!selected && !employee
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (!target) return
+    if (section !== target) { pendingFocus.current = undefined; return }
+    if (!loaded && !error) return
+    pendingFocus.current = undefined
+    const panel = target === 'rights' ? rightsPanel.current : accountingDetail.current ?? accountingPanel.current
+    panel?.focus()
+  }, [section, loaded, error])
   const rightsKey = JSON.stringify([selected, rightsRevision])
   useEffect(() => {
-    if (section !== 'balances' || !selected) return
+    if (section !== 'balances' || !employeeId) return
     let active = true
-    void window.hromadaHR.leave.listRights(selected).then(result => {
+    void window.hromadaHR.leave.listRights(employeeId).then(result => {
       if (!active) return
       setRights(result.ok ? { key: rightsKey, data: result.data } : { key: rightsKey, error: personnelMessage(result.error.code) })
     }).catch(() => {
       if (active) setRights({ key: rightsKey, error: 'Не вдалося завантажити статуси прав.' })
     })
     return () => { active = false }
-  }, [selected, section, rightsKey])
+  }, [employeeId, section, rightsKey])
   const currentRights = rights?.key === rightsKey ? rights : undefined
   const statusFor = (type: LeaveType) => currentRights?.data?.find(right => right.leaveType === type)?.status ?? 'unknown'
   const rightFor = (type: LeaveType) => {
@@ -75,7 +92,7 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
     onClick={() => navigationGuard.current(() => {
       openSection('rights')
       rightsTab.current?.focus()
-    })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити право</button>
+    })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити права</button>
   function accountingActions(type: LeaveType) {
     return <div className="leave-accounting-actions">
       {checkRight}
@@ -97,7 +114,6 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
       .finally(() => { if (active) setRecordsRevision(revision) })
     return () => { active = false }
   }, [revision])
-  const employee=employees.find(p=>p.id===selected),person=employees.find(p=>p.id===createEmployee)
   const refresh=()=>setRevision(v=>v+1)
   const currentYear = throughDate.slice(0, 4)
   const years = accountingYears(records, selected, currentYear)
@@ -119,10 +135,10 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
         onResume={() => { if (journalContext) setJournalContext(null); else navigationGuard.current(() => { openSection('balances'); accountingTab.current?.focus() }) }}/> : !history.error && <DataState kind="loading" message="Завантаження журналу…"/>}
     </div>
     {section!=='journal'&&<EmployeeChooser employees={employees} selected={selected} loading={!loaded} onSelect={id=>{if(id!==selected)navigationGuard.current(()=>setSelected(id))}}/>}
-    <div id={navId+'balances-panel'} role="tabpanel" aria-labelledby={navId+'balances'} hidden={section!=='balances'}>
+    <div ref={accountingPanel} tabIndex={-1} id={navId+'balances-panel'} role="tabpanel" aria-labelledby={navId+'balances'} hidden={section!=='balances'}>
       {section === 'balances' && employee ? <div className="leave-balances-workbench">
         <LeaveTypeNavigation value={accountingView} onChange={changeAccountingView}/>
-        <div ref={accountingDetail} tabIndex={-1} className="leave-balances-detail">
+        <div ref={accountingDetail} tabIndex={-1} role="region" aria-label={accountingView === 'overview' ? 'Усі види відпусток' : leaveLabels[accountingView]} className="leave-balances-detail">
           {currentRights?.error && <Alert variant="error" action={<button type="button" onClick={refreshRights}>Повторити</button>}>{currentRights.error}</Alert>}
           {accountingView === 'overview' ? <LeaveAccountingOverview key={employee.id} employeeId={employee.id}
             calendar={calendar} history={history} rightFor={rightFor} isHistorical={type => statusFor(type) === 'no_right'}
@@ -136,9 +152,9 @@ export default function LeaveWorkspace({navigationGuard,initialEmployeeId=''}:{n
             </> : <LeaveEventAccounting type={accountingView} employeeId={employee.id} calendar={calendar}
               history={history} right={rightFor(accountingView)} noRight={statusFor(accountingView) === 'no_right'} showLimit={Boolean(currentRights?.data) && statusFor(accountingView) !== 'no_right'} actions={accountingActions(accountingView)}/>}
         </div>
-      </div> : <DataState kind="empty" message="Оберіть працівника для перегляду обліку."/>}
+      </div> : <DataState kind="empty" message={missingEmployee ? 'Працівник недоступний. Оберіть працівника для перегляду обліку.' : 'Оберіть працівника для перегляду обліку.'}/>}
     </div>
-    <div id={navId+'rights-panel'} role="tabpanel" aria-labelledby={navId+'rights'} hidden={section!=='rights'}>{section==='rights'&&employee?<LeaveRights key={employee.id} employeeId={employee.id} records={records} navigationGuard={navigationGuard} onSaved={refreshRights}/>:<DataState kind="empty" message="Оберіть працівника для перевірки прав."/>}</div>
+    <div ref={rightsPanel} tabIndex={-1} id={navId+'rights-panel'} role="tabpanel" aria-labelledby={navId+'rights'} hidden={section!=='rights'}>{section==='rights'&&employee?<LeaveRights key={employee.id} employeeId={employee.id} records={records} navigationGuard={navigationGuard} onSaved={refreshRights}/>:<DataState kind="empty" message={missingEmployee ? 'Працівник недоступний. Оберіть працівника для перевірки прав.' : 'Оберіть працівника для перевірки прав.'}/>}</div>
     {creating&&<LeaveRegistrationForm key={createEmployee||'new'} employeeId={person?.id??''} employeeName={person?fullName(person):undefined} hireDate={person?.hireDate??'0001-01-01'} initialType="annual_main" navigationGuard={navigationGuard} returnFocus={registerButton.current} history={history}
       employeePicker={<div className="recipient-field"><span>Працівник</span><Select label="Працівник для нової відпустки" required searchable value={createEmployee} options={employees.map(p=>({value:p.id,label:fullName(p)}))} advanceOnSelect={false} onChange={id=>navigationGuard.current(()=>setCreateEmployee(id))}/>{!employees.length&&<p>Додайте працівника до кадрового реєстру.</p>}</div>}
       onClose={()=>setCreating(false)} onSaved={()=>{setCreating(false);refresh();notifySystemToast('success','Відпустку зареєстровано','Дані оновлено.')}}/>}

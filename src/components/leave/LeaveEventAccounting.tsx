@@ -42,7 +42,7 @@ export default function LeaveEventAccounting({ type, employeeId, calendar, histo
     <AccountingHistoryState history={history}/>
     {usage && !(noRight && !recent?.length) && <dl className="info-grid">
       <InfoItem label="Активні надання" value={usage.activeCount}/>
-      <InfoItem label="Зареєстровано днів" value={formatLeaveDays(usage.days)} emphasis/>
+      <InfoItem label="Зареєстровано за рік" value={formatLeaveDays(usage.days)} emphasis/>
       <InfoItem label="Скасовані реєстрації" value={usage.cancelledCount}/>
       {showLimit && usage.limit !== null && <InfoItem label="Облікова межа тривалості" value={formatLeaveDays(usage.limit)}/>}
     </dl>}

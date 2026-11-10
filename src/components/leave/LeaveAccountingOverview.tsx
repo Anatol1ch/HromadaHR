@@ -81,7 +81,7 @@ export default function LeaveAccountingOverview({ employeeId, calendar, history,
           {isPeriodLeave(type) && !balances && <DataState kind="loading" compact message="Завантаження залишків…"/>}
           {usage && <dl className="leave-accounting-values">
             <InfoItem label="Активні надання" value={usage.activeCount}/>
-            <InfoItem label="Зареєстровано днів" value={formatLeaveDays(usage.days)} emphasis/>
+            <InfoItem label="Зареєстровано за рік" value={formatLeaveDays(usage.days)} emphasis/>
           </dl>}
           <button type="button" className="secondary-button leave-accounting-more" aria-label={'Детальніше: ' + label}
             onClick={() => onDetails(type)}>Детальніше<ArrowRight size={15} aria-hidden="true"/></button>

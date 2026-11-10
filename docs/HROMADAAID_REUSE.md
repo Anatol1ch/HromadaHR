@@ -164,3 +164,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.9.5 – Єдиний облік відпусток
 
 Звірено read-only `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Повторно використано патерн вибору року й контекстних фільтрів у спільному реєстрі. Перенесено лише поведінку інтерфейсу. Дані, локальний рік, підсумки та правила відпусток належать HromadaHR.
+
+## 4.9.6 – Дії з особової картки
+
+Звірено read-only `src/RecipientRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Патерн явних дій з картки адаптовано до наявних вкладок HromadaHR, зі спільними Modal та InfoSection і власним типізованим наміром переходу.

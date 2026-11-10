@@ -4,6 +4,7 @@ import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
 import LeaveWorkspace from './components/leave/LeaveWorkspace'
+import type { LeaveNavigationIntent } from './components/leave/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Activity, Award, BookOpen, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
@@ -121,11 +122,11 @@ function StorageNotice() {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
-  const [leaveEmployee, setLeaveEmployee] = useState('')
+  const [leaveIntent, setLeaveIntent] = useState<LeaveNavigationIntent>()
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => { if (id === 'leave') setLeaveEmployee(''); setActive(id) })
+    if (id !== active) navigationGuard.current(() => { setLeaveIntent(undefined); setActive(id) })
   }
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
@@ -199,8 +200,8 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace onOpenLeave={id => navigationGuard.current(() => { setLeaveEmployee(id); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
-          <LeaveWorkspace initialEmployeeId={leaveEmployee} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          <EmployeesWorkspace onOpenLeave={intent => navigationGuard.current(() => { setLeaveIntent(intent); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
+          <LeaveWorkspace initialIntent={leaveIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
           active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :
           <div className="page-transition">
             <div className="page-heading">

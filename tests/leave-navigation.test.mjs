@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { leaveGroupOptions, specialOptions, groupForType, matchesLeaveGroup, selectedLeaveType, leaveLabels } from '../src/components/leave/presentation.ts'
 import { leaveTypes } from '../shared/leave.ts'
+import { initialLeaveNavigation } from '../src/components/leave/navigation.ts'
 test('five visible groups preserve all six actual types and explicit special selection', () => {
   assert.deepEqual(leaveGroupOptions.map(item => item.label), ['Щорічна основна','Додаткова за стаж','Додаткова на дітей','Додаткова на навчання','Соціальні та інші'])
   assert.equal(selectedLeaveType('other',''),null)
@@ -50,4 +51,21 @@ test('three sections share employee context; general registration starts empty a
   assert.ok(source.includes('navigationGuard.current(()=>openSection(value))'))
   const rights=readFileSync(new URL('../src/components/leave/LeaveRights.tsx',import.meta.url),'utf8')
   assert.doesNotMatch(rights,/Періоди та залишки|onPeriods/)
+})
+
+test('card destinations initialize the exact worker, top tab and all six accounting views', () => {
+  assert.deepEqual(initialLeaveNavigation(), { selected: '', section: 'journal', accountingView: 'overview' })
+  assert.deepEqual(initialLeaveNavigation({ employeeId: 'a', section: 'rights' }), { selected: 'a', section: 'rights', accountingView: 'overview' })
+  assert.deepEqual(initialLeaveNavigation({ employeeId: 'a', section: 'balances' }), { selected: 'a', section: 'balances', accountingView: 'overview' })
+  for (const type of leaveTypes) {
+    assert.deepEqual(initialLeaveNavigation({ employeeId: 'b', section: 'balances', type }), { selected: 'b', section: 'balances', accountingView: type })
+  }
+})
+
+test('the card forwards the intent to the single App guard and sidebar navigation clears it', () => {
+  const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+  const workspace = readFileSync(new URL('../src/components/employees/EmployeesWorkspace.tsx', import.meta.url), 'utf8')
+  assert.match(workspace, /<EmployeeCard onOpenLeave=\{onOpenLeave\}/)
+  assert.match(app, /onOpenLeave=\{intent => navigationGuard.current\(\(\) => \{ setLeaveIntent\(intent\); setActive\('leave'\)/)
+  assert.match(app, /setLeaveIntent\(undefined\); setActive\(id\)/)
 })

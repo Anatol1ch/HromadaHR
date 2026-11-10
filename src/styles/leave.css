@@ -349,3 +349,6 @@
 .leave-accounting-history { display:grid; gap:var(--space-1); padding:0; margin:var(--space-2) 0 0; list-style:none; }
 .leave-accounting-history li { display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-1) var(--space-3); padding-block:var(--space-1); border-top:1px solid var(--border-surface); }
 @container info-section (max-width: 550px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
+
+.leave-overview-more { justify-self:start; height:auto; min-height:var(--control-height-compact); max-width:100%; white-space:normal; }
+.leave-overview-item .leave-overview-details > div { min-width:0; overflow-wrap:anywhere; }
