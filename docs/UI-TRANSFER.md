@@ -503,3 +503,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.8.4 – Журнал із контексту форми
 
 Звірено `src/AidRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Контекст надань використовує чинні InfoSection та InfoItem. Перехід застосовує звичайну панель фільтрів журналу, а повернення відновлює чинний Modal із чернеткою.
+
+## 4.9.1 – Компактне підтвердження відпустки
+
+Звірено `src/components/ConfirmDialog.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Опційний режим підсумку використовує штатний футер Modal, InfoSection, InfoItem і чинні семантичні токени. Інші підтвердження залишаються на своєму стандартному компонуванні.

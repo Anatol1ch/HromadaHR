@@ -325,3 +325,16 @@
   .leave-metric-grid { grid-template-columns:minmax(0,1fr); }
   .leave-metric-grid .info-item-emphasis { grid-row:auto; }
 }
+.leave-confirmation-summary { display: grid; gap: var(--space-2); overflow-wrap: anywhere; }
+.leave-confirmation-summary .info-section { gap: var(--space-2); }
+.leave-confirmation-summary .info-section-heading h3 { font-size: 14px; }
+.leave-confirmation-summary .info-item dd { color: var(--color-text); font-size: 14px; }
+.leave-confirmation-summary .info-item-emphasis dd { color: var(--accent-hover); font-size: 18px; }
+.leave-confirmation-periods { margin: 0; padding: 0 var(--space-3); background: var(--surface-card); border-radius: var(--radius-control); }
+.leave-confirmation-periods > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-2); color: var(--color-text); }
+.leave-confirmation-periods > div + div { border-top: 1px solid var(--border-surface); }
+.leave-confirmation-periods dd { margin: 0; font-variant-numeric: tabular-nums; }
+.leave-confirmation-total { font-weight: 700; }
+@container info-section (max-width: 465px) {
+  .leave-confirmation-summary .info-grid-two { grid-template-columns: minmax(0, 1fr); }
+}

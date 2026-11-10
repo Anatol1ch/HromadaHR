@@ -15,6 +15,8 @@ import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import ConfirmDialog from '../ConfirmDialog'
+import LeaveConfirmationSummary from './LeaveConfirmationSummary'
+import { confirmationChanges, confirmationPeriods, type ConfirmationPeriod } from './confirmation'
 import RegistrationBalanceEditor from './RegistrationBalanceEditor'
 import DateField from '../DateField'
 import DictionaryTable from '../DictionaryTable'
@@ -22,9 +24,12 @@ import Modal from '../Modal'
 import Select from '../Select'
 import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import { leaveLabels, leaveGroupOptions, specialOptions, groupForType, selectedLeaveType, type LeaveGroup } from './presentation'
+import { leaveGroupOptions, specialOptions, groupForType, selectedLeaveType, type LeaveGroup } from './presentation'
 import { annualUsage } from './usage'
 import type { RegistrationHistory } from './registry'
+
+type LeaveConfirmation = { input: LeaveRegistration; employeeName: string; periods: ConfirmationPeriod[]; update?: LeaveUpdate; changes: string[] }
+const unconfirmedRegistration = 'Результат не підтверджено. Повторіть збереження тих самих даних для безпечної перевірки.'
 
 export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onReloadRecord, record, employeePicker, returnFocus, history }: {
   record?: LeaveRecord; employeePicker?: ReactNode
@@ -58,7 +63,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   const [uncertain, setUncertain] = useState<LeaveUpdate | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [confirm, setConfirm] = useState<LeaveRegistration | null>(null)
+  const [confirm, setConfirm] = useState<LeaveConfirmation | null>(null)
   const [retry, setRetry] = useState(0)
   const [balanceEditor, setBalanceEditor] = useState<PeriodLeaveType | null>(null)
   const [balancesUpdated, setBalancesUpdated] = useState(false)
@@ -142,27 +147,46 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   function prepare(event: FormEvent) {
     event.preventDefault()
     setAttempted(true)
-    if (!canSave || pending.current || uncertain || stale) return
+    if (!canSave || pending.current || uncertain || stale || confirm) return
+    setError('')
     const payload = { employeeId, leaveType: type, startDate: start!, endDate: end!, usedDays: days,
       grantBasis: grantBasis.trim() || null, durationExplanation: explanation.trim() || null, orderNumber: orderNumber.trim() || null,
       orderDate: dates.order ? parseDateInput(dates.order) : null,
       allocations: periodic ? allocation.values : [] }
-    if (record) { setConfirm({ ...payload, requestId: record.id }); return }
-    const json = JSON.stringify(payload)
-    if (operation.current?.payload !== json) operation.current = { payload: json, id: crypto.randomUUID() }
-    setConfirm({ ...payload, requestId: operation.current!.id })
+    if (!record) {
+      const json = JSON.stringify(payload)
+      if (operation.current?.payload !== json) operation.current = { payload: json, id: crypto.randomUUID() }
+    }
+    const input = { ...payload, requestId: record?.id ?? operation.current!.id }
+    const periods = confirmationPeriods(input, available)
+    if (!periods || !employeeName) {
+      setError(!employeeName ? 'Не вдалося визначити працівника.' : 'Не вдалося перевірити періоди списання. Уточніть розподіл.')
+      if (!periods) setRetry(value => value + 1)
+      return
+    }
+    const { employeeId: _employeeId, ...fields } = payload
+    const update = record ? { ...fields, id: record.id, expectedRevision: record.revision } : undefined
+    setConfirm({ input, employeeName, periods, update, changes: record ? confirmationChanges(input, record) : [] })
   }
-  async function save(input: LeaveRegistration) {
+  async function save({ input, update, periods }: LeaveConfirmation) {
     if (pending.current) return
     pending.current = true
     setBusy(true)
     setError('')
     try {
-      const update: LeaveUpdate | null = record ? {
-        id: record.id, expectedRevision: record.revision, leaveType: input.leaveType,
-        startDate: input.startDate, endDate: input.endDate, usedDays: input.usedDays, allocations: input.allocations,
-        orderNumber: input.orderNumber, orderDate: input.orderDate, durationExplanation: input.durationExplanation, grantBasis: input.grantBasis ?? null,
-      } : null
+      if (periods.length) {
+        // Check displayed identities without recalculating allocation or consuming the idempotent retry.
+        const saved = await window.hromadaHR.leave.listPeriods(input.employeeId).catch(() => null)
+        if (!alive.current) return
+        const actual = saved?.ok ? confirmationPeriods(input, saved.data) : null
+        if (!actual || actual.some((row, index) => row.start !== periods[index]?.start || row.end !== periods[index]?.end)) {
+          setError(saved?.ok ? 'Облікові періоди змінилися. Перевірте розподіл і відкрийте підтвердження знову.'
+            : 'Не вдалося перевірити облікові періоди. Повторіть спробу.')
+          setConfirm(null)
+          if (saved?.ok) setRetry(value => value + 1)
+          return
+        }
+      }
       const result = update ? await window.hromadaHR.leave.updateLeave(update) : await window.hromadaHR.leave.registerLeave(input)
       if (update && !result.ok && ['UNAVAILABLE','INTERNAL_ERROR'].includes(result.error.code)) {
         await verify(update)
@@ -170,13 +194,16 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       }
       if (!alive.current) return
       if (result.ok) onSaved(result.data.leaveType)
-      else { setError(personnelMessage(result.error.code)); setConfirm(null); if (['STALE_REVISION','LEAVE_CANCELLED'].includes(result.error.code)) setStale(true) }
+      else {
+        setError(!update && ['UNAVAILABLE','INTERNAL_ERROR'].includes(result.error.code)
+          ? unconfirmedRegistration : personnelMessage(result.error.code))
+        setConfirm(null)
+        if (['STALE_REVISION','LEAVE_CANCELLED'].includes(result.error.code)) setStale(true)
+        if (['INSUFFICIENT_DAYS','INVALID_PERIOD'].includes(result.error.code)) setRetry(value => value + 1)
+      }
     } catch {
-      if (record) {
-        await verify({ id: record.id, expectedRevision: record.revision, leaveType: input.leaveType,
-          startDate: input.startDate, endDate: input.endDate, usedDays: input.usedDays, allocations: input.allocations,
-          orderNumber: input.orderNumber, orderDate: input.orderDate, durationExplanation: input.durationExplanation, grantBasis: input.grantBasis ?? null })
-      } else if (alive.current) { setError('Результат не підтверджено. Повторіть збереження тих самих даних для безпечної перевірки.'); setConfirm(null) }
+      if (update) await verify(update)
+      else if (alive.current) { setError(unconfirmedRegistration); setConfirm(null) }
     } finally { pending.current = false; if (alive.current) setBusy(false) }
   }
 
@@ -318,8 +345,10 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
     {confirmFifo !== null && <ConfirmDialog title="Замінити розподіл?" variant="warning" confirmLabel="Застосувати FIFO"
       message="Автоматичний розподіл замінить поточні значення списання за періодами."
       onCancel={() => setConfirmFifo(null)} onConfirm={() => { if (confirmFifo === key) applyFifo(); setConfirmFifo(null) }} />}
-    {confirm && <ConfirmDialog title={record ? "Підтвердити зміни?" : "Підтвердити реєстрацію?"} variant="primary" confirmLabel={record ? "Зберегти зміни" : "Зареєструвати"}
-      message={`${leaveLabels[confirm.leaveType]}, ${formatDate(confirm.startDate)}–${formatDate(confirm.endDate)}. Підтверджую надання на ${confirm.usedDays} днів ${isPeriodLeave(confirm.leaveType) ? 'із зазначених залишків' : 'за введеною документальною підставою'}.`}
+    {confirm && <ConfirmDialog title={confirm.update ? 'Підтвердження змін' : 'Підтвердження відпустки'} variant="primary" layout="summary"
+      description={confirm.update ? 'Перевірте оновлені відомості перед збереженням.' : 'Перевірте відомості перед реєстрацією.'}
+      cancelLabel="Повернутися" confirmLabel={confirm.update ? 'Зберегти зміни' : 'Зареєструвати'}
+      message={<LeaveConfirmationSummary {...confirm}/>}
       onCancel={() => setConfirm(null)} onConfirm={() => save(confirm)} />}
   </Modal>
 }
