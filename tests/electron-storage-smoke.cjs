@@ -33,7 +33,7 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 14)
+    assert.equal(first.schemaVersion, 15)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)

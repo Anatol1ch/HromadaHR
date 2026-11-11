@@ -1,3 +1,4 @@
+import { projectService } from '../../shared/service-calculations.js'
 import { PersonnelService } from '../personnel/service.js'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
@@ -47,10 +48,12 @@ export class SeniorityRanksService {
     return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
   private baseline(db: Database.Database, id: string) {
-    return db.prepare<[string], ServiceBaseline>(`SELECT employee_id AS employeeId, years, months, days,
+    const row = db.prepare<[string], Omit<ServiceBaseline, 'autoAccrueAfterBaseline'> & {autoAccrueAfterBaseline:number}>(`SELECT employee_id AS employeeId, years, months, days, auto_accrue_after_baseline AS autoAccrueAfterBaseline,
       as_of_date AS asOfDate, basis_note AS basisNote, confirmed_at AS confirmedAt
-      FROM employee_service_baselines WHERE employee_id=?`).get(id) ?? null
+      FROM employee_service_baselines WHERE employee_id=?`).get(id)
+    return row ? {...row,autoAccrueAfterBaseline:row.autoAccrueAfterBaseline===1} : null
   }
+  getServiceProjection = (id:string) => this.run(id,(db,type) => projectService(this.baseline(db,id),todayIsoDate(),type as 'official'|'staff',this.allowance(db,id)))
   getServiceBaseline = (id: string) => this.run(id, db => this.baseline(db, id))
   clearServiceBaseline = (id: string) => this.run(id, db => {
     db.prepare('DELETE FROM employee_service_baselines WHERE employee_id=?').run(id); return null
@@ -59,10 +62,10 @@ export class SeniorityRanksService {
     const v = this.parse(schemas.serviceBaselineInput, input)
     this.checkDate(v.asOfDate)
     return this.run(id, db => {
-      db.prepare(`INSERT INTO employee_service_baselines(employee_id,years,months,days,as_of_date,basis_note,confirmed_at)
-        VALUES (?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET years=excluded.years,months=excluded.months,
-        days=excluded.days,as_of_date=excluded.as_of_date,basis_note=excluded.basis_note,confirmed_at=excluded.confirmed_at`)
-        .run(id,v.years,v.months,v.days,v.asOfDate,v.basisNote,new Date().toISOString())
+      db.prepare(`INSERT INTO employee_service_baselines(employee_id,years,months,days,as_of_date,basis_note,confirmed_at,auto_accrue_after_baseline)
+        VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET years=excluded.years,months=excluded.months,
+        days=excluded.days,as_of_date=excluded.as_of_date,basis_note=excluded.basis_note,confirmed_at=excluded.confirmed_at,auto_accrue_after_baseline=excluded.auto_accrue_after_baseline`)
+        .run(id,v.years,v.months,v.days,v.asOfDate,v.basisNote,new Date().toISOString(),Number(v.autoAccrueAfterBaseline))
       return this.baseline(db,id)!
     })
   }

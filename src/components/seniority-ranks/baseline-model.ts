@@ -1,8 +1,8 @@
 import type { ServiceBaselineInput } from '../../../shared/seniority-ranks.ts'
 import { formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
-export interface BaselineDraft { years: string; months: string; days: string; asOfDate: string; basisNote: string }
+export interface BaselineDraft { years: string; months: string; days: string; asOfDate: string; basisNote: string; autoAccrueAfterBaseline: boolean }
 export function baselineDraft(value: ServiceBaselineInput | null): BaselineDraft {
- return { years: value ? String(value.years) : '', months: value ? String(value.months) : '', days: value ? String(value.days) : '', asOfDate: formatDateInput(value?.asOfDate ?? ''), basisNote: value?.basisNote ?? '' }
+ return { years: value ? String(value.years) : '', months: value ? String(value.months) : '', days: value ? String(value.days) : '', asOfDate: formatDateInput(value?.asOfDate ?? ''), basisNote: value?.basisNote ?? '', autoAccrueAfterBaseline:value?.autoAccrueAfterBaseline??false }
 }
 export function baselineErrors(v: BaselineDraft, today = todayIsoDate()) {
  const errors: Partial<Record<keyof BaselineDraft,string>> = {}
@@ -17,8 +17,8 @@ export function baselineErrors(v: BaselineDraft, today = todayIsoDate()) {
 }
 export function baselineInput(v: BaselineDraft): ServiceBaselineInput {
  if(Object.keys(baselineErrors(v)).length) throw new Error('INVALID_DRAFT')
- return { years:Number(v.years),months:Number(v.months),days:Number(v.days),asOfDate:parseDateInput(v.asOfDate)!,basisNote:v.basisNote.trim()||null }
+ return { years:Number(v.years),months:Number(v.months),days:Number(v.days),asOfDate:parseDateInput(v.asOfDate)!,basisNote:v.basisNote.trim()||null,autoAccrueAfterBaseline:v.autoAccrueAfterBaseline }
 }
 const plural=new Intl.PluralRules('uk')
 function unit(n:number,one:string,few:string,many:string) {const category=plural.select(n);return `${n} ${category==='one'?one:category==='few'?few:many}`}
-export function baselineLabel(v: ServiceBaselineInput) { return `${unit(v.years,'рік','роки','років')} ${unit(v.months,'місяць','місяці','місяців')} ${unit(v.days,'день','дні','днів')}` }
+export function baselineLabel(v: Pick<ServiceBaselineInput,'years'|'months'|'days'>) { return `${unit(v.years,'рік','роки','років')} ${unit(v.months,'місяць','місяці','місяців')} ${unit(v.days,'день','дні','днів')}` }

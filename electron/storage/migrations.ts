@@ -158,6 +158,7 @@ INSERT INTO personnel_dictionary_order VALUES ('department', 0), ('position', 0)
 `,
 }, { version: 13, name: 'seniority_ranks', requiresBackup: true, sql: seniorityRanksSql,
 }, { version: 14, name: 'employee_service_baselines', requiresBackup: true, sql: serviceBaselineSql,
+}, { version: 15, name: 'baseline_auto_accrual', requiresBackup: true, sql: `ALTER TABLE employee_service_baselines ADD COLUMN auto_accrue_after_baseline INTEGER NOT NULL DEFAULT 0 CHECK(auto_accrue_after_baseline IN (0,1))`,
 }]
 
 function checksum(migration: Migration) {

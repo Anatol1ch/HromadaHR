@@ -9,6 +9,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  seniorityGetServiceProjection: 'seniorityRanks:getServiceProjection',
   seniorityGetServiceBaseline: 'seniorityRanks:getServiceBaseline',
   senioritySaveServiceBaseline: 'seniorityRanks:saveServiceBaseline',
   seniorityClearServiceBaseline: 'seniorityRanks:clearServiceBaseline',
@@ -69,6 +70,7 @@ export type IpcErrorCode = SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGU
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.seniorityGetServiceProjection]: { args: [string]; result: import('./service-calculations.js').ServiceProjection }
   [ipcChannels.seniorityGetServiceBaseline]: { args: [string]; result: ServiceBaseline | null }
   [ipcChannels.senioritySaveServiceBaseline]: { args: [string, ServiceBaselineInput]; result: ServiceBaseline }
   [ipcChannels.seniorityClearServiceBaseline]: { args: [string]; result: null }

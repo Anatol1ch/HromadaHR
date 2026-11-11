@@ -188,3 +188,7 @@ Read-only звірено реальну aid-toolbar/aid-filter-panel/aid-filter-
 ## 5.3.1 – Опорний стаж в особовій картці
 
 Read-only цільово звірено src/RecipientRegistry.tsx HromadaAID на SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: RecipientDetails і recipient-field. Аналога опорного кадрового стажу в перевірених фрагментах немає (не повний аудит). Використано вже перенесені HR InfoSection/InfoItem, DateField, ValidatedInput/Textarea, ConfirmDialog та кадрові сітки. Нового реєстру/редактора-Modal немає. Main/Storage/typed IPC повторюють чинний HR сервіс, предметний код AID не переносився. Windows GUI-приймання очікується.
+
+## 5.3.2 – Календарний прогноз
+
+Read-only звірено src/lib/calendar.ts HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: календарні Date/місячні helpers. У HR повторно використано чинні daysInMonth/isIsoCalendarDate; UI — наявні switch, InfoSection/InfoItem, Alert. Кадрова конвенція/строгі пороги потребують власного компактного чистого предметного модуля; історичні дати не реконструюються, предметну/серверну логіку AID не переносили. GUI прийматиме замовник.

@@ -1,3 +1,4 @@
+import type { ServiceProjection } from './service-calculations.js'
 import type { EmployeeCard } from './personnel.js'
 import type { IpcResult } from './ipc.js'
 export const allowancePercentages = [0, 10, 15, 20, 25, 30, 40] as const
@@ -10,9 +11,10 @@ export type Allowance = AllowanceInput & { employeeId: string; confirmedAt: stri
 export interface CurrentRank extends RankInput { employeeId: string; confirmedAt: string }
 export type SeniorityRanksErrorCode = 'RANK_REQUIRES_OFFICIAL'
 export interface SeniorityOverview { employee: EmployeeCard; allowance: Allowance | null; rank: CurrentRank | null }
-export interface ServiceBaselineInput { years: number; months: number; days: number; asOfDate: string; basisNote: string | null }
+export interface ServiceBaselineInput { years: number; months: number; days: number; asOfDate: string; basisNote: string | null; autoAccrueAfterBaseline: boolean }
 export interface ServiceBaseline extends ServiceBaselineInput { employeeId: string; confirmedAt: string }
 export interface SeniorityRanksApi {
+  getServiceProjection: (employeeId: string) => Promise<IpcResult<ServiceProjection>>
   getServiceBaseline: (employeeId: string) => Promise<IpcResult<ServiceBaseline | null>>
   saveServiceBaseline: (employeeId: string, input: ServiceBaselineInput) => Promise<IpcResult<ServiceBaseline>>
   clearServiceBaseline: (employeeId: string) => Promise<IpcResult<null>>
