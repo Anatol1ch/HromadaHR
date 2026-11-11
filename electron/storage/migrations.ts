@@ -1,3 +1,4 @@
+import { seniorityRanksSql } from './seniority-ranks-migration.js'
 import { leaveRightsSql } from './leave-rights-migration.js'
 import { specialLeavesSql } from './special-leaves-migration.js'
 import { leaveCorrectionsSql } from './leave-corrections-migration.js'
@@ -154,6 +155,7 @@ CREATE TABLE personnel_dictionary_order (
 ) STRICT;
 INSERT INTO personnel_dictionary_order VALUES ('department', 0), ('position', 0);
 `,
+}, { version: 13, name: 'seniority_ranks', requiresBackup: true, sql: seniorityRanksSql,
 }]
 
 function checksum(migration: Migration) {

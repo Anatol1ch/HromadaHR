@@ -1,3 +1,4 @@
+import type { SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
@@ -8,6 +9,13 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  seniorityGetAllowance: 'seniorityRanks:getAllowance',
+  senioritySaveAllowance: 'seniorityRanks:saveAllowance',
+  seniorityClearAllowance: 'seniorityRanks:clearAllowance',
+  seniorityGetRank: 'seniorityRanks:getRank',
+  senioritySaveRank: 'seniorityRanks:saveRank',
+  seniorityClearRank: 'seniorityRanks:clearRank',
+
   leaveListRights: 'leave:listRights', leaveSaveRights: 'leave:saveRights',
   leaveGetServiceLeaveStart: 'leave:getServiceLeaveStart', leaveSaveServiceLeaveStart: 'leave:saveServiceLeaveStart',
   leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
@@ -53,10 +61,17 @@ export interface SystemInfo {
   mode: 'dev' | 'built'
 }
 
-export type IpcErrorCode = 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
+export type IpcErrorCode = SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.seniorityGetAllowance]: { args: [string]; result: Allowance | null }
+  [ipcChannels.senioritySaveAllowance]: { args: [string, AllowanceInput]; result: Allowance }
+  [ipcChannels.seniorityClearAllowance]: { args: [string]; result: null }
+  [ipcChannels.seniorityGetRank]: { args: [string]; result: CurrentRank | null }
+  [ipcChannels.senioritySaveRank]: { args: [string, RankInput]; result: CurrentRank }
+  [ipcChannels.seniorityClearRank]: { args: [string]; result: null }
+
   [ipcChannels.leaveListRights]: { args: [string]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveSaveRights]: { args: [string, LeaveRightInput[]]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveGetServiceLeaveStart]: { args: [string]; result: string | null }
@@ -106,6 +121,7 @@ export interface IpcOperations {
 }
 
 export interface HromadaHRApi {
+  readonly seniorityRanks: SeniorityRanksApi
   readonly personnel: PersonnelApi
   readonly leave: LeaveApi
   readonly backup: BackupApi

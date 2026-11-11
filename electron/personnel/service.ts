@@ -83,6 +83,9 @@ export class PersonnelService {
       if (currentHireDate.hireDate !== value.hireDate && db.prepare('SELECT 1 FROM leave_period_balances WHERE employee_id=? LIMIT 1').get(id)) {
         throw new PersonnelError('HIRE_DATE_HAS_LEAVE_PERIODS')
       }
+      if (value.employeeType === 'staff' && db.prepare('SELECT 1 FROM employee_current_ranks WHERE employee_id=?').get(id)) {
+        throw new PersonnelError('EMPLOYEE_HAS_CURRENT_RANK')
+      }
       const changed = result.run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType,
           value.hireDate, value.positionId, value.departmentId, id)
       if (!changed.changes) throw new PersonnelError('NOT_FOUND')

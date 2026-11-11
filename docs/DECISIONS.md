@@ -250,3 +250,17 @@ Main та редактор використовують один чистий к
 ## 4.9.6 – Типізований намір переходу до відпусток
 
 LeaveNavigationIntent існує в Renderer і передає ID працівника, верхню вкладку та опційний вид обліку. App виконує один navigationGuard перед переходом і очищає намір на звичайній навігації. LeaveWorkspace використовує його лише як початковий стан нового екземпляра та читає актуальні дані через чинні IPC. Картка не передає підсумки, а контекст відсутнього працівника не підмінюється іншим ID.
+
+## 5.1 – Backend стажу, надбавок і рангів
+
+Реалізовано SQLite v13 (`seniority_ranks`), Main-only `SeniorityRanksService` і шість явних методів `window.hromadaHR.seniorityRanks`: `getAllowance`, `saveAllowance`, `clearAllowance`, `getRank`, `saveRank`, `clearRank`. Аргументи й відповіді перевіряються Zod; чинний sender/main-frame/URL guard збережено. Сервіс отримує актуальне з’єднання Storage для кожної операції, враховує BUSY, мутації транзакційні.
+
+`employee_seniority_allowances`: PK/FK employee_id (ON DELETE CASCADE), status, percentage, effective_on, document_type, document_number, document_date, review_on, confirmed_at. Статус confirmed вимагає відсотка 0/10/15/20/25/30/40 та дати; not_applicable вимагає NULL для обох. Відсутній рядок, підтверджений 0% і not_applicable різні. Надбавка дозволена для обох типів працівників лише за явним рішенням кадровика.
+
+`employee_current_ranks`: PK/FK employee_id (ON DELETE CASCADE), rank (ціле 1–15), assigned_on, nullable effective_on, ті самі реквізити документа, review_on, confirmed_at. Окрема effective_on зберігається NULL за відсутності; майбутній UI показуватиме assigned_on як початок дії. Ранг дозволений лише official (Main + SQLite trigger). PersonnelService повертає EMPLOYEE_HAS_CURRENT_RANK при спробі official → staff до явного очищення рангу; SQLite також блокує суперечність. Перехід staff → official не створює запису.
+
+Дати реальні календарні ISO. assigned_on/effective_on не пізніше локального сьогодні (Main та SQLite triggers); вони можуть передувати hire_date. review_on довільна календарна дата й нічого автоматично не змінює. confirmed_at задає Main при кожному збереженні. Документ необов’язковий; кожен реквізит може бути NULL. Очищення ідемпотентне для наявного працівника; невідомий працівник дає NOT_FOUND. Зберігається тільки актуальний стан без історії.
+
+Міграції 1–12 та checksum незмінні. v13 використовує requiresBackup і чинний захищений механізм. Додаткові індекси не потрібні: доступ за первинними ключами. Backup/restore runtime не змінено. employee_service_leave_start.acquired_on і його редагування залишаються виключно у LeaveService; нові таблиці не дублюють дату, право, періоди або залишки відпусток.
+
+Юридичних розрахунків, історичних періодів, категорій посад, автоматичного визначення відсотка чи рангу немає. Перелік відсотків є погодженим набором введення, а не перевіркою юридичного права. UI у 5.1 відсутній. Роботи 5.2–5.5 (інтерфейс, інтегроване відображення, наступні погоджені можливості) потребують окремого завдання; конкретні межі не визначено цим підетапом.

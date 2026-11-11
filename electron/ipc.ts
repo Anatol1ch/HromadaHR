@@ -1,3 +1,6 @@
+import { SeniorityRanksError } from './seniority-ranks/service.js'
+import type { SeniorityRanksService } from './seniority-ranks/service.js'
+import * as senioritySchemas from './seniority-ranks/schemas.js'
 import { zoomPercent, zoomStatus } from './zoom.js'
 import type { ZoomController } from './zoom.js'
 import { backupHistory } from '../shared/backupHistory.js'
@@ -52,7 +55,20 @@ export function registerIpcHandlers(
   openContact: (id: import('../shared/contacts.js').ContactId) => Promise<boolean> = async () => false,
   getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
   zoom?: Pick<ZoomController, 'get' | 'set'>,
+  seniority?: SeniorityRanksService,
 ) {
+  register(ipcChannels.seniorityGetAllowance, z.tuple([senioritySchemas.id]), senioritySchemas.allowance.nullable(),
+    ([id]) => seniority!.getAllowance(id))
+  register(ipcChannels.senioritySaveAllowance, z.tuple([senioritySchemas.id, senioritySchemas.allowanceInput]), senioritySchemas.allowance,
+    ([id, input]) => seniority!.saveAllowance(id, input))
+  register(ipcChannels.seniorityClearAllowance, z.tuple([senioritySchemas.id]), z.null(),
+    ([id]) => seniority!.clearAllowance(id))
+  register(ipcChannels.seniorityGetRank, z.tuple([senioritySchemas.id]), senioritySchemas.rank.nullable(),
+    ([id]) => seniority!.getRank(id))
+  register(ipcChannels.senioritySaveRank, z.tuple([senioritySchemas.id, senioritySchemas.rankInput]), senioritySchemas.rank,
+    ([id, input]) => seniority!.saveRank(id, input))
+  register(ipcChannels.seniorityClearRank, z.tuple([senioritySchemas.id]), z.null(),
+    ([id]) => seniority!.clearRank(id))
   register(ipcChannels.systemGetZoom, z.tuple([]), zoomStatus, () => {
     if (!zoom) throw new Error('Zoom unavailable')
     return zoom.get()
@@ -164,11 +180,11 @@ export function registerIpcHandlers(
         // Keep synchronous diagnostics synchronous; await privileged operations
         // before validating output and normalizing errors. No authentication.
         if (result instanceof Promise) return result.then(data => ({ ok: true as const, data: resultSchema.parse(data) }))
-          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError) ? error.code : 'INTERNAL_ERROR' as const } }))
+          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError) ? error.code : 'INTERNAL_ERROR' as const } }))
         return { ok: true, data: resultSchema.parse(result) }
       } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError) ? error.code : 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError) ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

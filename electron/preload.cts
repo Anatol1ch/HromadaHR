@@ -9,6 +9,14 @@ async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOpera
 }
 
 const api: HromadaHRApi = {
+  seniorityRanks: {
+    getAllowance: (id) => call(ipcChannels.seniorityGetAllowance, id),
+    saveAllowance: (id, input) => call(ipcChannels.senioritySaveAllowance, id, input),
+    clearAllowance: (id) => call(ipcChannels.seniorityClearAllowance, id),
+    getRank: (id) => call(ipcChannels.seniorityGetRank, id),
+    saveRank: (id, input) => call(ipcChannels.senioritySaveRank, id, input),
+    clearRank: (id) => call(ipcChannels.seniorityClearRank, id),
+  },
   personnel: {
     deleteEmployee: id => call(ipcChannels.personnelDeleteEmployee, id),
     listEmployees: () => call(ipcChannels.personnelListEmployees),

@@ -168,3 +168,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 4.9.6 – Дії з особової картки
 
 Звірено read-only `src/RecipientRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Патерн явних дій з картки адаптовано до наявних вкладок HromadaHR, зі спільними Modal та InfoSection і власним типізованим наміром переходу.
+
+## 5.1 – Main/SQLite/IPC стажу і рангів
+
+Цільову read-only оцінку HromadaAID виконано перед реалізацією: source SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, дерево src/services і src/RecipientRegistry.tsx. Придатні реєстрові/модальні UI-патерни вже адаптовано в HR; у 5.1 UI не змінюється. Предметного аналога стажу/рангів у перевірених шляхах не виявлено (не є повним аудитом). Рішення: використати чинні HR PersonnelService/LeaveService, Storage та типізований IPC; несумісні серверні repositories AID не переносити. Реалізовано дві таблиці v13, Main-сервіс і шість IPC; runtime-залежності від AID немає.
