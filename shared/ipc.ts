@@ -1,4 +1,4 @@
-import type { SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
+import type { ServiceBaseline, ServiceBaselineInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
@@ -9,6 +9,9 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  seniorityGetServiceBaseline: 'seniorityRanks:getServiceBaseline',
+  senioritySaveServiceBaseline: 'seniorityRanks:saveServiceBaseline',
+  seniorityClearServiceBaseline: 'seniorityRanks:clearServiceBaseline',
   seniorityListOverview: 'seniorityRanks:listOverview',
   seniorityGetAllowance: 'seniorityRanks:getAllowance',
   senioritySaveAllowance: 'seniorityRanks:saveAllowance',
@@ -66,6 +69,9 @@ export type IpcErrorCode = SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGU
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.seniorityGetServiceBaseline]: { args: [string]; result: ServiceBaseline | null }
+  [ipcChannels.senioritySaveServiceBaseline]: { args: [string, ServiceBaselineInput]; result: ServiceBaseline }
+  [ipcChannels.seniorityClearServiceBaseline]: { args: [string]; result: null }
   [ipcChannels.seniorityListOverview]: { args: []; result: SeniorityOverview[] }
   [ipcChannels.seniorityGetAllowance]: { args: [string]; result: Allowance | null }
   [ipcChannels.senioritySaveAllowance]: { args: [string, AllowanceInput]; result: Allowance }

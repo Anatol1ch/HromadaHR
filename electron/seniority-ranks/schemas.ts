@@ -13,3 +13,9 @@ export const allowance = z.intersection(allowanceInput, z.object({ employeeId: i
 export const rank = rankInput.extend({ employeeId: id, confirmedAt: z.iso.datetime() })
 
 export const overview = z.strictObject({ employee: employeeCard, allowance: allowance.nullable(), rank: rank.nullable() })
+
+export const serviceBaselineInput = z.strictObject({
+ years: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), months: z.number().int().min(0).max(11), days: z.number().int().min(0).max(30),
+ asOfDate: calendarDate, basisNote: z.string().trim().min(1).max(2000).nullable(),
+})
+export const serviceBaseline = serviceBaselineInput.extend({ employeeId: id, confirmedAt: z.iso.datetime() })

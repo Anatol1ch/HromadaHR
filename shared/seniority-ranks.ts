@@ -10,7 +10,12 @@ export type Allowance = AllowanceInput & { employeeId: string; confirmedAt: stri
 export interface CurrentRank extends RankInput { employeeId: string; confirmedAt: string }
 export type SeniorityRanksErrorCode = 'RANK_REQUIRES_OFFICIAL'
 export interface SeniorityOverview { employee: EmployeeCard; allowance: Allowance | null; rank: CurrentRank | null }
+export interface ServiceBaselineInput { years: number; months: number; days: number; asOfDate: string; basisNote: string | null }
+export interface ServiceBaseline extends ServiceBaselineInput { employeeId: string; confirmedAt: string }
 export interface SeniorityRanksApi {
+  getServiceBaseline: (employeeId: string) => Promise<IpcResult<ServiceBaseline | null>>
+  saveServiceBaseline: (employeeId: string, input: ServiceBaselineInput) => Promise<IpcResult<ServiceBaseline>>
+  clearServiceBaseline: (employeeId: string) => Promise<IpcResult<null>>
   listOverview: () => Promise<IpcResult<SeniorityOverview[]>>
   getAllowance: (employeeId: string) => Promise<IpcResult<Allowance | null>>
   saveAllowance: (employeeId: string, input: AllowanceInput) => Promise<IpcResult<Allowance>>

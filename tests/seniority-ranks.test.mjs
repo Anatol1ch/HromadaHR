@@ -27,7 +27,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,13)
+  assert.equal(connection.schemaVersion,14)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
@@ -130,7 +130,7 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
  assert.equal(overviewHandler(event,'extra').error.code,'INVALID_ARGUMENTS')
  contents.mainFrame.url='https://invalid.test/'
  assert.equal(overviewHandler(event).error.code,'FORBIDDEN');contents.mainFrame.url=url
- assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','getAllowance','getRank','listOverview','saveAllowance','saveRank'])
+ assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','clearServiceBaseline','getAllowance','getRank','getServiceBaseline','listOverview','saveAllowance','saveRank','saveServiceBaseline'])
  for(const [save,get,clear,value] of [['saveAllowance','getAllowance','clearAllowance',allowance],['saveRank','getRank','clearRank',rank]]) {
   assert.equal((await api[get](id)).data,null)
   assert.equal((await api[save](id,value)).ok,true)

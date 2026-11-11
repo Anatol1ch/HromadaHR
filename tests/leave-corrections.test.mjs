@@ -159,7 +159,7 @@ test('v7 migration preserves legacy mismatches and restore migrates the immutabl
   assert.deepEqual(restored.allocations,[{periodId,days:2}])
   assert.equal(restored.usedDays,2)
   assert.deepEqual(readFileSync(f.file),original)
-  assert.equal(storage.getStatus().schemaVersion,13)
+  assert.equal(storage.getStatus().schemaVersion,14)
 })
 test('v8 requires protection, rolls back failed SQL and preserves all rows',async t=>{
   const f=await fixture(t,migrations.slice(0,7))
@@ -178,7 +178,7 @@ test('v8 requires protection, rolls back failed SQL and preserves all rows',asyn
   const latest=await openStorageSafely(f.file)
   f.handles.push(latest)
   assert.deepEqual(latest.database.prepare('SELECT * FROM employees').all(),before)
-  assert.equal(latest.schemaVersion,13)
+  assert.equal(latest.schemaVersion,14)
   const snapshot=join(protection,readdirSync(protection).find(name=>name.includes('protect-migration-v8-')))
   assert.equal(inspectDatabase(snapshot),7)
 })

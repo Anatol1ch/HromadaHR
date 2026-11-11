@@ -74,8 +74,8 @@ test('v4 → v13 preserves directories and service tables and protects the origi
   assert.equal(migrations[4].requiresBackup, true)
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 13)
-  assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employee_current_ranks', 'employee_leave_rights', 'employee_seniority_allowances', 'employee_service_leave_start', 'employees', 'leave_allocations', 'leave_period_balances', 'leave_records', 'personnel_dictionary_order', 'positions', 'schema_migrations'])
+  assert.equal(current.schemaVersion, 14)
+  assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employee_current_ranks', 'employee_leave_rights', 'employee_seniority_allowances', 'employee_service_baselines', 'employee_service_leave_start', 'employees', 'leave_allocations', 'leave_period_balances', 'leave_records', 'personnel_dictionary_order', 'positions', 'schema_migrations'])
   assert.deepEqual(db.pragma('table_info(employees)').map(column => column.name),
     ['id', 'last_name', 'first_name', 'middle_name', 'birth_date', 'employee_type', 'hire_date', 'position_id', 'department_id'])
   assert.equal(db.pragma('table_list').find(row => row.name === 'employees').strict, 1)
@@ -125,7 +125,7 @@ test('fresh v13 validates and updates the current employee atomically with an in
   const f = fixture(t)
   const connection = await f.open()
   assert.equal(connection.created, true)
-  assert.equal(connection.schemaVersion, 13)
+  assert.equal(connection.schemaVersion, 14)
   const db = connection.database
   const service = new PersonnelService({ getDatabase: () => db }, () => false)
   assert.deepEqual(service.listEmployees(), [])
@@ -172,7 +172,7 @@ test('restoring a v4 test image applies v13 without altering the source image', 
   const selected = await backup.chooseRestore(async () => f.file)
   assert.equal(selected.schemaVersion, 4)
   assert.deepEqual(await backup.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 13)
+  assert.equal(storage.getStatus().schemaVersion, 14)
   const db = storage.getDatabase()
   assert.equal(db.prepare('SELECT count(*) AS n FROM employees').get().n, 0)
   assert.equal(tables(db).includes('employee_positions'), false)

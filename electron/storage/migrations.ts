@@ -1,3 +1,4 @@
+import { serviceBaselineSql } from './service-baseline-migration.js'
 import { seniorityRanksSql } from './seniority-ranks-migration.js'
 import { leaveRightsSql } from './leave-rights-migration.js'
 import { specialLeavesSql } from './special-leaves-migration.js'
@@ -156,6 +157,7 @@ CREATE TABLE personnel_dictionary_order (
 INSERT INTO personnel_dictionary_order VALUES ('department', 0), ('position', 0);
 `,
 }, { version: 13, name: 'seniority_ranks', requiresBackup: true, sql: seniorityRanksSql,
+}, { version: 14, name: 'employee_service_baselines', requiresBackup: true, sql: serviceBaselineSql,
 }]
 
 function checksum(migration: Migration) {
