@@ -527,3 +527,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 4.9.6 – Контекстні дії особової картки
 
 Звірено read-only `src/RecipientRegistry.tsx` HromadaAID на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Використано патерн явних дій з ідентичністю запису та чинні кнопки, InfoSection і Modal HromadaHR. Типізований намір адаптовано до локальних вкладок обліку й прав. Для фокусу використано монтування цільової області після перевірки працівника.
+
+## 5.2 – Реєстр і модальна картка стажу/рангів
+
+Read-only звірено реальний src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: DictionaryToolbar/Table, registry-row-actions, відкриття RecipientDetails та великий Modal. Адаптовано патерни через вже перенесені HR компоненти, спільні InfoSection/InfoItem та сиреневі токени. Дві незалежні кадрові форми мають спільний захист закриття й окремі операції збереження/очищення. Предметна/серверна логіка AID не переносилася; ручне Windows GUI-приймання очікується.

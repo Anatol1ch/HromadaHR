@@ -172,3 +172,7 @@ Read-only src/SettingsPage.tsx AID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb
 ## 5.1 – Main/SQLite/IPC стажу і рангів
 
 Цільову read-only оцінку HromadaAID виконано перед реалізацією: source SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb, дерево src/services і src/RecipientRegistry.tsx. Придатні реєстрові/модальні UI-патерни вже адаптовано в HR; у 5.1 UI не змінюється. Предметного аналога стажу/рангів у перевірених шляхах не виявлено (не є повним аудитом). Рішення: використати чинні HR PersonnelService/LeaveService, Storage та типізований IPC; несумісні серверні repositories AID не переносити. Реалізовано дві таблиці v13, Main-сервіс і шість IPC; runtime-залежності від AID немає.
+
+## 5.2 – Реєстр і модальна картка стажу/рангів
+
+Read-only звірено реальний src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: DictionaryToolbar/Table, registry-row-actions, відкриття RecipientDetails та великий Modal. Адаптовано патерни через вже перенесені HR компоненти, спільні InfoSection/InfoItem та сиреневі токени. Дві незалежні кадрові форми мають спільний захист закриття й окремі операції збереження/очищення. Предметна/серверна логіка AID не переносилася; ручне Windows GUI-приймання очікується.

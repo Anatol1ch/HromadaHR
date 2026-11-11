@@ -1,3 +1,4 @@
+import { PersonnelService } from '../personnel/service.js'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
 import type { Allowance, AllowanceInput, CurrentRank, RankInput, SeniorityRanksErrorCode } from '../../shared/seniority-ranks.js'
@@ -14,17 +15,19 @@ export class SeniorityRanksService {
   private parse<T>(schema: { parse: (input: unknown) => T }, input: unknown): T {
     try { return schema.parse(input) } catch { throw new SeniorityRanksError('INVALID_ARGUMENTS') }
   }
-  private run<T>(id: string, operation: (db: Database.Database, type: string) => T): T {
-    this.parse(schemas.id, id)
+  private run<T>(id: string | null, operation: (db: Database.Database, type: string) => T): T {
+    if (id !== null) this.parse(schemas.id, id)
     if (this.isBusy()) throw new SeniorityRanksError('BUSY')
     let db: Database.Database
     try { db = this.storage.getDatabase() } catch { throw new SeniorityRanksError('STORAGE_UNAVAILABLE') }
     try {
-      return db.transaction(() => {
+      const operationInTransaction = db.transaction(() => {
+        if (id === null) return operation(db, '')
         const employee = db.prepare<[string], { type: string }>('SELECT employee_type AS type FROM employees WHERE id=?').get(id)
         if (!employee) throw new SeniorityRanksError('NOT_FOUND')
         return operation(db, employee.type)
-      }).immediate()
+      })
+      return id === null ? operationInTransaction() : operationInTransaction.immediate()
     } catch (error) {
       if (error instanceof SeniorityRanksError) throw error
       const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
@@ -43,6 +46,13 @@ export class SeniorityRanksService {
   private rank(db: Database.Database, id: string) {
     return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
+  listOverview = () => this.run(null, db => {
+    const allowances = new Map(db.prepare<[], Allowance>(`SELECT ${columns}, status, percentage FROM employee_seniority_allowances`).all().map(row => [row.employeeId, row]))
+    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
+    return new PersonnelService(this.storage, this.isBusy).listEmployees().map(employee => ({
+      employee, allowance: allowances.get(employee.id) ?? null, rank: ranks.get(employee.id) ?? null,
+    }))
+  })
   getAllowance = (id: string) => this.run(id, db => this.allowance(db, id))
   getRank = (id: string) => this.run(id, db => this.rank(db, id))
   clearAllowance = (id: string) => this.run(id, db => { db.prepare('DELETE FROM employee_seniority_allowances WHERE employee_id=?').run(id); return null })

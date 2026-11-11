@@ -1,3 +1,4 @@
+import SeniorityRanksWorkspace from './components/seniority-ranks/SeniorityRanksWorkspace'
 import StartupScreen from './components/StartupScreen'
 import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
@@ -67,7 +68,7 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       <div className="workspace-shortcuts">{([
         { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
         { id: 'leave', title: 'Відпустки', text: 'Облік залишків відпусток', icon: CalendarDays, available: true },
-        { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: false },
+        { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: true },
         { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
       ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
         className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}
@@ -202,6 +203,7 @@ export default function App() {
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace onOpenLeave={intent => navigationGuard.current(() => { setLeaveIntent(intent); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
           <LeaveWorkspace initialIntent={leaveIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          active === 'service' ? <SeniorityRanksWorkspace navigationGuard={navigationGuard}/> :
           active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :
           <div className="page-transition">
             <div className="page-heading">

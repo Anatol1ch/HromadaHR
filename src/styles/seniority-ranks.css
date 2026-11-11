@@ -1,0 +1,17 @@
+.seniority-workspace,.seniority-card { display:grid; gap:16px; min-width:0; }
+.seniority-filters { display:grid; grid-template-columns:minmax(220px,2fr) repeat(3,minmax(150px,1fr)); gap:12px; align-items:end; }
+.seniority-filters label,.seniority-fields label { display:grid; gap:6px; min-width:0; color:var(--color-text); font-size:12px; }
+.seniority-table { min-width:720px; }
+.seniority-table small { display:block; color:var(--color-text-secondary); white-space:normal; overflow-wrap:anywhere; margin-top:4px; }
+.seniority-person { padding:0; border:0; background:transparent; color:var(--accent); font:inherit; font-weight:600; text-align:left; cursor:pointer; overflow-wrap:anywhere; }
+.seniority-person:hover { text-decoration:underline; }
+.seniority-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:0; margin:0; border:0; min-width:0; }
+.seniority-fields input { min-width:0; width:100%; box-sizing:border-box; }
+.seniority-fields label>input { min-height:44px; padding:8px 12px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text); font:inherit; font-size:15px; }
+.seniority-actions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px; }
+.seniority-actions button { white-space:normal; height:auto; min-height:36px; }
+.seniority-note { font-size:12px; color:var(--color-text-secondary); }
+.seniority-modal { container-type:inline-size; }
+@container (max-width:560px) { .seniority-fields { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:1100px) { .seniority-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .seniority-filters { grid-template-columns:minmax(0,1fr); } }

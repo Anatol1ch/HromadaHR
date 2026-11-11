@@ -71,6 +71,9 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   p.updateEmployee(e.id,details)
   assert.equal(s.getRank(e.id),null)
   s.saveRank(e.id,rank)
+  const overview=s.listOverview()
+  assert.equal(overview.find(row=>row.employee.id===e.id).rank.rank,15)
+  assert.equal(overview.find(row=>row.employee.id===other.id).allowance.percentage,0)
   const before = s.getAllowance(e.id)
   f.db.exec("CREATE TRIGGER test_abort AFTER UPDATE ON employee_seniority_allowances BEGIN SELECT RAISE(ABORT,'synthetic failure'); END")
   assert.throws(()=>s.saveAllowance(e.id,{...allowance,percentage:40}),code('CONFLICT'))
@@ -80,6 +83,7 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   integrity(f.db)
   await f.reopen()
   assert.equal(s.getRank(e.id).rank,15)
+  assert.equal(s.listOverview().find(row=>row.employee.id===e.id).rank.rank,15)
   assert.equal(s.getAllowance(e.id).percentage,0)
   assert.throws(()=>new SeniorityRanksService(f.storage,()=>true).getRank(e.id),code('BUSY'))
   assert.throws(()=>new SeniorityRanksService({getDatabase(){throw Error('private path')}},()=>false).getRank(e.id),code('STORAGE_UNAVAILABLE'))
@@ -115,7 +119,18 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
  let exposed
  runInNewContext(readFileSync(new URL('../dist-electron/preload.cjs',import.meta.url),'utf8'),{require:()=>({contextBridge:{exposeInMainWorld:(k,v)=>{exposed=v}},ipcRenderer:{invoke:(c,...args)=>handlers.get(c)(event,...args)}})})
  const api=exposed.seniorityRanks,id=f.employee.id
- assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','getAllowance','getRank','saveAllowance','saveRank'])
+ const overview=await api.listOverview()
+ assert.equal(overview.ok,true)
+ assert.equal(overview.data.length,2)
+ assert.equal(overview.data.find(row=>row.employee.id===id).allowance,null)
+ const overviewHandler=handlers.get(ipcChannels.seniorityListOverview)
+ assert.equal(overviewHandler({...event,sender:{} }).error.code,'FORBIDDEN')
+ assert.equal(overviewHandler({...event,senderFrame:null}).error.code,'FORBIDDEN')
+ assert.equal(overviewHandler({...event,senderFrame:{url}}).error.code,'FORBIDDEN')
+ assert.equal(overviewHandler(event,'extra').error.code,'INVALID_ARGUMENTS')
+ contents.mainFrame.url='https://invalid.test/'
+ assert.equal(overviewHandler(event).error.code,'FORBIDDEN');contents.mainFrame.url=url
+ assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','getAllowance','getRank','listOverview','saveAllowance','saveRank'])
  for(const [save,get,clear,value] of [['saveAllowance','getAllowance','clearAllowance',allowance],['saveRank','getRank','clearRank',rank]]) {
   assert.equal((await api[get](id)).data,null)
   assert.equal((await api[save](id,value)).ok,true)

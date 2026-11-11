@@ -57,6 +57,7 @@ export function registerIpcHandlers(
   zoom?: Pick<ZoomController, 'get' | 'set'>,
   seniority?: SeniorityRanksService,
 ) {
+  register(ipcChannels.seniorityListOverview, z.tuple([]), z.array(senioritySchemas.overview), () => seniority!.listOverview())
   register(ipcChannels.seniorityGetAllowance, z.tuple([senioritySchemas.id]), senioritySchemas.allowance.nullable(),
     ([id]) => seniority!.getAllowance(id))
   register(ipcChannels.senioritySaveAllowance, z.tuple([senioritySchemas.id, senioritySchemas.allowanceInput]), senioritySchemas.allowance,
