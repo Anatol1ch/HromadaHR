@@ -1,6 +1,6 @@
 import { employeeStructure, withDirectoryNames, type DirectoryOrder } from '../../employees/registry.ts'
 import { allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank, type SeniorityOverview } from '../../../shared/seniority-ranks.ts'
-import { formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
+import { formatDate, formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
 import { fullName, normalizeText } from '../../employees/model.ts'
 export type Kind = 'allowance' | 'rank'
 export interface Draft { status: string; percentage: string; rank: string; assignedOn: string; effectiveOn: string; documentType: string; documentNumber: string; documentDate: string; reviewOn: string }
@@ -31,7 +31,7 @@ export function allowanceInput(v: Draft): AllowanceInput {
 }
 export function rankInput(v: Draft): RankInput {
  if (Object.keys(validateDraft('rank',v)).length) throw new Error('INVALID_DRAFT')
- return { ...basis(v),rank:Number(v.rank),assignedOn:parseDateInput(v.assignedOn)!,effectiveOn:parseDateInput(v.effectiveOn) }
+ return { ...basis(v),rank:Number(v.rank),assignedOn:parseDateInput(v.assignedOn)!,effectiveOn:parseDateInput(v.effectiveOn) === parseDateInput(v.assignedOn) ? null : parseDateInput(v.effectiveOn) }
 }
 export const allowanceLabel = (value: Allowance | null) => value === null ? 'Не внесено' : value.status === 'not_applicable' ? 'Не застосовується' : `${value.percentage}%`
 export const rankLabel = (row: SeniorityOverview) => row.employee.employeeType === 'staff' ? 'Не застосовується' : row.rank ? `${row.rank.rank} ранг` : 'Не внесено'
@@ -54,4 +54,28 @@ export function nextReview(row: SeniorityOverview): string | null {
 
 export function updateIndicator(row: SeniorityOverview, kind: Kind, value: Allowance | CurrentRank | null): SeniorityOverview {
   return kind === 'allowance' ? { ...row, allowance: value as Allowance | null } : { ...row, rank: value as CurrentRank | null }
+}
+
+export function directionsFor(type: 'official' | 'staff'): Kind[] {
+  return type === 'official' ? ['rank', 'allowance'] : ['allowance']
+}
+export const documentTypes = ['Розпорядження голови', 'Рішення виконавчого комітету', 'Рішення ради'] as const
+export function documentTypeOptions(selected: string) {
+  const options = [{ value: '', label: 'Не зазначено' }, ...documentTypes.map(value => ({ value, label: value }))]
+  if (selected && !options.some(option => option.value === selected)) options.push({ value: selected, label: `${selected} (збережене значення)` })
+  return options
+}
+export function documentLabel(value: Pick<Allowance, 'documentType' | 'documentNumber' | 'documentDate'> | null) {
+  if (!value) return ''
+  return [value.documentType, value.documentNumber ? `№ ${value.documentNumber}` : '', value.documentDate ? `від ${formatDate(value.documentDate)}` : ''].filter(Boolean).join(' ')
+}
+export function toggleSeparateDate(v: Draft, enabled: boolean): Draft {
+  return { ...v, effectiveOn: enabled ? v.effectiveOn || (parseDateInput(v.assignedOn) ? v.assignedOn : '') : '' }
+}
+export function canCopyDocumentDate(v: Draft, today = todayIsoDate()) {
+  const date = parseDateInput(v.documentDate)
+  return date !== null && date <= today
+}
+export function copyDocumentDate(v: Draft, today = todayIsoDate()): Draft {
+  return canCopyDocumentDate(v, today) ? { ...v, effectiveOn: v.documentDate } : v
 }

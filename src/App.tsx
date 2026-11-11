@@ -21,7 +21,7 @@ const sections = [
   { id: 'overview', label: 'Огляд', icon: Activity },
   { id: 'employees', label: 'Працівники', icon: UsersRound },
   { id: 'leave', label: 'Відпустки', icon: CalendarDays },
-  { id: 'service', label: 'Стаж і ранги', icon: Award },
+  { id: 'service', label: 'Ранги та вислуга', icon: Award },
   { id: 'documents', label: 'Документи', icon: FileText },
   { id: 'dictionaries', label: 'Довідники', icon: BookOpen },
   { id: 'settings', label: 'Налаштування', icon: Settings },
@@ -33,7 +33,7 @@ type Section = typeof sections[number]
 const settingsSection = sections.find(section => section.id === 'settings')!
 const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'leave' | 'settings' | 'dictionaries'>, string> = {
   overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
-  service: 'Тут буде облік стажу та рангів працівників. Розрахунки й кадрові операції ще не доступні.',
+  service: 'Облік підтверджених рангів і надбавок за вислугу років.',
   documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
 }
 
@@ -68,7 +68,7 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       <div className="workspace-shortcuts">{([
         { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
         { id: 'leave', title: 'Відпустки', text: 'Облік залишків відпусток', icon: CalendarDays, available: true },
-        { id: 'service', title: 'Стаж і ранги', text: 'Кадрові відомості', icon: Award, available: true },
+        { id: 'service', title: 'Ранги та вислуга', text: 'Кадрові відомості', icon: Award, available: true },
         { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
       ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
         className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}

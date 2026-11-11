@@ -16,7 +16,7 @@ import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate, parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage, fullName, employeeTypeLabels } from '../../employees/model'
-import { allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { directionsFor, documentTypeOptions, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate, allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
@@ -37,6 +37,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
  const [error,setError]=useState('')
  const [clearing,setClearing]=useState(false)
  const [separateDate,setSeparateDate]=useState(!!value?.effectiveOn)
+ const [effectiveRevision,setEffectiveRevision]=useState(0)
  const form=useRef<HTMLFormElement>(null), owner=useRef<HTMLDivElement>(null), alive=useRef(true)
  const id=useId()
  const dirty=editing && JSON.stringify(initial)!==JSON.stringify(draft)
@@ -67,7 +68,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
   return <div className="recipient-field employee-field"><label htmlFor={id+key}>{label}{required&&<span aria-hidden="true"> *</span>}</label>{control}</div>
  }
  function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewOn',label:string,required=false) {
-  return field(key,label,<DateField id={id+key} value={dates[key]} initialDraft={draft[key]} required={required} disabled={busy}
+  return field(key,label,<DateField key={key==='effectiveOn'?effectiveRevision:key} id={id+key} value={dates[key]} initialDraft={draft[key]} required={required} disabled={busy}
    max={key==='assignedOn'||key==='effectiveOn'?todayIsoDate():undefined} error={errors[key]}
    onDraftChange={v=>change(key,v)} onChange={v=>setDates(current=>({...current,[key]:v}))}/>,required)
  }
@@ -76,7 +77,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
    aria-invalid={!!errors[key]} aria-describedby={errors[key]?id+key+'-error':undefined} onChange={e=>change(key,e.target.value)}/>
    {errors[key]&&<span className="field-error" id={id+key+'-error'}>{errors[key]}</span>}</>)
  }
- function select(key: 'status'|'percentage'|'rank',label:string,options:{value:string;label:string}[],required=false) {
+ function select(key: 'status'|'percentage'|'rank'|'documentType',label:string,options:{value:string;label:string}[],required=false) {
   return <div className="recipient-field employee-field"><span>{label}{required?' *':''}</span>
    <Select label={label} value={draft[key]} options={options} required={required} disabled={busy} onChange={v=>change(key,v)} error={errors[key]}/>
   </div>
@@ -86,7 +87,8 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
  }
  const applicable=kind==='rank'||draft.status==='confirmed'
  const rankValue=kind==='rank'?row.rank:null
- const document=[value?.documentType,value?.documentNumber&&`№ ${value.documentNumber}`,value?.documentDate&&formatDate(value.documentDate)].filter(Boolean).join(' · ')
+ const document=documentLabel(value)
+ const futureDocumentDate=(parseDateInput(draft.documentDate)??'')>todayIsoDate()
  const headline=value ? kind==='allowance'?allowanceLabel(row.allowance):rankLabel(row) : kind==='allowance'?'Надбавку не внесено':'Ранг не внесено'
  const close=()=>requestClose(onClose)
  const footer=<div className="employee-form-footer">
@@ -101,27 +103,27 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
    </div>
   </div>
  </div>
- return <Modal title="Стаж і ранги" size="wide" className="employee-form-modal seniority-modal" busy={busy} onClose={close} footer={footer}>
+ return <Modal title="Ранги та вислуга" size="wide" className="employee-form-modal seniority-modal" busy={busy} onClose={close} footer={footer}>
   <div ref={owner} className="employee-card">
    <header className="employee-card-header">
     <div className="employee-card-avatar" aria-hidden="true"><UserRound size={23}/></div>
     <div className="employee-card-identity"><h3>{fullName(row.employee)}</h3><p>{row.employee.position.name} · {row.employee.department.name}</p><small className="employee-muted">{employeeTypeLabels[row.employee.employeeType]}</small></div>
    </header>
    <nav className="employee-card-tabs" role="tablist" aria-label="Напрями кадрових показників" onKeyDown={navigateTabs}>
-    {(['allowance','rank'] as const).filter(direction=>direction==='allowance'||row.employee.employeeType==='official').map(direction=><button type="button" key={direction} role="tab" id={id+direction} aria-selected={kind===direction} aria-controls={id+'-panel'} tabIndex={kind===direction?0:-1} disabled={busy}
+    {directionsFor(row.employee.employeeType).map(direction=><button type="button" key={direction} role="tab" id={id+direction} aria-selected={kind===direction} aria-controls={id+'-panel'} tabIndex={kind===direction?0:-1} disabled={busy}
      onClick={()=>{if(direction!==kind)requestClose(()=>{reset(direction==='allowance'?row.allowance:row.rank);onSwitch(direction)})}}>{direction==='allowance'?'Надбавка за вислугу':'Ранг'}<small>{direction==='allowance'?allowanceLabel(row.allowance):rankLabel(row)}</small></button>)}
    </nav>
    {row.employee.employeeType==='staff'&&<p className="employee-hint seniority-staff-note">Облік рангів застосовується до посадових осіб місцевого самоврядування.</p>}
    <div id={id+'-panel'} role="tabpanel" aria-labelledby={id+kind}>
-    {!editing?<InfoSection title={title}>
-     <div className="seniority-overview-heading"><strong className="seniority-value">{headline}</strong><button type="button" className="primary-button" onClick={edit}><Pencil size={17} aria-hidden="true"/>{kind==='allowance'?value?'Редагувати надбавку':'Внести надбавку':value?'Редагувати ранг':'Внести ранг'}</button></div>
-     {value&&(rankValue||value.effectiveOn||value.reviewOn||document)&&<dl className="info-grid">
-      {rankValue&&<InfoItem label="Дата присвоєння" value={formatDate(rankValue.assignedOn)}/>}
+    {!editing?<section className="seniority-overview" aria-label={title}>
+     <div className="seniority-overview-heading"><strong className={value?'seniority-value':'seniority-empty'}>{headline}</strong><button type="button" className="secondary-button" onClick={edit}><Pencil size={16} aria-hidden="true"/>{value?'Редагувати':kind==='allowance'?'Внести надбавку':'Внести ранг'}</button></div>
+     {value&&(rankValue||value.effectiveOn||value.reviewOn)&&<dl className="info-grid seniority-dates">
+      {rankValue&&<InfoItem label={rankValue.effectiveOn&&rankValue.effectiveOn!==rankValue.assignedOn?'Дата присвоєння':'Присвоєно та діє з'} value={formatDate(rankValue.assignedOn)}/>}
       {value.effectiveOn&&(!rankValue||value.effectiveOn!==rankValue.assignedOn)&&<InfoItem label="Початок дії" value={formatDate(value.effectiveOn)}/>}
       {value.reviewOn&&<InfoItem label="Наступна перевірка" value={formatDate(value.reviewOn)}/>}
-      {document&&<InfoItem label="Документ-підстава" value={document} wide/>}
      </dl>}
-    </InfoSection>:<form id={id} ref={form} noValidate className="employee-form" aria-busy={busy} onSubmit={e=>{e.preventDefault();void mutate()}}>
+     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
+    </section>:<form id={id} ref={form} noValidate className="employee-form" aria-busy={busy} onSubmit={e=>{e.preventDefault();void mutate()}}>
      <InfoSection title={kind==='allowance'?'Відомості про надбавку':'Відомості про ранг'}>
       <fieldset className="recipient-fieldset" disabled={busy}><div className="employee-form-grid">
        {kind==='allowance'?<>
@@ -133,13 +135,21 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
         {date('assignedOn','Дата присвоєння',true)}
        </>}
       </div></fieldset>
+      {kind==='allowance'&&applicable&&<div className="seniority-date-help">
+       <button type="button" className="secondary-button" disabled={busy||!canCopyDocumentDate(draft)} onClick={()=>{const next=copyDocumentDate(draft);setEffectiveRevision(v=>v+1);setDraft(next);setDates(v=>({...v,effectiveOn:parseDateInput(next.effectiveOn)??''}));setErrors(v=>({...v,effectiveOn:undefined}))}}>Використати дату документа</button>
+       {futureDocumentDate&&<span className="field-error">Дата документа пізніша за сьогодні. Її не можна використати як підтверджений початок дії.</span>}
+      </div>}
       {kind==='rank'&&<>
-       <label className="seniority-date-option"><input type="checkbox" checked={separateDate} disabled={busy} onChange={e=>{const checked=e.target.checked;setSeparateDate(checked);if(!checked){change('effectiveOn','');setDates(v=>({...v,effectiveOn:''}))}}}/>Вказати окрему дату початку дії</label>
-       {separateDate&&<div className="employee-form-grid">{date('effectiveOn','Дата початку дії')}</div>}
+       <div className="seniority-date-option">
+        <button type="button" className="seniority-switch" role="switch" aria-checked={separateDate} aria-labelledby={id+'-separate-label'} aria-describedby={id+'-separate-hint'} aria-controls={separateDate?id+'-separate-field':undefined} disabled={busy}
+         onClick={()=>{const next=toggleSeparateDate(draft,!separateDate);setSeparateDate(!separateDate);setDraft(next);setDates(v=>({...v,effectiveOn:parseDateInput(next.effectiveOn)??''}));setErrors(v=>({...v,effectiveOn:undefined}))}}><span aria-hidden="true"/></button>
+        <div><span id={id+'-separate-label'}>Окрема дата початку дії</span><small id={id+'-separate-hint'}>За замовчуванням збігається з датою присвоєння</small></div>
+       </div>
+       {separateDate&&<div id={id+'-separate-field'} className="employee-form-grid">{date('effectiveOn','Дата початку дії')}</div>}
       </>}
      </InfoSection>
      <InfoSection title="Документальна підстава"><fieldset className="recipient-fieldset" disabled={busy}><div className="employee-form-grid">
-      {text('documentType','Тип документа',200)}{text('documentNumber','Номер документа',100)}{date('documentDate','Дата документа')}
+      {select('documentType','Тип документа',documentTypeOptions(draft.documentType))}{text('documentNumber','Номер документа',100)}{date('documentDate','Дата документа')}
      </div></fieldset></InfoSection>
      <InfoSection title="Контроль"><div className="employee-form-grid">{date('reviewOn','Дата наступної перевірки')}</div></InfoSection>
     </form>}

@@ -44,8 +44,8 @@ export default function SeniorityRanksWorkspace({ navigationGuard }: {navigation
   setSelected(current=>current?update(current):null)
  }
  return <section className="page-transition employee-registry seniority-workspace" aria-labelledby="seniority-title">
-  <div className="page-heading employee-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="seniority-title" ref={heading} tabIndex={-1}>Стаж і ранги</h1><p className="subtitle">Облік підтверджених надбавок за вислугу років і присвоєних рангів працівників.</p></div></div>
-  <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри стажу та рангів">
+  <div className="page-heading employee-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="seniority-title" ref={heading} tabIndex={-1}>Ранги та вислуга</h1><p className="subtitle">Облік присвоєних рангів і підтверджених надбавок за вислугу років.</p></div></div>
+  <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри рангів та вислуги">
    <div className="aid-toolbar">
     <SearchField label="Пошук працівника" placeholder="ПІБ, посада або підрозділ" value={filters.query} onChange={v=>change('query',v)}/>
     <button type="button" className={`secondary-button aid-filter-toggle${filtersOpen?' expanded':''}`} aria-expanded={filtersOpen} aria-controls={panelId} onClick={()=>setFiltersOpen(v=>!v)}><SlidersHorizontal size={18} aria-hidden="true"/>Фільтри{activeFilters>0&&<span className="aid-filter-count" aria-label={`Застосовано фільтрів: ${activeFilters}`}>{activeFilters}</span>}</button>
@@ -59,12 +59,12 @@ export default function SeniorityRanksWorkspace({ navigationGuard }: {navigation
   </section>
   {tableError&&<Alert variant="error" action={<button type="button" onClick={()=>setRevision(v=>v+1)}>Повторити завантаження</button>}>{tableError}</Alert>}
   <GroupedEmployeeTable groups={tableError?[]:groups??[]} loading={loading} error={tableError} filtered={filtered} count={visible.length}
-   columns={[{label:'ПІБ'},{label:'Посада',width:'24%'},{label:'Надбавка'},{label:'Ранг'},{label:'Наступна перевірка',width:'130px'},{label:'Дії',width:'60px',className:'employee-actions-heading'}]}
+   columns={[{label:'ПІБ'},{label:'Посада',width:'24%'},{label:'Ранг'},{label:'Надбавка'},{label:'Наступна перевірка',width:'130px'},{label:'Дії',width:'60px',className:'employee-actions-heading'}]}
    renderRow={employee=>{
     const row=byId.get(employee.id)!, review=nextReview(row)
     return <tr key={employee.id}>
      <td><strong className="employee-name">{fullName(employee)}</strong></td><td>{employee.position.name}</td>
-     <td>{allowanceLabel(row.allowance)}</td><td>{rankLabel(row)}</td><td className="employee-date">{review?formatDate(review):'Не встановлено'}</td>
+     <td>{rankLabel(row)}</td><td>{allowanceLabel(row.allowance)}</td><td className="employee-date">{review?formatDate(review):'Не встановлено'}</td>
      <td className="dictionary-actions-cell"><div className="registry-row-actions"><button type="button" className="table-action" title="Переглянути" aria-label={`Відкрити відомості: ${fullName(employee)}`} onClick={event=>{opener.current=event.currentTarget;setSelected({...row,employee})}}><Eye size={17} aria-hidden="true"/></button></div></td>
     </tr>
    }}/>

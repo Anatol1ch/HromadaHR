@@ -6,9 +6,29 @@
 .seniority-modal .employee-card-tabs:has(button:only-child) { grid-template-columns: minmax(0, 1fr); }
 .seniority-staff-note { margin: 0; }
 .seniority-overview-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.seniority-value { color: var(--accent-hover); font-size: 24px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.seniority-date-option { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--color-text-label); }
-.seniority-date-option input { flex: none; accent-color: var(--accent); }
+.seniority-value { color: var(--accent-hover); font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.seniority-date-option { display: flex; align-items: center; gap: var(--space-2); padding-block: var(--space-1); font-size: 13px; color: var(--color-text-label); }
+
 .seniority-footer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .seniority-footer-actions .employee-form-actions { margin-inline-start: auto; }
 .seniority-footer-actions button { white-space: normal; height: auto; min-height: var(--control-height); }
+
+.seniority-overview { display: grid; gap: var(--space-3); min-width: 0; }
+.seniority-empty { font-size: 16px; font-weight: 600; }
+.seniority-overview-heading .secondary-button { min-height: var(--control-height-compact); height: auto; white-space: normal; }
+.seniority-dates { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seniority-dates .info-item { border: 1px solid var(--border-surface); }
+.seniority-document { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding-top: var(--space-2); border-top: 1px solid var(--border-surface); font-size: 13px; overflow-wrap: anywhere; }
+.seniority-document > span:first-child { color: var(--color-text-muted); }
+.seniority-document > span:last-child { min-width: 0; }
+.seniority-date-option small { display: block; margin-top: var(--space-1); color: var(--color-text-muted); font-size: 12px; }
+.seniority-switch { display: inline-flex; align-items: center; flex: none; width: 42px; height: 24px; padding: 3px; border: 1px solid var(--border-standard); border-radius: var(--radius-card); background: var(--surface-disabled); cursor: pointer; }
+.seniority-switch > span { width: 16px; height: 16px; border-radius: var(--radius-control); background: var(--color-text-muted); }
+.seniority-switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.seniority-switch[aria-checked="true"] > span { transform: translateX(16px); background: var(--color-on-accent); }
+.seniority-switch:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 3px; }
+.seniority-switch:disabled { opacity: .6; cursor: default; }
+.seniority-date-help { display: grid; justify-items: start; gap: var(--space-2); }
+.seniority-date-help .secondary-button { font-size: 12px; height: auto; min-height: var(--control-height-compact); white-space: normal; }
+@container (max-width: 650px) { .seniority-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 440px) { .seniority-dates { grid-template-columns: minmax(0, 1fr); } }
