@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowanceInput, rankInput, draftFor, validateDraft, allowanceLabel, rankLabel, filterOverview } from '../src/components/seniority-ranks/model.ts'
+import { allowanceInput, rankInput, draftFor, validateDraft, allowanceLabel, rankLabel, filterOverview, overviewStructure, nextReview, updateIndicator } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
@@ -52,4 +52,28 @@ test('calendar drafts, future dates, mandatory fields and text limits are valida
  assert.deepEqual(validateDraft('allowance',base,'2020-02-29'),{})
  assert.match(personnelMessage('RANK_REQUIRES_OFFICIAL'),/посадової особи/)
  assert.match(personnelMessage('EMPLOYEE_HAS_CURRENT_RANK'),/очистіть поточний ранг/)
+})
+
+test('seniority registry shares department/position order, directory names and stable Ukrainian name ties',()=>{
+ const dirs={department:[{id:'second',name:'Відділ 2'},{id:'first',name:'Відділ 1'}],position:[{id:'chief',name:'Керівник'},{id:'expert',name:'Фахівець'}]}
+ const make=(id,name,departmentId,positionId)=>({...row(id,'official'),employee:{...row(id,'official').employee,lastName:name,departmentId,positionId}})
+ const rows=[make('z','Яворів','first','chief'),make('b','Іваненко','second','expert'),make('a','Іваненко','second','expert'),make('c','Яворів','second','chief')]
+ const groups=overviewStructure(filterOverview(rows,{query:'',type:'',rank:'',allowance:''}),dirs)
+ assert.deepEqual(groups.map(g=>g.id),['second','first'])
+ assert.deepEqual(groups[0].rows.map(e=>e.id),['c','a','b'])
+ assert.equal(groups[0].rows[0].position.name,'Керівник')
+ assert.equal(groups[0].rows[0].department.name,'Відділ 2')
+ assert.equal(overviewStructure(rows,{...dirs,position:[]}),null)
+})
+test('nearest manual review date and independent indicator updates preserve the other value',()=>{
+ const original=row('a','official',{...confirmed,reviewOn:'2028-01-01'},{...rank,reviewOn:'2027-01-01'})
+ assert.equal(nextReview(original),'2027-01-01')
+ assert.equal(nextReview(row('empty','staff')),null)
+ const updated=updateIndicator(original,'allowance',notApplicable)
+ assert.equal(updated.rank,original.rank)
+ assert.equal(updated.employee,original.employee)
+ assert.equal(updateIndicator(original,'rank',null).allowance,original.allowance)
+ assert.equal(original.allowance.percentage,0)
+ const draft={...draftFor(rank),effectiveOn:''}
+ assert.equal(rankInput(draft).effectiveOn,null)
 })

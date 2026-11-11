@@ -1,3 +1,4 @@
+import { employeeStructure, withDirectoryNames, type DirectoryOrder } from '../../employees/registry.ts'
 import { allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank, type SeniorityOverview } from '../../../shared/seniority-ranks.ts'
 import { formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
 import { fullName, normalizeText } from '../../employees/model.ts'
@@ -42,4 +43,15 @@ export function filterOverview(rows: SeniorityOverview[], f: Filters) {
   const e=row.employee, text=normalizeText(`${fullName(e)} ${e.position.name} ${e.department.name}`)
   return words.every(word=>text.includes(word)) && (!f.type || e.employeeType===f.type) && (!f.allowance || (row.allowance?.status ?? 'missing')===f.allowance) && (!f.rank || e.employeeType==='official' && (f.rank==='assigned' ? !!row.rank : !row.rank))
  }).sort((a,b)=>collator.compare(fullName(a.employee),fullName(b.employee)) || a.employee.id.localeCompare(b.employee.id))
+}
+
+export function overviewStructure(rows: SeniorityOverview[], directories: DirectoryOrder) {
+  return employeeStructure(withDirectoryNames(rows.map(row => row.employee), directories), directories)
+}
+export function nextReview(row: SeniorityOverview): string | null {
+  return [row.allowance?.reviewOn, row.rank?.reviewOn].filter((date): date is string => !!date).sort()[0] ?? null
+}
+
+export function updateIndicator(row: SeniorityOverview, kind: Kind, value: Allowance | CurrentRank | null): SeniorityOverview {
+  return kind === 'allowance' ? { ...row, allowance: value as Allowance | null } : { ...row, rank: value as CurrentRank | null }
 }

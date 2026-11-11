@@ -531,3 +531,7 @@ Read-only HromadaAID SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: цільов�
 ## 5.2 – Реєстр і модальна картка стажу/рангів
 
 Read-only звірено реальний src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: DictionaryToolbar/Table, registry-row-actions, відкриття RecipientDetails та великий Modal. Адаптовано патерни через вже перенесені HR компоненти, спільні InfoSection/InfoItem та сиреневі токени. Дві незалежні кадрові форми мають спільний захист закриття й окремі операції збереження/очищення. Предметна/серверна логіка AID не переносилася; ручне Windows GUI-приймання очікується.
+
+## 5.2.1 – Єдина кадрова композиція
+
+Read-only звірено реальну aid-toolbar/aid-filter-panel/aid-filter-grid у src/AidRegistry.tsx HromadaAID на SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Повторно використано перенесені у HR кадрові стилі й контроли, employee-card-header/tabs, EmployeeForm та GroupedEmployeeTable, виділену з EmployeeGroupTable без зміни кадрових дій. Локальні стилі 5.2 видалено й замінено мінімальними стилями композиції. Предметний код AID не переносився. Ручне Windows-візуальне приймання 5.2.1 очікується.
