@@ -1,6 +1,6 @@
 import type { EmployeeCardTab } from '../../../shared/personnel-control'
 import { profileSections,profileSection,requestProfileSection } from '../../employees/profile'
-import RankProjectionPanel from '../seniority-ranks/RankProjectionPanel'
+import ProfileIndicatorPanel from '../seniority-ranks/ProfileIndicatorPanel'
 import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
@@ -27,6 +27,7 @@ export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onD
   const [tab, setTab] = useState<EmployeeCardTab>(initialTab)
   useEffect(()=>setTab(initialTab),[id,initialTab,tabRequestId])
   const [baselineBusy,setBaselineBusy]=useState(false)
+  const [baselineEditing,setBaselineEditing]=useState(false),[allowanceRefresh,setAllowanceRefresh]=useState(0)
   const close=()=>navigationGuard.current(onClose)
   const tabId = useId()
   const heading=useRef<HTMLHeadingElement>(null),focused=useRef('')
@@ -106,10 +107,12 @@ export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onD
               <dl className="info-grid">{fields.map(([field,value])=><InfoItem key={field} label={field} value={value}/>)}</dl>
             </InfoSection>)}
             <div><button type="button" className="secondary-button danger-action" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>onDelete(id))}><Trash2 size={16} aria-hidden="true"/>Видалити працівника</button></div>
-          </>:section==='service'?<ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy}/>
-            :section==='rank'?<RankProjectionPanel key={id} employeeId={id} refreshKey={revision}/>
+          </>:section==='service'?<>
+            <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
+            <ProfileIndicatorPanel employee={employee} kind="allowance" navigationGuard={navigationGuard} disabled={baselineEditing||baselineBusy||loading} refreshKey={revision} onRefresh={()=>setAllowanceRefresh(v=>v+1)}/>
+          </>
+            :section==='rank'?<ProfileIndicatorPanel employee={employee} kind="rank" navigationGuard={navigationGuard} disabled={loading} refreshKey={revision}/>
             :<LeaveOverview onOpen={destination=>onOpenLeave({...destination,employeeId:id})} employeeId={id} revision={revision}/>}
-          {(section==='service'||section==='rank')&&<p className="employee-hint">{section==='service'?'Змінити підтверджену надбавку':'Внести або змінити ранг'} можна в розділі «Ранги та вислуга».</p>}
         </section>
       </div>
     </>}

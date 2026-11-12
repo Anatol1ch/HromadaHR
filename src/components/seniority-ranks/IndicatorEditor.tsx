@@ -13,24 +13,25 @@ import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import { UserRound, Pencil, Check, X, Trash2 } from 'lucide-react'
 import { navigateTabs } from '../../lib/tabNavigation'
+import { editorDirections,uncertainIndicatorResult } from './profile-indicators'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate, parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage, fullName, employeeTypeLabels } from '../../employees/model'
-import { rankOriginLabels, directionsFor, documentTypeOptions, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate, allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { rankOriginLabels, documentTypeOptions, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate, allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
- onSwitch: (kind: Kind) => void; onClose: () => void
+ onClose: () => void; returnFocus?:HTMLElement|null
  onSaved: (kind: Kind, value: Allowance | CurrentRank | null) => void
-}
-export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, onClose, onSaved }: Props) {
+}&({mode?:'legacy';onSwitch:(kind:Kind)=>void}|{mode:'focused';onSwitch?:never})
+export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, onClose, onSaved,mode='legacy',returnFocus }: Props) {
  const value = kind === 'allowance' ? row.allowance : row.rank
  const employeeId = row.employee.id
  const inFlight = useRef(false)
  const [busy,onBusy] = useState(false)
  const title = kind === 'allowance' ? 'Надбавка за вислугу років' : 'Поточний ранг'
- const [editing,setEditing]=useState(false)
+ const [editing,setEditing]=useState(mode==='focused')
  const [initial,setInitial]=useState(()=>draftFor(value))
  const [draft,setDraft]=useState(initial)
  const [dates,setDates]=useState(()=>dateValues(initial))
@@ -60,8 +61,8 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
    const api=window.hromadaHR.seniorityRanks
    const result=clear ? await (kind==='allowance'?api.clearAllowance(employeeId):api.clearRank(employeeId)) : await (kind==='allowance'?api.saveAllowance(employeeId,allowanceInput(draft)):api.saveRank(employeeId,rankInput(draft)))
    if(!alive.current) return
-   if(!result.ok) {setError(personnelMessage(result.error.code));return}
-   onSaved(kind,result.data);reset(result.data);setClearing(false)
+   if(!result.ok) {setError(uncertainIndicatorResult(result.error.code)?'Не вдалося підтвердити результат операції. Чернетку збережено; перечитайте дані перед повторною спробою.':personnelMessage(result.error.code));return}
+   reset(result.data);setClearing(false);onSaved(kind,result.data)
    notifySystemToast('success',clear?'Відомості очищено':'Відомості збережено',title)
   } catch {if(alive.current)setError('Не вдалося підтвердити результат операції. Чернетку збережено; перевірте дані перед повторною спробою.')}
   finally {inFlight.current=false;if(alive.current)onBusy(false)}
@@ -99,24 +100,24 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
    {editing&&value&&<button type="button" className="secondary-button danger-action" disabled={busy} onClick={()=>{setError('');setClearing(true)}}><Trash2 size={17} aria-hidden="true"/>Очистити показник</button>}
    <div className="employee-form-actions">
     {editing?<>
-     <button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(()=>reset(value))}><X size={17} aria-hidden="true"/>Скасувати</button>
+     <button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(mode==='focused'?onClose:()=>reset(value))}><X size={17} aria-hidden="true"/>Скасувати</button>
      <button type="submit" form={id} className="primary-button" disabled={busy} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy?'Збереження…':'Зберегти зміни'}</button>
     </>:<button type="button" className="secondary-button" disabled={busy} onClick={close}>Закрити</button>}
    </div>
   </div>
  </div>
- return <Modal title="Ранги та вислуга" size="wide" className="employee-form-modal seniority-modal" busy={busy} onClose={close} footer={footer}>
+ return <Modal title={mode==='focused'?title:'Ранги та вислуга'} description={mode==='focused'?fullName(row.employee):undefined} returnFocus={returnFocus} size={mode==='focused'?'large':'wide'} className="employee-form-modal seniority-modal" busy={busy} onClose={close} footer={footer}>
   <div ref={owner} className="employee-card">
-   <header className="employee-card-header">
+   {mode==='legacy'&&<header className="employee-card-header">
     <div className="employee-card-avatar" aria-hidden="true"><UserRound size={23}/></div>
     <div className="employee-card-identity"><h3>{fullName(row.employee)}</h3><p>{row.employee.position.name} · {row.employee.department.name}</p><small className="employee-muted">{employeeTypeLabels[row.employee.employeeType]}</small></div>
-   </header>
-   <nav className="employee-card-tabs" role="tablist" aria-label="Напрями кадрових показників" onKeyDown={navigateTabs}>
-    {directionsFor(row.employee.employeeType).map(direction=><button type="button" key={direction} role="tab" id={id+direction} aria-selected={kind===direction} aria-controls={id+'-panel'} tabIndex={kind===direction?0:-1} disabled={busy}
-     onClick={()=>{if(direction!==kind)requestClose(()=>{reset(direction==='allowance'?row.allowance:row.rank);onSwitch(direction)})}}>{direction==='allowance'?'Надбавка за вислугу':'Ранг'}<small>{direction==='allowance'?allowanceLabel(row.allowance):rankLabel(row)}</small></button>)}
-   </nav>
-   {row.employee.employeeType==='staff'&&<p className="employee-hint seniority-staff-note">Облік рангів застосовується до посадових осіб місцевого самоврядування.</p>}
-   <div id={id+'-panel'} role="tabpanel" aria-labelledby={id+kind}>
+   </header>}
+   {mode==='legacy'&&<nav className="employee-card-tabs" role="tablist" aria-label="Напрями кадрових показників" onKeyDown={navigateTabs}>
+    {editorDirections(mode,kind,row.employee.employeeType).map(direction=><button type="button" key={direction} role="tab" id={id+direction} aria-selected={kind===direction} aria-controls={id+'-panel'} tabIndex={kind===direction?0:-1} disabled={busy}
+     onClick={()=>{if(direction!==kind)requestClose(()=>{reset(direction==='allowance'?row.allowance:row.rank);onSwitch?.(direction)})}}>{direction==='allowance'?'Надбавка за вислугу':'Ранг'}<small>{direction==='allowance'?allowanceLabel(row.allowance):rankLabel(row)}</small></button>)}
+   </nav>}
+   {mode==='legacy'&&row.employee.employeeType==='staff'&&<p className="employee-hint seniority-staff-note">Облік рангів застосовується до посадових осіб місцевого самоврядування.</p>}
+   <div id={id+'-panel'} role={mode==='legacy'?'tabpanel':undefined} aria-labelledby={mode==='legacy'?id+kind:undefined}>
     {!editing?<section className="seniority-overview" aria-label={title}>
      <div className="seniority-overview-heading"><strong className={value?'seniority-value':'seniority-empty'}>{headline}</strong><button type="button" className="secondary-button" onClick={edit}><Pencil size={16} aria-hidden="true"/>{value?'Редагувати':kind==='allowance'?'Внести надбавку':'Внести ранг'}</button></div>
      {value&&(rankValue||value.effectiveOn||value.reviewOn)&&<dl className="info-grid seniority-dates">

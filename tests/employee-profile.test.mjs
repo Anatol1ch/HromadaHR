@@ -58,7 +58,7 @@ test('page shell mounts only the active existing view, reads the current employe
  assert.match(page,/\[id, retry, revision, tabRequestId, onLoaded\]/)
  assert.match(page,/key=\{id\+':\'\+tabRequestId\+':\'\+section\}/)
  assert.match(page,/DataState kind="loading"/);assert.match(page,/Повторити завантаження/);assert.match(page,/До списку працівників/)
- assert.match(page,/section==='service'\?<ServiceBaselinePanel/);assert.match(page,/section==='rank'\?<RankProjectionPanel/);assert.match(page,/:<LeaveOverview /)
+ assert.match(page,/<ServiceBaselinePanel /);assert.match(page,/<ProfileIndicatorPanel employee=\{employee\} kind="allowance"/);assert.match(page,/section==='rank'\?<ProfileIndicatorPanel/);assert.match(page,/:<LeaveOverview /)
  assert.doesNotMatch(page,/saveAllowance|saveRank|savePeriods|registerLeave|updateEmployee|deleteEmployee/)
  assert.match(workspace,/<div hidden=\{!!workspace.cardId\}><EmployeeRegistry/)
  assert.match(workspace,/<EmployeeProfilePage onOpenLeave=/);assert.match(workspace,/<EmployeeForm /);assert.match(workspace,/<EmployeeActionDialog /)

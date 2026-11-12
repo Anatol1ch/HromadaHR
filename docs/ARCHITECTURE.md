@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує HromadaHR 0.1.0 після підетапу 6.1. Чинна схема **SQLite v18**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
+Документ описує HromadaHR 0.1.0 після підетапу 6.2. Чинна схема **SQLite v18**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
 
 ## Чинна модель
 
@@ -546,3 +546,17 @@ Semantic section keys general/service/rank/leave збережені для Emplo
 getEmployee викликається за id/revision/retry/tabRequestId; cleanup відкидає старі відповіді. Заголовок і прихований реєстр оновлюються через чинні onLoaded/mergeEmployee/saved. Ключ робочої області включає id/requestId/section: схвалений повторний intent перечитує перегляд і скидає лише явно відкинуту чернетку, навіть коли працівник і розділ ті самі. Невідомий/видалений працівник має повноцінний Alert/retry та дію повернення, а не порожню модалку. Edit і Delete залишаються на чинних EmployeeForm/EmployeeActionDialog; після delete reducer повертає список.
 
 General повторно використовує кадрові поля й форматування попередньої картки на InfoSection/InfoItem. Service монтує ServiceBaselinePanel і його ServiceProjectionView, Rank — RankProjectionPanel, Leave — LeaveOverview з чинним переходом до LeaveWorkspace. Невидимі предметні перегляди не монтуються й не запитують даних. Складні редактори надбавок/рангів і відпусток лишаються у SeniorityRanksWorkspace/LeaveWorkspace. SQLite v18, 0.1.0, міграції, Main/IPC, формули, права/залишки, backup та security не змінено. Нових залежностей/Router/вікон Electron немає.
+
+## 6.2 – Підтверджені показники в профілі
+
+IndicatorEditor лишається єдиною формою обох показників. Його props мають режими legacy (default, onSwitch обов'язковий, чинний перегляд/вкладки) і focused (один kind, onSwitch не приймається, форма відкрита одразу). Focused використовує звичайний Modal large із предметним заголовком/ПІБ, без повторної шапки й вкладок. Save/clear/валидація/draftFor/input-конвертації/ConfirmDialog/toast лишаються спільними. У focused «Скасувати» закриває через guard; legacy повертає до перегляду, як раніше.
+
+FocusedIndicatorEditor — тільки адаптер читання: readIndicatorContext паралельно викликає getEmployee та getAllowance/getRank за одним id. Після успіху передає мінімальний SeniorityOverview єдиному редактору; інший показник у DTO null й недоступний для перемикання. loadIndicatorContext повертає cleanup, ігнорує застарілі відповіді; UI додатково звіряє key employeeId/kind/retry. Помилка читання показує Modal Alert/retry, а не порожню форму. Для актуального staff rank не відкривається. Нових IPC або listOverview для одного працівника немає.
+
+ProfileIndicatorPanel читає поточний показник окремо, показує підтверджені реквізити через InfoSection/InfoItem/documentLabel і відкриває FocusedIndicatorEditor. Після успіху ставить фактичну saved/cleared відповідь Main у локальний стан; allowance викликає profile onRefresh, rank збільшує refreshKey RankProjectionPanel. У Profile RankProjectionPanel має showCurrent=false/showConfirmedDetails=false: номер, походження, опора, ручний строк і документ показані в підтвердженій секції, а діапазон/наступний ранг/розрахункова дата — окремо без дублювання.
+
+ServiceBaselinePanel отримав необов'язкові refreshKey, onEditingChange та showConfirmedAllowance. refreshKey входить лише в ефект getServiceProjection, не в читання/скидання опорного запису або draft. Profile вимикає дубль підтвердженого відсотка у ServiceProjectionView через showConfirmedAllowance=false; поточні документи/дати належать ProfileIndicatorPanel. Під час inline-редагування стажу дія надбавки disabled, при busy також; onEditingChange(false) повертається після save/cancel/unmount. Успішна зміна надбавки не перемонтовує сторінку або чернетку стажу. Staff зберігає підтверджену надбавку без нормативного прогнозу ОМС.
+
+Modal.returnFocus отримує початкову кнопку профілю і під час loading, і у формі. Після clear кнопка лишається тим самим DOM-елементом із новим текстом; якщо її більше немає, використовується заголовок профілю. Editor використовує чинний useUnsavedChanges, без другого Modal dirty guard. Main-інвалідація personnelControl:changed для save/clear вже працює й не змінювалася. Транспортний UNAVAILABLE/INTERNAL_ERROR показує невизначений результат без скидання чернетки; закриття/скасування редактора також перечитує поточний показник і прогноз, щоб не лишити старі відомості після можливої фактичної мутації.
+
+SeniorityRanksWorkspace/IndicatorsCard збережені на legacy, зі старими перемиканням/реєстром/фільтрами. SQLite v18, 0.1.0, усі Main/IPC-контракти, формули, документи-підстави, LeaveService/відпустки, кадрові стани та backup/security незмінні. Нових залежностей/стилів/глобального кешу немає.

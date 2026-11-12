@@ -15,7 +15,8 @@ import { personnelMessage } from '../../employees/model'
 import { formatDate, formatDateTime, todayIsoDate } from '../../lib/dates'
 import { baselineDraft, baselineErrors, baselineInput, baselineLabel, type BaselineDraft } from './baseline-model'
 
-export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBusyChange }: {
+export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBusyChange,refreshKey=0,onEditingChange,showConfirmedAllowance=true }: {
+ refreshKey?:number;onEditingChange?:(editing:boolean)=>void;showConfirmedAllowance?:boolean
  employeeId: string; navigationGuard: RefObject<NavigationGuard>; onBusyChange: (busy:boolean)=>void
 }) {
  const [value,setValue]=useState<ServiceBaseline|null>(null), [loading,setLoading]=useState(true), [retry,setRetry]=useState(0)
@@ -28,6 +29,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
  const dirty=editing&&JSON.stringify(initial)!==JSON.stringify(draft)
  const requestClose=useUnsavedChanges(dirty,inFlight,navigationGuard,owner)
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
+ useEffect(()=>()=>onEditingChange?.(false),[onEditingChange])
  useEffect(()=>{
   let current=true;setLoading(true);setError('')
   window.hromadaHR.seniorityRanks.getServiceBaseline(employeeId).then(result=>{
@@ -46,8 +48,8 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
   let current=true;setProjection(null);setProjectionError('');projectionDate.current=todayIsoDate()
   window.hromadaHR.seniorityRanks.getServiceProjection(employeeId).then(result=>{if(current){if(result.ok)setProjection(result.data);else setProjectionError(personnelMessage(result.error.code))}}).catch(()=>{if(current)setProjectionError('Не вдалося отримати прогноз.')})
   return()=>{current=false}
- },[employeeId,value,loading,projectionRetry])
- function reset(next:ServiceBaseline|null) {const v=baselineDraft(next);setDraft(v);setInitial(v);setIso(next?.asOfDate??'');setEditing(false);setErrors({});setError('')}
+ },[employeeId,value,loading,projectionRetry,refreshKey])
+ function reset(next:ServiceBaseline|null) {const v=baselineDraft(next);setDraft(v);setInitial(v);setIso(next?.asOfDate??'');setEditing(false);onEditingChange?.(false);setErrors({});setError('')}
  function change<K extends keyof BaselineDraft>(key:K,text:BaselineDraft[K]) {setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined}))}
  async function save(clear=false) {
   if(inFlight.current)return
@@ -64,7 +66,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
   finally {inFlight.current=false;if(alive.current){setBusy(false);onBusyChange(false)}}
  }
  return <div ref={owner} className="employee-form">
-  <InfoSection title="Підтверджений стаж служби" action={!loading&&!error&&!editing&&<button type="button" className="secondary-button" onClick={()=>{reset(value);setEditing(true)}}>{value?'Редагувати стаж':'Внести стаж'}</button>}>
+  <InfoSection title="Підтверджений стаж служби" action={!loading&&!error&&!editing&&<button type="button" className="secondary-button" onClick={()=>{reset(value);setEditing(true);onEditingChange?.(true)}}>{value?'Редагувати стаж':'Внести стаж'}</button>}>
    {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:editing?<form className="employee-form service-baseline-form" noValidate onSubmit={e=>{e.preventDefault();void save()}}>
     <fieldset className="recipient-fieldset service-baseline-fields" disabled={busy}>
      <div className="employee-form-grid">
@@ -93,7 +95,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
     </dl>
    </>:<DataState kind="empty" compact message="Підтверджений стаж не внесено"/>}
   </InfoSection>
-  {!editing&&!loading&&<ServiceProjectionView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>}
+  {!editing&&!loading&&<ServiceProjectionView showConfirmedAllowance={showConfirmedAllowance} value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>}
   {clearing&&<ConfirmDialog title="Очистити підтверджений стаж?" message="Поточний опорний запис і його чернетку буде вилучено. Попередня версія окремо не зберігається. Надбавка, ранг і відпустки залишаться без змін." confirmLabel="Очистити" error={error} onCancel={()=>{if(!inFlight.current){setClearing(false);setError('')}}} onConfirm={()=>save(true)}/>}
  </div>
 }

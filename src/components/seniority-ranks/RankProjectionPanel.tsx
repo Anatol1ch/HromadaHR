@@ -10,7 +10,7 @@ import { personnelMessage } from '../../employees/model'
 import { rankOriginLabels } from './model'
 
 /** Read-only view shared by the rank editor and employee card. Never proposes a write. */
-export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=true}:{employeeId:string;refreshKey?:CurrentRank|null|number;showCurrent?:boolean}) {
+export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=true,showConfirmedDetails=true}:{employeeId:string;refreshKey?:CurrentRank|null|number;showCurrent?:boolean;showConfirmedDetails?:boolean}) {
  const [value,setValue]=useState<RankProjection|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
  const day=useRef(todayIsoDate())
  useEffect(()=>{
@@ -31,10 +31,10 @@ export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=t
     {value.usualRanks.length>0&&<InfoItem label="Звичайний діапазон" value={value.usualRanks.join(', ')}/>}
     {value.nextRank!==null&&<InfoItem label="Наступний можливий ранг" value={`${value.nextRank} ранг`}/>}
     {value.reviewOn&&<InfoItem label="Орієнтовна перевірка" value={formatDate(value.reviewOn)}/>}
-    {value.rank&&<InfoItem label="Походження рангу" value={rankOriginLabels[value.rank.origin]}/>}
-    {value.rank?.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(value.rank.reviewAnchorOn)}/>}
-    {value.rank?.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(value.rank.reviewOn)}/>}
-    {value.rank?.originNote&&<InfoItem label="Пояснення підстави" value={value.rank.originNote} wide/>}
+    {showConfirmedDetails&&value.rank&&<InfoItem label="Походження рангу" value={rankOriginLabels[value.rank.origin]}/>}
+    {showConfirmedDetails&&value.rank?.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(value.rank.reviewAnchorOn)}/>}
+    {showConfirmedDetails&&value.rank?.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(value.rank.reviewOn)}/>}
+    {showConfirmedDetails&&value.rank?.originNote&&<InfoItem label="Пояснення підстави" value={value.rank.originNote} wide/>}
    </dl>}
    <p className="employee-hint">{value.explanation}</p>
    {(value.timing==='past'||value.timing==='today')&&<Alert variant="info">Настав орієнтовний строк перевірки можливості присвоєння чергового рангу.</Alert>}

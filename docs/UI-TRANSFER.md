@@ -567,3 +567,7 @@ Read-only перевірено src/App.tsx (topbar/top-actions) та src/Setting
 ## 6.1 – Повноцінна сторінка особової картки
 
 Read-only звірено src/SettingsPage.tsx (settings-section-nav/current, умовне монтування вмісту) та src/RecipientRegistry.tsx (RecipientDetails і detail section/grid/item) HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Еталонний RecipientDetails модальний, тому не переносився як оболонка: замовник прямо погодив повноцінну сторінку. У HR адаптовано наявний навігаційний патерн settings та InfoSection/InfoItem, збережено чинні форми/перегляди/guard. Новий employee-profile.css ізольований; палітра/висоти контролів/адаптивні інформаційні сітки лишаються на спільних токенах. Нової дизайн-системи або серверної/предметної логіки AID немає. Windows GUI перевірить замовник.
+
+## 6.2 – Сфокусовані показникові редактори профілю
+
+Read-only звірено src/RecipientRegistry.tsx (RecipientFormModal, початкові значення, active cleanup читання, recipient-field) HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. У HR збережено вже адаптовані Modal/ConfirmDialog/поля/guard і єдиний IndicatorEditor. Нові ProfileIndicatorPanel/FocusedIndicatorEditor лише компонують read-only реквізити й цільове завантаження навколо нього; другої форми/предметної логіки не створено. Використані чинні InfoSection/InfoItem, documentLabel, кольори й геометрія без глобального редизайну або нового CSS. Серверні/предметні механізми AID не переносилися. Windows GUI прийматиме замовник.
