@@ -35,7 +35,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   const [context, setContext] = useState<LeaveJournalContext | null>(null)
   const historyReturn = useRef<View>('overview')
   const opener = useRef<HTMLElement | null>(null)
-  const heading = useRef<HTMLHeadingElement>(null)
+  const heading = useRef<HTMLDivElement>(null)
   const { throughDate } = useAccountingDate()
   const [records, setRecords] = useState<{ key: string; data?: LeaveRecord[]; error?: string }>()
   const [rights, setRights] = useState<{ key: string; data?: EmployeeLeaveRight[]; error?: string }>()
@@ -105,8 +105,8 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     : view === 'history' ? 'Історія відпусток' : 'Огляд відпусток'
 
   return <div className="profile-leave-workbench">
-    <div className="profile-leave-toolbar">
-      <h3 ref={heading} tabIndex={-1}>{title}</h3>
+    <div className="profile-leave-toolbar" role="group" aria-label={title} ref={heading} tabIndex={-1}>
+      {view !== 'rights' && view !== 'history' && <h3>{title}</h3>}
       <div className="leave-accounting-actions">
         {view !== 'overview' && <button type="button" className="secondary-button" onClick={() => changeView('overview')}><ArrowLeft size={16}/>До огляду відпусток</button>}
         {view !== 'rights' && <button type="button" className="secondary-button" onClick={() => changeView('rights')}><ShieldCheck size={16}/>Права на відпустки</button>}

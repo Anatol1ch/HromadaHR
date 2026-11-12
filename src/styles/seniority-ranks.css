@@ -1,11 +1,3 @@
-.seniority-workspace { min-width: 0; container-type: inline-size; }
-.seniority-modal .employee-card-header { grid-template-columns: auto minmax(0, 1fr); }
-.seniority-modal .employee-card-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.seniority-modal .employee-card-tabs button { display: grid; gap: var(--space-1); }
-.seniority-modal .employee-card-tabs small { font-size: 12px; font-weight: 400; }
-.seniority-modal .employee-card-tabs:has(button:only-child) { grid-template-columns: minmax(0, 1fr); }
-.seniority-staff-note { margin: 0; }
-.seniority-overview-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .seniority-value { color: var(--accent-hover); font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .seniority-date-option { display: flex; align-items: center; gap: var(--space-2); padding-block: var(--space-1); font-size: 13px; color: var(--color-text-label); }
 
@@ -13,11 +5,6 @@
 .seniority-footer-actions .employee-form-actions { margin-inline-start: auto; }
 .seniority-footer-actions button { white-space: normal; height: auto; min-height: var(--control-height); }
 
-.seniority-overview { display: grid; gap: var(--space-3); min-width: 0; }
-.seniority-empty { font-size: 16px; font-weight: 600; }
-.seniority-overview-heading .secondary-button { min-height: var(--control-height-compact); height: auto; white-space: normal; }
-.seniority-dates { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.seniority-dates .info-item { border: 1px solid var(--border-surface); }
 .seniority-document { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: 0; padding-top: var(--space-2); border-top: 1px solid var(--border-surface); font-size: 13px; overflow-wrap: anywhere; }
 .seniority-document > span:first-child { color: var(--color-text-muted); }
 .seniority-document > span:last-child { min-width: 0; }
@@ -30,8 +17,6 @@
 .seniority-switch:disabled { opacity: .6; cursor: default; }
 .seniority-date-help { display: grid; justify-items: start; gap: var(--space-2); }
 .seniority-date-help .secondary-button { font-size: 12px; height: auto; min-height: var(--control-height-compact); white-space: normal; }
-@container (max-width: 650px) { .seniority-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container (max-width: 440px) { .seniority-dates { grid-template-columns: minmax(0, 1fr); } }
 
 .service-baseline-form .service-baseline-fields { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; min-width: 0; }
 

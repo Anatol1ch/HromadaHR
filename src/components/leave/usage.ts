@@ -19,8 +19,3 @@ export function annualUsage(records: LeaveRecord[], employeeId: string, type: Le
   return { history, activeCount: active.length, cancelledCount: history.length - active.length, days: active.reduce((sum, record) => sum + record.usedDays, 0), limit,
     alreadyGranted: limit !== null && active.length > 0 }
 }
-
-export function matchesEmployeeName(name: string, query: string) {
-  const normalized = name.toLocaleLowerCase('uk-UA')
-  return query.trim().toLocaleLowerCase('uk-UA').split(/\s+/).every(word => normalized.includes(word))
-}

@@ -1,4 +1,3 @@
-import { employeePickerOptions, matchesEmployeeOption } from '../src/components/leave/employeePicker.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { employeeStructure, employeeSummary, filterEmployees, initialRegistry, registryOptions, withDirectoryNames } from '../src/employees/registry.ts'
@@ -87,20 +86,4 @@ test('directory ranks control groups and jobs, with Ukrainian names and stable I
   const renamed = withDirectoryNames(people, { ...directories, department: [{ id: 'Юридичний', name: 'Нова назва' }] })
   assert.equal(renamed[0].department.name, 'Нова назва')
   assert.deepEqual(registryOptions(reversed.position, 'position', '').slice(1).map(option => option.value), reversed.position.map(entry => entry.id))
-})
-
-test('employee picker uses directory order, distinguishes namesakes and searches all displayed fields', () => {
-  const people = [
-    row('b', 'Іваненко', 'Юрист', 'Архів', '2025-01-01'),
-    row('a', 'Іваненко', 'Юрист', 'Архів', '2025-01-01'),
-    row('c', 'Дорош', 'Бухгалтер', 'Юридичний', '2025-01-01'),
-    row('d', 'Коваль', 'Секретар', 'Архів', '2025-01-01'),
-  ]
-  const options = employeePickerOptions(people, directories)
-  assert.deepEqual(options.map(option => option.value), ['c', 'a', 'b', 'd'])
-  for (const query of ['ІВАН', 'ІВАН   ПРИКЛАД', 'ЮРИСТ', 'Архі   Юрис']) {
-    assert.deepEqual(options.filter(option => matchesEmployeeOption(option, query)).map(option => option.value), ['a', 'b'])
-  }
-  assert.equal(employeePickerOptions(people, { ...directories, position: [] }), null)
-  assert.deepEqual(employeePickerOptions([], directories), [])
 })

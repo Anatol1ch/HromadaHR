@@ -1,7 +1,5 @@
-import { employeeStructure, withDirectoryNames, type DirectoryOrder } from '../../employees/registry.ts'
-import { rankOrigins, type RankOrigin, allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank, type SeniorityOverview } from '../../../shared/seniority-ranks.ts'
+import { rankOrigins, type RankOrigin, allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank } from '../../../shared/seniority-ranks.ts'
 import { formatDate, formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
-import { fullName, normalizeText } from '../../employees/model.ts'
 export type Kind = 'allowance' | 'rank'
 export interface Draft { status: string; percentage: string; rank: string; assignedOn: string; effectiveOn: string; origin: string; reviewAnchorOn: string; originNote: string; documentType: string; documentNumber: string; documentDate: string; reviewOn: string }
 export function draftFor(value: Allowance | CurrentRank | null): Draft {
@@ -39,31 +37,6 @@ export function rankInput(v: Draft): RankInput {
  return { ...basis(v),origin:v.origin as RankOrigin,reviewAnchorOn:parseDateInput(v.reviewAnchorOn),originNote:v.originNote.trim()||null,rank:Number(v.rank),assignedOn:parseDateInput(v.assignedOn)!,effectiveOn:parseDateInput(v.effectiveOn) === parseDateInput(v.assignedOn) ? null : parseDateInput(v.effectiveOn) }
 }
 export const allowanceLabel = (value: Allowance | null) => value === null ? 'Не внесено' : value.status === 'not_applicable' ? 'Не застосовується' : `${value.percentage}%`
-export const rankLabel = (row: SeniorityOverview) => row.employee.employeeType === 'staff' ? 'Не застосовується' : row.rank ? `${row.rank.rank} ранг` : 'Не внесено'
-export interface Filters { query: string; type: string; allowance: string; rank: string }
-const collator = new Intl.Collator('uk',{sensitivity:'base',numeric:true})
-export function filterOverview(rows: SeniorityOverview[], f: Filters) {
- const words = normalizeText(f.query).split(' ').filter(Boolean)
- return rows.filter(row => {
-  const e=row.employee, text=normalizeText(`${fullName(e)} ${e.position.name} ${e.department.name}`)
-  return words.every(word=>text.includes(word)) && (!f.type || e.employeeType===f.type) && (!f.allowance || (row.allowance?.status ?? 'missing')===f.allowance) && (!f.rank || e.employeeType==='official' && (f.rank==='assigned' ? !!row.rank : !row.rank))
- }).sort((a,b)=>collator.compare(fullName(a.employee),fullName(b.employee)) || a.employee.id.localeCompare(b.employee.id))
-}
-
-export function overviewStructure(rows: SeniorityOverview[], directories: DirectoryOrder) {
-  return employeeStructure(withDirectoryNames(rows.map(row => row.employee), directories), directories)
-}
-export function nextReview(row: SeniorityOverview): string | null {
-  return [row.allowance?.reviewOn, row.rank?.reviewOn].filter((date): date is string => !!date).sort()[0] ?? null
-}
-
-export function updateIndicator(row: SeniorityOverview, kind: Kind, value: Allowance | CurrentRank | null): SeniorityOverview {
-  return kind === 'allowance' ? { ...row, allowance: value as Allowance | null } : { ...row, rank: value as CurrentRank | null }
-}
-
-export function directionsFor(type: 'official' | 'staff'): Kind[] {
-  return type === 'official' ? ['rank', 'allowance'] : ['allowance']
-}
 export const documentTypes = ['Розпорядження голови', 'Рішення виконавчого комітету', 'Рішення ради'] as const
 export function documentTypeOptions(selected: string) {
   const options = [{ value: '', label: 'Не зазначено' }, ...documentTypes.map(value => ({ value, label: value }))]

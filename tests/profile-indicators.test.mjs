@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync,mkdtempSync,rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join,resolve,sep,basename } from 'node:path'
-import { editorDirections,readIndicatorContext,readIndicator,loadIndicatorContext,uncertainIndicatorResult } from '../src/components/seniority-ranks/profile-indicators.ts'
+import { readIndicatorContext,readIndicator,loadIndicatorContext,uncertainIndicatorResult } from '../src/components/seniority-ranks/profile-indicators.ts'
 import { openStorageSafely } from '../dist-electron/electron/storage/index.js'
 import { PersonnelService } from '../dist-electron/electron/personnel/service.js'
 import { SeniorityRanksService } from '../dist-electron/electron/seniority-ranks/service.js'
@@ -15,13 +15,6 @@ const allowance={status:'confirmed',percentage:0,effectiveOn:'2020-01-01',docume
 const rank={rank:6,assignedOn:'2020-01-01',origin:'civil_service_equivalence',reviewAnchorOn:'2020-02-01',originNote:'Документально підтверджено',effectiveOn:null}
 const tick=()=>new Promise(resolve=>setImmediate(resolve))
 
-test('focused mode fixes one direction while legacy keeps its established employee-type behavior',()=>{
- assert.deepEqual(editorDirections('legacy','allowance','official'),['rank','allowance'])
- assert.deepEqual(editorDirections('legacy','rank','staff'),['allowance'])
- for(const kind of ['allowance','rank'])assert.deepEqual(editorDirections('focused',kind,'official'),[kind])
- assert.deepEqual(editorDirections('focused','allowance','staff'),['allowance'])
- assert.deepEqual(editorDirections('focused','rank','staff'),[])
-})
 test('fresh context reads only the target and current employee; null, confirmed zero and not-applicable remain distinct',async()=>{
  const calls=[],api={personnel:{getEmployee:async id=>{calls.push(['employee',id]);return ok(employee)}},seniorityRanks:{
   getAllowance:async id=>{calls.push(['allowance',id]);return ok(allowance)},getRank:async id=>{calls.push(['rank',id]);return ok(rank)},listOverview:()=>{throw Error('must not scan registry')},
@@ -61,14 +54,14 @@ test('closing or changing the employee discards late context responses and only 
 test('the same editor handles focused saves/clears and guards; projection refresh never remounts the baseline draft',()=>{
  const source=name=>readFileSync(new URL('../src/components/'+name,import.meta.url),'utf8')
  const editor=source('seniority-ranks/IndicatorEditor.tsx'),adapter=source('seniority-ranks/FocusedIndicatorEditor.tsx'),panel=source('seniority-ranks/ProfileIndicatorPanel.tsx'),baseline=source('seniority-ranks/ServiceBaselinePanel.tsx'),profile=source('employees/EmployeeProfilePage.tsx')
- assert.match(adapter,/<IndicatorEditor key=\{key\} mode="focused"/);assert.match(adapter,/if\(current\?\.row\)/);assert.match(adapter,/loadIndicatorContext/)
+ assert.match(adapter,/<IndicatorEditor key=\{key\}/);assert.match(adapter,/if\(current\?\.row\)/);assert.match(adapter,/loadIndicatorContext/)
  assert.doesNotMatch(adapter,/saveAllowance|saveRank|clearAllowance|clearRank|listOverview|ValidatedInput/)
- assert.match(editor,/useState\(mode==='focused'\)/);assert.match(editor,/mode==='legacy'&&<nav/);assert.match(editor,/mode==='focused'\?title:'Ранги та вислуга'/)
+ assert.doesNotMatch(editor,/\bmode\b|onSwitch|role="tablist"/);assert.match(editor,/title=\{title\}/)
  assert.match(editor,/if\(inFlight.current\) return/);assert.match(editor,/requestClose\(onClose\)/);assert.match(editor,/ConfirmDialog/);assert.match(editor,/returnFocus=\{returnFocus\}/)
  assert.match(panel,/if\(reconcile\)/);assert.match(panel,/onRefresh\?\.\(\)/);assert.match(panel,/setState\(\{key,value:saved\}\)/);assert.match(panel,/setVersion\(v=>v\+1\)/);assert.match(panel,/showConfirmedDetails=\{false\}/)
  assert.match(profile,/disabled=\{baselineEditing\|\|baselineBusy\|\|loading\}/);assert.match(profile,/refreshKey=\{allowanceRefresh\}/);assert.doesNotMatch(profile,/key=\{allowanceRefresh\}/)
  assert.match(baseline,/\[employeeId,retry\]/);assert.match(baseline,/\[employeeId,value,loading,projectionRetry,refreshKey\]/);assert.match(baseline,/onEditingChange\?\.\(true\)/)
- assert.match(profile,/showConfirmedAllowance=\{false\}/);assert.match(source('seniority-ranks/IndicatorsCard.tsx'),/onSwitch=\{setActive\}/)
+ assert.match(profile,/showConfirmedAllowance=\{false\}/)
 })
 test('existing Main APIs preserve actual allowance/rank replies, refresh projections and leave all leave facts unchanged',async t=>{
  const root=mkdtempSync(join(tmpdir(),'hr-profile-indicators-')),c=await openStorageSafely(join(root,'test.db'))

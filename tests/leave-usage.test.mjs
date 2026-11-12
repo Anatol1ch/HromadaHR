@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accountingYears, annualUsage, matchesEmployeeName, sortedLeaveYears } from '../src/components/leave/usage.ts'
+import { accountingYears, annualUsage, sortedLeaveYears } from '../src/components/leave/usage.ts'
 
 test('leave year selectors list distinct years in ascending order', () => {
   assert.deepEqual(sortedLeaveYears(['2029','2027','2028','2027']), ['2027','2028','2029'])
@@ -50,16 +50,6 @@ test('study counts separate events without a universal limit or fictitious avail
   assert.equal(usage.limit,null)
   assert.equal(usage.alreadyGranted,false)
   assert.equal('remaining' in usage,false)
-})
-
-test('employee search matches all name parts without choosing a default employee', () => {
-  assert.equal(matchesEmployeeName('Коваль Олена Іванівна','  оЛеНа   коваль '),true)
-  assert.equal(matchesEmployeeName('Коваль Олена Іванівна','Петро'),false)
-  const source=readFileSync(new URL('../src/components/leave/EmployeeChooser.tsx',import.meta.url),'utf8')
-  assert.doesNotMatch(source,/onSelect\(results\[0\]|onSelect\(employees\[0\]/)
-  assert.match(source,/onChange=\{onSelect\}/)
-  assert.match(source,/searchable matchesSearch=\{matchesEmployeeOption\}/)
-  assert.match(source,/<Select/)
 })
 
 test('editor actions are contextual and rights keep a single guarded explicit save', () => {

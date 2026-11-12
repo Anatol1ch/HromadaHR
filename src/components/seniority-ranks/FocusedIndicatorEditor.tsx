@@ -15,7 +15,7 @@ export default function FocusedIndicatorEditor({employeeId,kind,navigationGuard,
  const [state,setState]=useState<{key:string;row?:SeniorityOverview;error?:string}>(),[retry,setRetry]=useState(0)
  const key=JSON.stringify([employeeId,kind,retry]),current=state?.key===key?state:undefined
  useEffect(()=>loadIndicatorContext(window.hromadaHR,employeeId,kind,result=>setState(result.ok?{key,row:result.data}:{key,error:personnelMessage(result.error.code)})),[employeeId,kind,key])
- if(current?.row)return <IndicatorEditor key={key} mode="focused" kind={kind} row={current.row} navigationGuard={navigationGuard} onClose={onClose} onSaved={onSaved} returnFocus={returnFocus}/>
+ if(current?.row)return <IndicatorEditor key={key} kind={kind} row={current.row} navigationGuard={navigationGuard} onClose={onClose} onSaved={onSaved} returnFocus={returnFocus}/>
  return <Modal title={kind==='allowance'?'Надбавка за вислугу років':'Поточний ранг'} size="large" onClose={onClose} returnFocus={returnFocus}>
   {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:<DataState kind="loading" message="Читання актуальних відомостей…"/>}
  </Modal>

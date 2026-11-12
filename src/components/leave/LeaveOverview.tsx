@@ -6,7 +6,7 @@ import InfoSection from '../InfoSection'
 import useAccountingDate from './useAccountingDate'
 import { isPeriodLeave } from '../../../shared/leave'
 import { useEffect, useState } from 'react'
-import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight } from '../../../shared/leave'
+import type { LeaveRecord, PeriodBalance, ProposedLeavePeriod, EmployeeLeaveRight, LeaveType } from '../../../shared/leave'
 import { balanceSummary } from './summary'
 import { leaveLabels, leaveOptions, periodLeaveOptions, rightLabels } from './presentation'
 import { formatDate } from '../../lib/dates'
@@ -14,7 +14,7 @@ import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import DictionaryTable from '../DictionaryTable'
-import type { LeaveDestination } from './navigation'
+export type LeaveDestination = { section: 'balances'; type?: LeaveType } | { section: 'rights' }
 
 /** Employee card overview: no mutation components or callbacks are mounted here. */
 export default function LeaveOverview({ employeeId, revision, onOpen }: { employeeId: string; revision: number; onOpen: (destination: LeaveDestination) => void }) {

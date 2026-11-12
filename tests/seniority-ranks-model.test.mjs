@@ -1,28 +1,17 @@
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowanceInput, rankInput, draftFor, validateDraft, allowanceLabel, rankLabel, filterOverview, overviewStructure, nextReview, updateIndicator, directionsFor, documentTypeOptions, documentTypes, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate } from '../src/components/seniority-ranks/model.ts'
+import { allowanceInput, rankInput, draftFor, validateDraft, allowanceLabel, documentTypeOptions, documentTypes, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
 const notApplicable={...basis,status:'not_applicable',percentage:null,effectiveOn:null}
 const rank={...basis,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-02-29',effectiveOn:null}
-function row(id,type,allowance=null,current=null) { return {employee:{id,lastName:id,firstName:'Тест',middleName:null,employeeType:type,position:{name:'Інспектор'},department:{name:'Відділ'}},allowance,rank:current} }
-test('missing, zero, not applicable and staff ranks remain distinct in registry filters',()=>{
+test('missing, confirmed zero and not-applicable allowances remain distinct',()=>{
  assert.equal(allowanceLabel(null),'Не внесено')
  assert.equal(allowanceLabel(confirmed),'0%')
  assert.equal(allowanceLabel(notApplicable),'Не застосовується')
- assert.equal(rankLabel(row('a','staff')),'Не застосовується')
- assert.equal(rankLabel(row('b','official')),'Не внесено')
- const rows=[row('Я','official',null),row('Б','official',confirmed,rank),row('А','staff',notApplicable)]
- const filters={query:'',type:'',allowance:'',rank:''}
- assert.deepEqual(filterOverview(rows,filters).map(r=>r.employee.id),['А','Б','Я'])
- assert.deepEqual(filterOverview(rows,{...filters,rank:'missing'}).map(r=>r.employee.id),['Я'])
- assert.equal(filterOverview(rows,{...filters,rank:'assigned'}).length,1)
- assert.equal(filterOverview(rows,{...filters,allowance:'confirmed'})[0].allowance.percentage,0)
- assert.equal(filterOverview(rows,{...filters,allowance:'not_applicable'})[0].employee.employeeType,'staff')
- assert.equal(filterOverview(rows,{...filters,query:'інспектор ВІДДІЛ'}).length,3)
- assert.equal(filterOverview(rows,{...filters,type:'staff',rank:'missing'}).length,0)
+
 })
 test('forms require explicit values and keep optional rank effective date null',()=>{
  const empty=draftFor(null)
@@ -55,37 +44,11 @@ test('calendar drafts, future dates, mandatory fields and text limits are valida
  assert.match(personnelMessage('EMPLOYEE_HAS_CURRENT_RANK'),/очистіть поточний ранг/)
 })
 
-test('seniority registry shares department/position order, directory names and stable Ukrainian name ties',()=>{
- const dirs={department:[{id:'second',name:'Відділ 2'},{id:'first',name:'Відділ 1'}],position:[{id:'chief',name:'Керівник'},{id:'expert',name:'Фахівець'}]}
- const make=(id,name,departmentId,positionId)=>({...row(id,'official'),employee:{...row(id,'official').employee,lastName:name,departmentId,positionId}})
- const rows=[make('z','Яворів','first','chief'),make('b','Іваненко','second','expert'),make('a','Іваненко','second','expert'),make('c','Яворів','second','chief')]
- const groups=overviewStructure(filterOverview(rows,{query:'',type:'',rank:'',allowance:''}),dirs)
- assert.deepEqual(groups.map(g=>g.id),['second','first'])
- assert.deepEqual(groups[0].rows.map(e=>e.id),['c','a','b'])
- assert.equal(groups[0].rows[0].position.name,'Керівник')
- assert.equal(groups[0].rows[0].department.name,'Відділ 2')
- assert.equal(overviewStructure(rows,{...dirs,position:[]}),null)
-})
-test('nearest manual review date and independent indicator updates preserve the other value',()=>{
- const original=row('a','official',{...confirmed,reviewOn:'2028-01-01'},{...rank,reviewOn:'2027-01-01'})
- assert.equal(nextReview(original),'2027-01-01')
- assert.equal(nextReview(row('empty','staff')),null)
- const updated=updateIndicator(original,'allowance',notApplicable)
- assert.equal(updated.rank,original.rank)
- assert.equal(updated.employee,original.employee)
- assert.equal(updateIndicator(original,'rank',null).allowance,original.allowance)
- assert.equal(original.allowance.percentage,0)
- const draft={...draftFor(rank),effectiveOn:''}
- assert.equal(rankInput(draft).effectiveOn,null)
-})
-
-test('rank precedes allowance for officials; staff opens allowance; navigation uses the accepted name',()=>{
- assert.deepEqual(directionsFor('official'),['rank','allowance'])
- assert.deepEqual(directionsFor('staff'),['allowance'])
+test('navigation retains only the current documents route',()=>{
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8')
  assert.doesNotMatch(app,/id: 'service'/)
  assert.match(app,/id: 'documents', title: 'Документи'/)
- for(const file of ['src/App.tsx','src/employees/model.ts','src/components/seniority-ranks/IndicatorEditor.tsx','src/components/seniority-ranks/SeniorityRanksWorkspace.tsx']) {
+ for(const file of ['src/App.tsx','src/employees/model.ts','src/components/seniority-ranks/IndicatorEditor.tsx']) {
   const source=readFileSync(new URL('../'+file,import.meta.url),'utf8')
   assert.equal(source.includes('Стаж і ранги'),false)
  }
@@ -130,7 +93,5 @@ test('copying document date is one explicit bounded change and preserves unrelat
   assert.equal(canCopyDocumentDate(draft,'2026-11-11'),false)
   assert.equal(copyDocumentDate(draft,'2026-11-11'),draft)
  }
- const original=row('a','official',confirmed,rank)
- const result=updateIndicator(original,'allowance',allowanceInput({...copied,reviewOn:''}))
- assert.equal(result.rank,original.rank)
+
 })

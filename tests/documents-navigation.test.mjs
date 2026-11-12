@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
@@ -72,4 +72,23 @@ test('global filters span workers; context roundtrip does not alter the normal j
   assert.deepEqual(rows(normal),['1'])
   assert.deepEqual(rows({...emptyLeaveFilters,status:'cancelled'}),['2'])
   assert.deepEqual(rows(emptyLeaveFilters),['2','1'])
+})
+
+test('retired UI files have no remaining imports; active profile and document editors remain available', () => {
+  const removed = ['leave/LeaveWorkspace','seniority-ranks/SeniorityRanksWorkspace','seniority-ranks/IndicatorsCard',
+    'leave/EmployeeChooser','leave/LeaveAccountingOverview','leave/LeaveTypeNavigation','leave/navigation','leave/employeePicker']
+  for (const name of removed) {
+    assert.equal(existsSync(new URL('../src/components/' + name + (name.endsWith('/navigation') || name.endsWith('/employeePicker') ? '.ts' : '.tsx'), import.meta.url)),false)
+  }
+  const root = new URL('../src/', import.meta.url)
+  for (const entry of readdirSync(root, { recursive: true }).filter(name => /\.tsx?$/.test(name))) {
+    const source = readFileSync(new URL(entry.replaceAll('\\','/'),root),'utf8')
+    const imports = [...source.matchAll(/(?:from|import)\s*['"]([^'"]+)['"]/g)].map(match => match[1]).filter(path=>path.startsWith('.')).map(path=>new URL(path,new URL(entry.replaceAll('\\','/'),root)).pathname.replace(/\.tsx?$/,''))
+    for (const name of removed) assert.equal(imports.includes(new URL('../src/components/'+name,import.meta.url).pathname), false, entry + ': ' + name)
+  }
+  for (const name of ['employees/EmployeeProfilePage','employees/EmployeeForm','leave/ProfileLeaveWorkbench','leave/LeaveJournal',
+    'leave/LeaveRegistrationForm','leave/LeaveRecordAction','leave/LeaveRights','leave/LeaveBalances','seniority-ranks/IndicatorEditor',
+    'seniority-ranks/FocusedIndicatorEditor','seniority-ranks/RankProjectionPanel','documents/DocumentsWorkspace']) {
+    assert.equal(existsSync(new URL('../src/components/'+name+'.tsx',import.meta.url)),true)
+  }
 })

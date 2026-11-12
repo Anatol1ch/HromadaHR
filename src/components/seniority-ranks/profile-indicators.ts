@@ -1,10 +1,6 @@
 import type { HromadaHRApi,IpcErrorCode,IpcResult } from '../../../shared/ipc'
 import type { Allowance,CurrentRank,SeniorityOverview } from '../../../shared/seniority-ranks'
-import { directionsFor,type Kind } from './model.ts'
-export type IndicatorMode='legacy'|'focused'
-export function editorDirections(mode:IndicatorMode,kind:Kind,type:'official'|'staff'):Kind[] {
- return mode==='focused'?(kind==='rank'&&type==='staff'?[]:[kind]):directionsFor(type)
-}
+import type { Kind } from './model.ts'
 export async function readIndicator(api:HromadaHRApi['seniorityRanks'],id:string,kind:Kind):Promise<IpcResult<Allowance|CurrentRank|null>> {
  try{return await(kind==='allowance'?api.getAllowance(id):api.getRank(id))}
  catch{return {ok:false,error:{code:'UNAVAILABLE'}}}

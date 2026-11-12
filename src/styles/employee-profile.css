@@ -29,7 +29,7 @@
 .profile-leave-workbench .leave-accounting-actions { flex-wrap:wrap; }
 .profile-leave-workbench .leave-register-table { min-width:760px; }
 .profile-leave-workbench .leave-registry { min-width:0; }
-.profile-leave-toolbar h3:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
+.profile-leave-toolbar:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
 
 .profile-leave-workbench .leave-register-table :is(th, td):nth-child(-n+4) { min-width:0; }
 .profile-leave-workbench .leave-register-table .leave-journal-date { min-width:6.5rem; }
