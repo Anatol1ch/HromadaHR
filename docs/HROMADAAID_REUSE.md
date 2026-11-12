@@ -200,3 +200,7 @@ Read-only звірено src/RecipientRegistry.tsx HromadaAID за SHA 33eca1073
 ## 5.3.4 – Перегляд і контроль рангу
 
 Read-only звірено RecipientDetails у src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Використано чинні адаптовані InfoSection/InfoItem, Select, DateField, ValidatedTextarea й згорнуту native details-секцію з локальними токенами. RankProjectionPanel — один read-only компонент для двох чинних контекстів; другого редактора чи реєстру немає. Предметні правила джерела не переносилися. Для дворічної дати використано наявний HR daysInMonth; saturating shiftMonths не підходить через вимогу явно відхиляти рік >9999. Windows GUI прийматиме замовник.
+
+## 5.3.5 – Розрахункова підказка відпустки
+
+Read-only перевірено src/RecipientRegistry.tsx (RecipientDetails, recipient-detail-section/grid/item, Alert/DataState та форми recipient-field) HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Збережено вже адаптовані HR InfoSection/InfoItem/Alert/DataState/ConfirmDialog і BalanceEditor; додано один спільний компактний read-only блок та локальну кнопку підстановки. Власні відпускні правила й транзакції LeaveService не мають сумісного предметного аналога в реєстрі допомоги; не переносили сервер/предметну логіку AID. Нової дизайн-системи чи редактора немає. Windows GUI прийматиме замовник.

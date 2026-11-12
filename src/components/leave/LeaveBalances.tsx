@@ -1,4 +1,5 @@
 import useAccountingDate from './useAccountingDate'
+import OmsServiceLeaveProjection from './OmsServiceLeaveProjection'
 import { balanceSummary, formatLeaveDays } from './summary'
 import { leaveLabels as labels } from './presentation'
 import type { PeriodBalance } from '../../../shared/leave'
@@ -149,6 +150,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         <InfoItem label="Дата набуття права за стаж" value={data.serviceStart ? formatDate(data.serviceStart) : 'Не внесено'}/>
       </dl>}
     </InfoSection>
+    {type==='oms_service_additional'&&<OmsServiceLeaveProjection employeeId={employeeId} revision={key}/>}
     {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
     {!data?.error && <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data}

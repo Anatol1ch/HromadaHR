@@ -1,10 +1,12 @@
 import useAccountingDate from './useAccountingDate'
+import useOmsServiceLeaveProjection from './useOmsServiceLeaveProjection'
+import { applyServiceLeaveSuggestion, serviceDraftIdentity, serviceLeaveSuggestion } from './service-leave-draft'
 import Select from '../Select'
 import HelpTip from './HelpTip'
 import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { Check, Plus, X } from 'lucide-react'
 import type { LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from '../../../shared/leave'
-import { formatDate, formatDateInput, parseDateInput } from '../../lib/dates'
+import { formatDate, formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
 import Alert from '../Alert'
 import ConfirmDialog from '../ConfirmDialog'
@@ -27,6 +29,8 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   const {today, throughDate}=useAccountingDate()
   const formId = useId()
   const service = type === 'oms_service_additional'
+  const projection=useOmsServiceLeaveProjection(employeeId,0,service&&!historicalOnly&&rightsReady)
+  const [suggestion,setSuggestion]=useState<{identity:string;days:number}|null>(null)
   const initial = useRef<Draft[]>(periods.filter(period => type === 'annual_main' || period.status === 'confirmed').map(period => ({ period, days: period.status === 'confirmed' ? String(period.confirmedDays) : '' })))
   const [draftRows, setRows] = useState(initial.current)
   const [savedDate, setSavedDate] = useState(serviceStart ?? null)
@@ -66,6 +70,24 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
       const latest = service ? serviceDraftRows(current, dateValue || null, throughDate, manualProposals, historicalOnly).rows : current
       return latest.map((row, i) => i === index ? edit(row) : row)
     })
+  }
+
+  async function fillSuggestion() {
+    if(!suggestion||pending.current||historicalOnly||!rightsReady||dateDirty)return
+    pending.current=true;setBusy(true);setError('')
+    try {
+      const result=await window.hromadaHR.leave.getOmsServiceLeaveProjection(employeeId)
+      if(!alive.current)return
+      if(!result.ok){setError(personnelMessage(result.error.code));return}
+      const latest=serviceDraftRows(draftRows,dateValue||null,throughDate,manualProposals,historicalOnly)
+      const target=latest.rows.find(row=>serviceDraftIdentity(row)===suggestion.identity)
+      const now=todayIsoDate()
+      if(!target||latest.detached.has(target)||serviceLeaveSuggestion(target,result.data,now)!==suggestion.days) {
+        setError('Відомості для підстановки змінилися. Перевірте право, період і актуальний розрахунок.');projection.onRetry();return
+      }
+      setRows(applyServiceLeaveSuggestion(latest.rows,suggestion.identity,result.data,now))
+    } catch {if(alive.current)setError('Не вдалося перевірити рекомендацію. Чернетку не змінено.')}
+    finally {pending.current=false;if(alive.current){setBusy(false);setSuggestion(null)}}
   }
 
   async function submit(event: FormEvent) {
@@ -139,6 +161,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
     <form id={formId} ref={form} className="leave-layout leave-editor" onSubmit={event => void submit(event)}>
       {service && <ServiceLeaveDate value={dateValue} disabled={busy} error={dateError} onChange={setDateValue}
         onDraftChange={value => { setDateDraft(value); setDateError(''); setRowError(undefined) }}/>}
+      {service&&projection.error&&<Alert variant="info" action={<button type="button" onClick={projection.onRetry}>Повторити</button>}>Рекомендація недоступна. {projection.error} Дні можна внести вручну.</Alert>}
       <p className="leave-muted">{historicalOnly ? 'Виправте підтверджені записи або внесіть документально підтверджений початковий залишок за період, що почався до 01.01.2027.' : 'Перенесіть залишки зі зошита за кожним періодом.'} Порожньо – не внесено. 0 – залишку немає. <HelpTip label="Як заповнювати залишки"
         text={historicalOnly ? 'Початковий залишок має враховувати операції до 31.12.2026.' : 'Історичні значення вносять після операцій до 31.12.2026. За новим періодом внесіть підтверджене право – воно не нараховується автоматично.'}/></p>
       {type === 'children_social_additional' && childYears.length > 0 && <div className="recipient-field">
@@ -156,6 +179,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         {rows.map((row, index) => {
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
           const basis = 'period' in row ? row.period.accountingBasis : manualStart ? manualStart < cutoff ? 'initial_balance' : 'confirmed_entitlement' : null
+          const suggested=service&&!historicalOnly&&rightsReady&&!dateDirty&&!preview?.detached.has(row)?serviceLeaveSuggestion(row,projection.value,today):null
           return <tr key={'period' in row ? row.period.periodStart + '/' + row.period.periodEnd : row.id} className={'start' in row ? 'leave-manual-period' : undefined}>
             <td>{'period' in row ? <span className="leave-period">{type === 'children_social_additional' ? row.period.periodStart.slice(0, 4) + ' рік · ' + periodLabel(row.period) : periodLabel(row.period)}{row.period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</span> : <>
               {row.endEdited && suggestedPeriodEnd(row.startIso) && suggestedPeriodEnd(row.startIso) !== row.endIso &&
@@ -169,11 +193,13 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
             </div></>}
             {'period' in row && basis === 'confirmed_entitlement' && !historicalOnly && <small className="leave-period-note">Право за новим періодом</small>}
             {preview?.detached.has(row) && <small className="recipient-field-error">Цей період більше не відповідає даті. Очистьте дні або поверніть попередню дату.</small>}
+            {suggested!==null&&<button type="button" className="secondary-button leave-projection-action" disabled={busy||confirmZeros} onClick={()=>setSuggestion({identity:serviceDraftIdentity(row),days:suggested})}>Підставити розрахункову тривалість — {suggested} днів</button>}
+            {row.suggestedFromProjection&&<small className="leave-period-note">Чернетку заповнено за розрахунком. Перевірте перед збереженням.</small>}
             </td>
             <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
               aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)} aria-invalid={rowError?.row === index || undefined}
               aria-describedby={rowError?.row === index ? formId + '-row-error' : undefined}
-              onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days })) }} /></div>
+              onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days, suggestedFromProjection:undefined })) }} /></div>
               {rowError?.row === index && <small className="recipient-field-error" id={formId + '-row-error'} role="alert">{rowError.message}</small>}
             </td>
             {hasRowActions && <td className="leave-actions-column">{'start' in row && <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy} onClick={() => { setRowError(undefined); setRows(rows.filter((_,i)=>i!==index)) }}><X size={16} aria-hidden="true" /></button>}</td>}
@@ -185,6 +211,9 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
           setRows([...rows, { id, start: '', end: '', startIso: '', endIso: '', days: '' }])
         }}><Plus size={16} aria-hidden="true" />Додати період вручну</button>}
     </form>
+    {suggestion&&<ConfirmDialog title="Підставити розрахункову тривалість?" variant="primary" confirmLabel="Заповнити чернетку"
+      message={`До порожнього рядка буде підставлено ${suggestion.days} днів. Перевірте підтверджене право та особливі обставини, зокрема періоди догляду за дитиною. Це рекомендація; запис у базу виконується лише кнопкою «Зберегти».`}
+      onCancel={()=>setSuggestion(null)} onConfirm={fillSuggestion}/>}
     {confirmZeros && <ConfirmDialog title="Заповнити нулями?" variant="primary" confirmLabel="Заповнити нулями"
       message={`Кількість періодів вибраного виду для заповнення: ${zeroCount}. Нулі буде записано після натискання «Зберегти».`}
       onCancel={() => setConfirmZeros(false)} onConfirm={() => {

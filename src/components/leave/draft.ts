@@ -6,7 +6,7 @@ import { serviceLeaveProposals } from '../../../shared/leave-periods.ts'
 export const cutoff = '2027-01-01'
 export type Period = ConfirmedLeavePeriod | ProposedLeavePeriod
 type ManualDraft = { id: number; start: string; end: string; startIso: string; endIso: string; days: string; endEdited?: boolean }
-export type Draft = { period: Period; days: string } | ManualDraft
+export type Draft = ({ period: Period; days: string } | ManualDraft) & { suggestedFromProjection?: boolean }
 
 const periodKey = (period: Period) => period.periodStart + '/' + period.periodEnd
 

@@ -1,5 +1,6 @@
 import LeaveTypeCard, { LeaveBalanceMetric } from './LeaveTypeCard'
 import LeaveStatus from './LeaveStatus'
+import OmsServiceLeaveProjection from './OmsServiceLeaveProjection'
 import { ArrowRight, History, ShieldCheck, Wallet } from 'lucide-react'
 import InfoSection from '../InfoSection'
 import useAccountingDate from './useAccountingDate'
@@ -56,6 +57,7 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
         onOpen={() => onOpen({ section: 'balances', type: option.value })}/>
     })}</div>
     </InfoSection>
+    <OmsServiceLeaveProjection employeeId={employeeId} revision={revision}/>
     <InfoSection title="Останні зареєстровані відпустки" icon={<History size={17}/>}>
       {data.records.length ? <DictionaryTable label="Останні відпустки" className="leave-table leave-recent-table" columns={[
         {label:'Вид',width:'37%'},{label:'Дати',width:'24%'},{label:'Днів',width:'7%',className:'leave-days-column'},{label:'Статус',width:'16%'},{label:'Розпорядження',width:'16%'},

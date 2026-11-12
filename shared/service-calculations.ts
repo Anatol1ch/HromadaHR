@@ -75,6 +75,18 @@ export function allowanceForDuration(v:Duration) {
  for(const threshold of allowanceThresholds)if(v.years>threshold.years||(v.years===threshold.years&&(v.months>0||v.days>0)))percentage=threshold.percentage
  return {percentage,nextThreshold:allowanceThresholds.find(t=>v.years<t.years||(v.years===t.years&&v.months===0&&v.days===0))??null}
 }
+/** First future day satisfying a duration threshold under calculateService's existing convention.
+ * Search only; never reconstructs an historical service date. Out-of-range calculations bound the search.
+ */
+export function serviceThresholdDate(v:ServiceBaselineInput,on:string,exceeds:(duration:Duration)=>boolean):string|null {
+ if(!isIsoCalendarDate(on)||calculateService(v,on).status!=='calculated')return null
+ const reached=(day:number)=>{const r=calculateService(v,fromSerial(day));return r.current===null||exceeds(r.current)}
+ let low=serial(on)+1,high=serial('9999-12-31')
+ if(low>high||!reached(high))return null
+ while(low<high){const middle=Math.floor((low+high)/2);if(reached(middle))high=middle;else low=middle+1}
+ const candidate=calculateService(v,fromSerial(low))
+ return candidate.current&&exceeds(candidate.current)?fromSerial(low):null
+}
 export function projectService(v:ServiceBaselineInput|null,on:string,type:'official'|'staff',confirmedAllowance:Allowance|null):ServiceProjection {
  const calculation=calculateService(v,on)
  const result:ServiceProjection={status:type==='staff'?'not_applicable':calculation.status,calculation,percentage:null,nextThreshold:null,reviewOn:null,reviewAccuracy:null,confirmedAllowance,comparison:type==='staff'?'not_applicable':'unavailable'}
@@ -84,14 +96,8 @@ export function projectService(v:ServiceBaselineInput|null,on:string,type:'offic
  if(calculation.status==='calculated') {
   result.comparison=!confirmedAllowance?'missing':confirmedAllowance.status==='not_applicable'?'not_applicable':confirmedAllowance.percentage===result.percentage?'matches':'different'
   if(forecast.nextThreshold&&v) {
-   // Earliest strictly exceeding day under the same convention, bounded binary search.
-   const exceeds=(day:number)=>{const r=calculateService(v,fromSerial(day));return r.current===null||allowanceForDuration(r.current).percentage>forecast.percentage}
-   let low=serial(on)+1,high=serial('9999-12-31')
-   if(low<=high&&exceeds(high)) {
-    while(low<high){const middle=Math.floor((low+high)/2);if(exceeds(middle))high=middle;else low=middle+1}
-    const candidate=calculateService(v,fromSerial(low))
-    if(candidate.current&&allowanceForDuration(candidate.current).percentage>forecast.percentage){result.reviewOn=fromSerial(low);result.reviewAccuracy='estimate'}
-   }
+   result.reviewOn=serviceThresholdDate(v,on,duration=>allowanceForDuration(duration).percentage>forecast.percentage)
+   if(result.reviewOn)result.reviewAccuracy='estimate'
   }
  }
  return result

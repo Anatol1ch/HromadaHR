@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує HromadaHR 0.1.0 після підетапу 5.3.4. Чинна схема **SQLite v17**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
+Документ описує HromadaHR 0.1.0 після підетапу 5.3.5. Чинна схема **SQLite v17**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
 
 ## Чинна модель
 
@@ -506,3 +506,15 @@ RankProjection: status, reason, explanation, calculatedOn, category, positionSta
 IndicatorEditor отримав згорнуті «Додаткові відомості»: Select походження, DateField опори й пояснення. Чернетка/nullable-конвертація/помилки використовують чинну модель. При помилці реквізиту закрита додаткова секція розкривається. RankProjectionPanel є спільним read-only відображенням під рангом у редакторі й на наявній вкладці «Ранги» EmployeeCard; другого редактора немає. Повторний перегляд читає Main, після збереження форма переходить у перегляд і прогноз перечитується. У EmployeeCard зміна revision після кадрового редагування також перечитує прогноз, навіть якщо вкладка рангу вже відкрита. При поверненні до вікна/вкладки у нову добу виконується перечитування без таймера; застарілі відповіді ігноруються.
 
 Надбавки, опорний стаж, calculateService/projectService та LeaveService не змінені. Глобальна employee-first навігація, перехід із read-only вкладки до редактора, історія/присвоєння/документи не реалізовані й потребують окремого UI/предметного завдання. Версія 0.1.0.
+
+## 5.3.5 – Рекомендація додаткової відпустки за стаж ОМС
+
+Схема залишається SQLite v17, версія 0.1.0; міграцій, нових таблиць та залежностей немає. shared/service-leave-calculations.ts містить єдину шкалу serviceLeaveThresholds, serviceLeaveDays, nextServiceLeaveThreshold і projectOmsServiceLeave. Використовуються Duration/calculateService; наявний обмежений пошук першого дня понад поріг виділено в serviceThresholdDate і повторно використано для прогнозу надбавки та відпустки. Сам календарний алгоритм не змінено.
+
+leave.getOmsServiceLeaveProjection(employeeId) — один read-only typed IPC із Zod-перевірками аргументів/відповіді та чинними sender/main-frame/URL guards. LeaveService отримує актуальний Storage і читає тип працівника, опорний запис/boolean, acquired_on, статус права й періоди в одній deferred read-транзакції. INSERT/UPDATE/DELETE не виконує. Немає залежності від викликів SeniorityRanksService або нового кешу.
+
+Результат OmsServiceLeaveProjection: status (calculated/baseline_only/missing_baseline/not_applicable/requires_review), calculation із тривалістю/датою/точністю/причиною, recommendedDays, nextThreshold (years/days), reviewOn/reviewAccuracy, acquiredOn, rightStatus (unknown/has_right/no_right), currentPeriods із comparison, historicalBalancePresent. Порівнюються лише confirmed_entitlement, що містять дату розрахунку, і лише за актуального calculated; initial_balance завжди not_comparable. Нормативна тривалість не порівнюється з availableDays; historical balance — окремий показник, а відмінність не є юридичною помилкою.
+
+OmsServiceLeaveProjection та useOmsServiceLeaveProjection спільні для LeaveBalances і LeaveOverview (отже, вкладки «Відпустки» EmployeeCard), без другого завантажувача чи редактора. Застарілі відповіді відкидаються за ключем/cleanup; повторне відкриття й revision перечитують дані; focus/visibilitychange перевіряють нову локальну добу без нового таймера. Дати UI форматуються через formatDate.
+
+BalanceEditor отримав лише локальну дію підстановки: confirmed has_right, official/calculated, актуальна дата, непідтверджений порожній confirmed_entitlement, який уже почався й містить сьогодні; жодних історичних, майбутніх, підтверджених або заповнених рядків. За зміненої чернетки acquired_on/від'єднаного періоду дія прихована. Після пояснення ConfirmDialog редактор перечитує Main-прогноз і повторно перевіряє всі умови; змінює тільки days цільового рядка й позначає розрахункове походження. Вручну змінене число прибирає цю позначку. Службова позначка не передається IPC. Збереження/валідація/захист чернеток — чинні buildChanges/saveBalanceDraft/useUnsavedChanges; надбавки, ранг, стаж і зареєстровані відпустки не переписуються.

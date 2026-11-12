@@ -405,3 +405,5 @@
 @container info-section (max-width: 280px) {
   .leave-event-accounting .info-section-heading { flex-wrap:wrap; }
 }
+
+.leave-projection-action { margin-top: var(--space-2); max-width: 100%; white-space: normal; text-align: left; }

@@ -39,6 +39,7 @@ const api: HromadaHRApi = {
     reorderDictionary: (kind, ids, revision) => call(ipcChannels.personnelReorderDictionary, kind, ids, revision),
   },
   leave: {
+    getOmsServiceLeaveProjection: id => call(ipcChannels.leaveOmsServiceProjection, id),
     listRights: id => call(ipcChannels.leaveListRights,id),
     saveRights: (id,input) => call(ipcChannels.leaveSaveRights,id,input),
     getServiceLeaveStart: id => call(ipcChannels.leaveGetServiceLeaveStart, id),

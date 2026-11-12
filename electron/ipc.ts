@@ -135,6 +135,7 @@ export function registerIpcHandlers(
 
   register(ipcChannels.leaveListRights, z.tuple([leaveSchemas.id]), leaveSchemas.employeeRight.array(), ([id]) => leave.listRights(id))
   register(ipcChannels.leaveSaveRights, z.tuple([leaveSchemas.id,leaveSchemas.rightsInput]), leaveSchemas.employeeRight.array(), ([id,input]) => leave.saveRights(id,input))
+  register(ipcChannels.leaveOmsServiceProjection, z.tuple([leaveSchemas.id]), leaveSchemas.omsServiceProjection, ([id]) => leave.getOmsServiceLeaveProjection(id))
   register(ipcChannels.leaveGetServiceLeaveStart, z.tuple([leaveSchemas.id]), leaveSchemas.calendarDate.nullable(), ([id]) => leave.getServiceLeaveStart(id))
   register(ipcChannels.leaveSaveServiceLeaveStart, z.tuple([leaveSchemas.id, leaveSchemas.calendarDate.nullable()]), leaveSchemas.calendarDate.nullable(), ([id,date]) => leave.saveServiceLeaveStart(id,date))
   register(ipcChannels.leaveGetRecord, z.tuple([leaveSchemas.id]), leaveSchemas.record, ([id]) => leave.getRecord(id))

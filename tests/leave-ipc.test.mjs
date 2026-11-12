@@ -47,7 +47,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
       confirmRestore: () => ({}), retryStorage: () => ({}) }, () => {}, personnel, leave)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   const api = preload(async (channel, ...args) => handlers.get(channel)(event, ...args))
-  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getRecord', 'getServiceLeaveStart', 'listPeriods', 'listRecords', 'listRights', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'saveRights', 'saveServiceLeaveStart', 'updateLeave'])
+  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getOmsServiceLeaveProjection', 'getRecord', 'getServiceLeaveStart', 'listPeriods', 'listRecords', 'listRights', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'saveRights', 'saveServiceLeaveStart', 'updateLeave'])
   const proposal = await api.leave.proposePeriods(employee.id, '2028-01-01', 'annual_main')
   assert.equal(proposal.ok, true)
   assert.equal(proposal.data[0].status, 'proposed')

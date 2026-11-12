@@ -43,6 +43,7 @@ export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 
 export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
 export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }
 export interface LeaveApi {
+  getOmsServiceLeaveProjection: (employeeId: string) => Promise<IpcResult<import('./service-leave-calculations.js').OmsServiceLeaveProjection>>
   getServiceLeaveStart: (employeeId: string) => Promise<IpcResult<string | null>>
   saveServiceLeaveStart: (employeeId: string, date: string | null) => Promise<IpcResult<string | null>>
   listRights: (employeeId: string) => Promise<IpcResult<EmployeeLeaveRight[]>>

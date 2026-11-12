@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { leaveTypes, periodLeaveTypes } from '../../shared/leave.js'
 import { isCalendarDate } from './periods.js'
+import { serviceProjection } from '../seniority-ranks/schemas.js'
 
 export const id = z.string().uuid()
 export const periodLeaveType = z.enum(periodLeaveTypes)
@@ -49,3 +50,11 @@ export const leaveUpdate = registration.omit({ requestId: true, employeeId: true
 export const rightInput = z.strictObject({ leaveType, status: z.enum(['has_right','no_right']).nullable() })
 export const rightsInput = z.array(rightInput).min(1).max(6)
 export const employeeRight = z.strictObject({ employeeId: id, leaveType, status: z.enum(['has_right','no_right']), checkedAt: z.iso.datetime() })
+
+export const omsServiceProjection=z.strictObject({
+ status:z.enum(['calculated','baseline_only','missing_baseline','not_applicable','requires_review']),
+ calculation:serviceProjection.shape.calculation,
+ recommendedDays:z.number().int().min(0).max(15).nullable(),nextThreshold:z.strictObject({years:z.number().int().min(10).max(15),days:z.number().int().min(5).max(15)}).nullable(),
+ reviewOn:calendarDate.nullable(),reviewAccuracy:z.literal('estimate').nullable(),acquiredOn:calendarDate.nullable(),rightStatus:z.enum(['unknown','has_right','no_right']),
+ currentPeriods:z.array(confirmedPeriod.extend({comparison:z.enum(['matches','different','not_comparable'])})),historicalBalancePresent:z.boolean(),
+})

@@ -22,6 +22,7 @@ export const ipcChannels = {
   senioritySaveRank: 'seniorityRanks:saveRank',
   seniorityClearRank: 'seniorityRanks:clearRank',
 
+  leaveOmsServiceProjection: 'leave:getOmsServiceLeaveProjection',
   leaveListRights: 'leave:listRights', leaveSaveRights: 'leave:saveRights',
   leaveGetServiceLeaveStart: 'leave:getServiceLeaveStart', leaveSaveServiceLeaveStart: 'leave:saveServiceLeaveStart',
   leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
@@ -84,6 +85,7 @@ export interface IpcOperations {
   [ipcChannels.senioritySaveRank]: { args: [string, RankInput]; result: CurrentRank }
   [ipcChannels.seniorityClearRank]: { args: [string]; result: null }
 
+  [ipcChannels.leaveOmsServiceProjection]: { args:[string]; result:import('./service-leave-calculations.js').OmsServiceLeaveProjection }
   [ipcChannels.leaveListRights]: { args: [string]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveSaveRights]: { args: [string, LeaveRightInput[]]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveGetServiceLeaveStart]: { args: [string]; result: string | null }
