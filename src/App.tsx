@@ -3,17 +3,15 @@ import PersonnelControlBell from './components/personnel-control/PersonnelContro
 import usePersonnelControl from './components/personnel-control/usePersonnelControl'
 import { requestEmployeeNavigation } from './employees/navigation'
 import type { PersonnelIssue,EmployeeNavigationIntent } from '../shared/personnel-control'
-import SeniorityRanksWorkspace from './components/seniority-ranks/SeniorityRanksWorkspace'
 import StartupScreen from './components/StartupScreen'
 import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
 import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
-import LeaveWorkspace from './components/leave/LeaveWorkspace'
+import DocumentsWorkspace from './components/documents/DocumentsWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Award, BookOpen, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, BookOpen, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
-import DataState from './components/DataState'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
 import SettingsPage from './components/SettingsPage'
@@ -24,8 +22,6 @@ const sections = [
   { id: 'home', label: 'Головна', icon: Home },
   { id: 'overview', label: 'Огляд', icon: Activity },
   { id: 'employees', label: 'Працівники', icon: UsersRound },
-  { id: 'leave', label: 'Відпустки', icon: CalendarDays },
-  { id: 'service', label: 'Ранги та вислуга', icon: Award },
   { id: 'documents', label: 'Документи', icon: FileText },
   { id: 'dictionaries', label: 'Довідники', icon: BookOpen },
   { id: 'settings', label: 'Налаштування', icon: Settings },
@@ -35,12 +31,6 @@ type SectionId = typeof sections[number]['id']
 type Section = typeof sections[number]
 
 const settingsSection = sections.find(section => section.id === 'settings')!
-const sectionDescriptions: Record<Exclude<SectionId, 'home' | 'employees' | 'leave' | 'settings' | 'dictionaries'>, string> = {
-  overview: 'Тут буде зведений огляд кадрового обліку громади. Показники з’являться після реалізації кадрових модулів.',
-  service: 'Облік підтверджених рангів і надбавок за вислугу років.',
-  documents: 'Тут буде робота з кадровими документами. Створення та облік документів ще не доступні.',
-}
-
 function NavigationItem({ section, active, onNavigate }: {
   section: Section
   active: SectionId
@@ -70,14 +60,11 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
     <section className="dashboard-panel workspace-actions" aria-labelledby="workspace-title">
       <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
       <div className="workspace-shortcuts">{([
-        { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound, available: true },
-        { id: 'leave', title: 'Відпустки', text: 'Облік залишків відпусток', icon: CalendarDays, available: true },
-        { id: 'service', title: 'Ранги та вислуга', text: 'Кадрові відомості', icon: Award, available: true },
-        { id: 'documents', title: 'Документи', text: 'Кадрові документи', icon: FileText, available: false },
-      ] as const).map(({ id, title, text, icon: Icon, available }) => <button type="button" key={id}
-        className={available ? '' : 'workspace-shortcut-locked'} aria-disabled={!available}
-        aria-label={available ? title : title + '. У розробці'} onClick={() => { if (available) onNavigate(id) }}>
-        <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}{!available && <span className="workspace-planned-label">У розробці</span>}</small></span><ArrowUpRight size={18} aria-hidden="true"/>
+        { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound },
+        { id: 'documents', title: 'Документи', text: 'Журнал відпусток', icon: FileText },
+      ] as const).map(({ id, title, text, icon: Icon }) => <button type="button" key={id}
+        aria-label={title} onClick={() => onNavigate(id)}>
+        <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}</small></span><ArrowUpRight size={18} aria-hidden="true"/>
       </button>)}</div>
     </section>
     <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>
@@ -165,7 +152,6 @@ export default function App() {
     return () => { alive = false; clearInterval(timer) }
   }, [])
   const current = sections.find(section => section.id === active)!
-  const CurrentIcon = current.icon
 
   if (storage.state === 'error' || storage.state === 'closed') return <RecoveryScreen status={storage} />
   if (!startupReady) return <StartupScreen />
@@ -210,21 +196,10 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard} /> : active === 'leave' ?
-          <LeaveWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
+          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard} /> : active === 'documents' ?
+          <DocumentsWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
           active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
-          active === 'service' ? <SeniorityRanksWorkspace navigationGuard={navigationGuard}/> :
-          active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :
-          <div className="page-transition">
-            <div className="page-heading">
-              <div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>{current.label}</h1></div>
-            </div>
-            <section className="dashboard-panel" aria-label={`Стан розділу «${current.label}»`}>
-              <DataState kind="planned" message="Функціональність ще не реалізована"
-                description={sectionDescriptions[active]}
-                icon={<CurrentIcon size={22} aria-hidden="true" />} />
-            </section>
-          </div>}
+          <DictionariesWorkspace navigationGuard={navigationGuard}/>}
       </main>
     </div>
     {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}

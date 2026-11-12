@@ -59,7 +59,7 @@ export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
     case 'APPOINTMENT_REVIEW_REQUIRED': return 'Посаду або підрозділ змінено. Перевірте й явно підтвердьте нову дату призначення та категорію або залиште їх невідомими.'
     case 'RANK_REQUIRES_OFFICIAL': return 'Ранг можна зберегти лише для посадової особи місцевого самоврядування.'
-    case 'EMPLOYEE_HAS_CURRENT_RANK': return 'Спочатку явно очистіть поточний ранг у розділі «Ранги та вислуга», потім змініть тип працівника.'
+    case 'EMPLOYEE_HAS_CURRENT_RANK': return 'Спочатку явно очистіть поточний ранг на вкладці «Ранги» особової картки, потім змініть тип працівника.'
     case 'SPECIAL_YEAR_CONFLICT': return 'За цей рік уже зареєстровано відпустку такого виду. Виправте або скасуйте помилковий запис.'
     case 'SPECIAL_DURATION': return 'Перевищено тривалість спеціального виду або немає пояснення меншої тривалості.'
     case 'GRANT_BASIS_REQUIRED': return 'Для подієвої відпустки зазначте документальну підставу надання.'

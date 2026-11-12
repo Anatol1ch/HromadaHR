@@ -83,8 +83,8 @@ test('rank precedes allowance for officials; staff opens allowance; navigation u
  assert.deepEqual(directionsFor('official'),['rank','allowance'])
  assert.deepEqual(directionsFor('staff'),['allowance'])
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8')
- assert.match(app,/id: 'service', label: 'Ранги та вислуга'/)
- assert.match(app,/id: 'service', title: 'Ранги та вислуга'/)
+ assert.doesNotMatch(app,/id: 'service'/)
+ assert.match(app,/id: 'documents', title: 'Документи'/)
  for(const file of ['src/App.tsx','src/employees/model.ts','src/components/seniority-ranks/IndicatorEditor.tsx','src/components/seniority-ranks/SeniorityRanksWorkspace.tsx']) {
   const source=readFileSync(new URL('../'+file,import.meta.url),'utf8')
   assert.equal(source.includes('Стаж і ранги'),false)

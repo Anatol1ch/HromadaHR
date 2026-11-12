@@ -62,6 +62,6 @@ test('page shell mounts only the active existing view, reads the current employe
  assert.doesNotMatch(page,/saveAllowance|saveRank|savePeriods|registerLeave|updateEmployee|deleteEmployee/)
  assert.match(workspace,/<div hidden=\{!!workspace.cardId\}><EmployeeRegistry/)
  assert.match(workspace,/<EmployeeProfilePage initialTab=/);assert.match(workspace,/<EmployeeForm /);assert.match(workspace,/<EmployeeActionDialog /)
- assert.match(app,/<LeaveWorkspace /);assert.match(app,/<SeniorityRanksWorkspace /);assert.match(app,/<PersonnelControlBell /)
+ assert.match(app,/<DocumentsWorkspace /);assert.doesNotMatch(app,/<LeaveWorkspace |<SeniorityRanksWorkspace /);assert.match(app,/<PersonnelControlBell /)
  assert.match(app,/requestEmployeeNavigation\(issue,[\s\S]*navigationGuard.current/)
 })
