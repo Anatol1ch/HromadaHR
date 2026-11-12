@@ -66,7 +66,7 @@ test('v12 migrates and restores v11 with alphabetic seeds, immutable IDs and lea
   const selected = await backup.chooseRestore(async () => f.file)
   assert.equal(selected.schemaVersion, 11)
   await backup.confirmRestore(selected.token, async () => true)
-  assert.equal(storage.getStatus().schemaVersion, 18)
+  assert.equal(storage.getStatus().schemaVersion, 19)
   assert.deepEqual(readFileSync(f.file), source)
   const upgraded = storage.getDatabase()
   assert.deepEqual(ledger(upgraded).slice(0, 11), prior)
@@ -79,7 +79,7 @@ test('v12 migrates and restores v11 with alphabetic seeds, immutable IDs and lea
   assert.deepEqual(new LeaveService(storage, () => false).getRecord(registration.id), registration)
 
   const current = await f.open()
-  assert.equal(current.schemaVersion, 18)
+  assert.equal(current.schemaVersion, 19)
   const copies = readdirSync(join(f.root, 'protection')).filter(name => name.includes('protect-migration-v12-'))
   assert.ok(copies.length >= 1)
   const protectedCopy = new Database(join(f.root, 'protection', copies[0]), { readonly: true })

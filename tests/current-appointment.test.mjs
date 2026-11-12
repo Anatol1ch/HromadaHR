@@ -22,7 +22,7 @@ async function fixture(t){
  db.prepare('INSERT INTO positions(id,name,name_key) VALUES (?,?,?)').run(positionId,'Тест','Тест')
  db.prepare('INSERT INTO employees(id,last_name,first_name,employee_type,hire_date,position_id,department_id) VALUES (?,?,?,?,?,?,?)').run(id,'Тест','Умовний','official','2020-01-01',positionId,departmentId)
  const ledger=db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,18);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=15 ORDER BY version').all(),ledger)
+ assert.equal(c.schemaVersion,19);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=15 ORDER BY version').all(),ledger)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false)
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-appointment-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
  return {db:c.database,p,storage,id,input:{lastName:'Тест',firstName:'Умовний',middleName:null,birthDate:null,employeeType:'official',hireDate:'2020-01-01',positionId,departmentId,positionStartedOn:null,positionCategory:null}}

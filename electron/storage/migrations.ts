@@ -1,3 +1,4 @@
+import { documentsSql } from './documents-migration.js'
 import { currentAppointmentSql } from './current-appointment-migration.js'
 import { serviceBaselineSql } from './service-baseline-migration.js'
 import { seniorityRanksSql } from './seniority-ranks-migration.js'
@@ -183,6 +184,7 @@ CREATE TABLE personnel_reminder_states (
  CHECK((state='reviewed' AND snoozed_until IS NULL) OR (state='snoozed' AND snoozed_until IS NOT NULL))
 ) STRICT;
 `,
+}, { version:19, name:'personnel_documents', requiresBackup:true, sql:documentsSql,
 }]
 
 function checksum(migration: Migration) {

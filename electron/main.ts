@@ -1,3 +1,4 @@
+import { DocumentsService } from './documents/service.js'
 import { PersonnelControlService } from './personnel-control/service.js'
 import { ZoomController } from './zoom.js'
 import { createStartup } from './startup.js'
@@ -111,7 +112,7 @@ if (!hasLock) {
     acknowledgeRenderer()
     return storage.getStatus()
   }, backupController, () => app.quit(), new PersonnelService(storage, () => backups.isBusy()), new LeaveService(storage, () => backups.isBusy()),
-  id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory, zoom, new SeniorityRanksService(storage, () => backups.isBusy()), new PersonnelControlService(storage, () => backups.isBusy()))
+  id => openContact(id, uri => shell.openExternal(uri)), backupController.getHistory, zoom, new SeniorityRanksService(storage, () => backups.isBusy()), new PersonnelControlService(storage, () => backups.isBusy()), new DocumentsService(storage, () => backups.isBusy()))
   app.on('second-instance', () => {
     if (!mainWindow) return
     if (mainWindow.isMinimized()) mainWindow.restore()

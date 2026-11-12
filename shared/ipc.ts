@@ -1,3 +1,4 @@
+import type { DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
 import type { ServiceBaseline, ServiceBaselineInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
@@ -9,6 +10,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  documentsList:'documents:listDocuments', documentsGet:'documents:getDocument', documentsCreate:'documents:createDocument', documentsUpdate:'documents:updateDocument', documentsDelete:'documents:deleteDocument',
   controlOverview:'personnelControl:getOverview',controlSettings:'personnelControl:getSettings',controlSaveSettings:'personnelControl:saveSettings',controlSetState:'personnelControl:setReminderState',
   seniorityGetRankProjection:'seniorityRanks:getRankProjection',
   seniorityGetServiceProjection: 'seniorityRanks:getServiceProjection',
@@ -69,10 +71,15 @@ export interface SystemInfo {
   mode: 'dev' | 'built'
 }
 
-export type IpcErrorCode = 'STALE_REMINDER' | SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
+export type IpcErrorCode = DocumentsErrorCode | 'STALE_REMINDER' | SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.documentsList]: {args:[]; result:PersonnelDocumentSummary[]}
+  [ipcChannels.documentsGet]: {args:[string]; result:PersonnelDocument}
+  [ipcChannels.documentsCreate]: {args:[PersonnelDocumentCreateInput]; result:PersonnelDocument}
+  [ipcChannels.documentsUpdate]: {args:[PersonnelDocumentUpdateInput]; result:PersonnelDocument}
+  [ipcChannels.documentsDelete]: {args:[string,number]; result:null}
   [ipcChannels.controlOverview]:{args:[];result:import('./personnel-control.js').ControlOverview}
   [ipcChannels.controlSettings]:{args:[];result:import('./personnel-control.js').ControlSettings}
   [ipcChannels.controlSaveSettings]:{args:[import('./personnel-control.js').ControlSettings];result:import('./personnel-control.js').ControlSettings}
@@ -140,6 +147,7 @@ export interface IpcOperations {
 }
 
 export interface HromadaHRApi {
+  readonly documents: DocumentsApi
   readonly personnelControl:import('./personnel-control.js').PersonnelControlApi
   readonly seniorityRanks: SeniorityRanksApi
   readonly personnel: PersonnelApi

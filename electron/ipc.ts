@@ -1,3 +1,5 @@
+import { DocumentsError, type DocumentsService } from './documents/service.js'
+import * as documentSchemas from './documents/schemas.js'
 import { PersonnelControlError,type PersonnelControlService } from './personnel-control/service.js'
 import * as controlSchemas from './personnel-control/schemas.js'
 import { SeniorityRanksError } from './seniority-ranks/service.js'
@@ -59,7 +61,13 @@ export function registerIpcHandlers(
   zoom?: Pick<ZoomController, 'get' | 'set'>,
   seniority?: SeniorityRanksService,
   control?:PersonnelControlService,
+  documents?:DocumentsService,
 ) {
+  register(ipcChannels.documentsList,z.tuple([]),z.array(documentSchemas.summary),()=>documents!.listDocuments())
+  register(ipcChannels.documentsGet,z.tuple([documentSchemas.id]),documentSchemas.document,([id])=>documents!.getDocument(id))
+  register(ipcChannels.documentsCreate,z.tuple([documentSchemas.createInput]),documentSchemas.document,([input])=>documents!.createDocument(input))
+  register(ipcChannels.documentsUpdate,z.tuple([documentSchemas.updateInput]),documentSchemas.document,([input])=>documents!.updateDocument(input))
+  register(ipcChannels.documentsDelete,z.tuple([documentSchemas.id,documentSchemas.revision]),z.null(),([id,revision])=>documents!.deleteDocument(id,revision))
   register(ipcChannels.controlOverview,z.tuple([]),controlSchemas.overview,()=>control!.getOverview())
   register(ipcChannels.controlSettings,z.tuple([]),controlSchemas.settings,()=>control!.getSettings())
   register(ipcChannels.controlSaveSettings,z.tuple([controlSchemas.settings]),controlSchemas.settings,([input])=>control!.saveSettings(input))
@@ -204,11 +212,11 @@ export function registerIpcHandlers(
         // Keep synchronous diagnostics synchronous; await privileged operations
         // before validating output and normalizing errors. No authentication.
         if (result instanceof Promise) return result.then(accept)
-          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' as const } }))
+          .catch(error => ({ ok: false as const, error: { code: (error instanceof DocumentsError || error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' as const } }))
         return accept(result)
       } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: (error instanceof DocumentsError || error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

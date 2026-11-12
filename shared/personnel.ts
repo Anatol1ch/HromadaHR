@@ -25,7 +25,7 @@ export interface EmployeeCard extends EmployeeDetails {
 export type DictionaryKind = 'department' | 'position'
 export interface DictionaryEntry { id: string; name: string; revision: number; employeeCount: number }
 export interface DictionarySnapshot { entries: DictionaryEntry[]; revision: number }
-export type PersonnelErrorCode = 'APPOINTMENT_REVIEW_REQUIRED' | 'EMPLOYEE_HAS_CURRENT_RANK' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'HIRE_DATE_HAS_LEAVE_PERIODS' | 'DICTIONARY_STALE' | 'DICTIONARY_IN_USE'
+export type PersonnelErrorCode = 'EMPLOYEE_HAS_DOCUMENTS' | 'APPOINTMENT_REVIEW_REQUIRED' | 'EMPLOYEE_HAS_CURRENT_RANK' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'HIRE_DATE_HAS_LEAVE_PERIODS' | 'DICTIONARY_STALE' | 'DICTIONARY_IN_USE'
 export interface PersonnelApi {
   deleteEmployee: (employeeId: string) => Promise<IpcResult<null>>
   listEmployees: () => Promise<IpcResult<EmployeeCard[]>>

@@ -114,7 +114,7 @@ test('v9 to v12 preserves registrations, cancellations, balances and protective 
   const beforeRestoreService=new LeaveService(storage,()=>backup.isBusy())
   await backup.confirmRestore(selected.token,async()=>true)
   assert.deepEqual(readFileSync(f.file),source)
-  assert.equal(storage.getStatus().schemaVersion,18)
+  assert.equal(storage.getStatus().schemaVersion,19)
   const live=storage.getDatabase()
   for (const [table, rows] of Object.entries(before)) {
     const columns = table === 'departments' || table === 'positions' ? 'id, name, name_key' : '*'
@@ -124,7 +124,7 @@ test('v9 to v12 preserves registrations, cancellations, balances and protective 
   assert.deepEqual(live.pragma('foreign_key_check'),[])
   assert.deepEqual(live.pragma('integrity_check'),[{integrity_check:'ok'}])
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,18)
+  assert.equal(upgraded.schemaVersion,19)
   const protection=join(f.root,'data','protection')
   assert.equal(inspectDatabase(join(protection,readdirSync(protection).find(x=>x.includes('protect-migration-v10-')))),9)
 })

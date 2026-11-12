@@ -99,6 +99,7 @@ export class PersonnelService {
   deleteEmployee = (employeeId: string) => {
     this.parse(schemas.id, employeeId)
     return this.run(db => db.transaction(() => {
+      if (db.prepare('SELECT 1 FROM personnel_document_employees WHERE employee_id=? LIMIT 1').get(employeeId)) throw new PersonnelError('EMPLOYEE_HAS_DOCUMENTS')
       if (!db.prepare('DELETE FROM employees WHERE id=?').run(employeeId).changes) throw new PersonnelError('NOT_FOUND')
       return null
     }).immediate())

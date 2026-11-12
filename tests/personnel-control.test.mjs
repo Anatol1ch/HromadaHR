@@ -38,7 +38,7 @@ const integrity=db=>{assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.
 test('v17→v18 retains the old ledger and facts, singleton defaults and strict FK/CHECK state structure',async t=>{
  const root=temp(t),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,17))
  const old=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,18);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
+ assert.equal(c.schemaVersion,19);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
  assert.deepEqual(c.database.prepare('SELECT * FROM personnel_control_settings').all(),[{id:1,horizon_days:30}])
  for(const sql of ['UPDATE personnel_control_settings SET horizon_days=15','INSERT INTO personnel_control_settings VALUES (2,30)'])assert.throws(()=>c.database.exec(sql))
  const f=await fixture(t),issue=rankIssue(f),insert=f.db.prepare('INSERT INTO personnel_reminder_states VALUES (?,?,?,?,?,?)')

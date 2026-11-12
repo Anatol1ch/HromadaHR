@@ -81,5 +81,5 @@ test('existing Main APIs preserve actual allowance/rank replies, refresh project
  s.clearAllowance(e.id);assert.equal((await readIndicatorContext(api,e.id,'allowance')).data.allowance,null);assert.deepEqual(s.getRank(e.id),r)
  const final=s.saveAllowance(e.id,{...allowance,percentage:0});assert.equal(final.percentage,0)
  s.clearRank(e.id);assert.equal((await readIndicatorContext(api,e.id,'rank')).data.rank,null);assert.equal(s.getRankProjection(e.id).reason,'missing_rank');assert.deepEqual(s.getAllowance(e.id),final)
- assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,18);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
+ assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,19);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
 })

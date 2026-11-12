@@ -9,6 +9,11 @@ async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOpera
 }
 
 const api: HromadaHRApi = {
+  documents: {
+    listDocuments:()=>call(ipcChannels.documentsList), getDocument:id=>call(ipcChannels.documentsGet,id),
+    createDocument:input=>call(ipcChannels.documentsCreate,input), updateDocument:input=>call(ipcChannels.documentsUpdate,input),
+    deleteDocument:(id,revision)=>call(ipcChannels.documentsDelete,id,revision),
+  },
   personnelControl:{
     getOverview:()=>call(ipcChannels.controlOverview),getSettings:()=>call(ipcChannels.controlSettings),
     saveSettings:input=>call(ipcChannels.controlSaveSettings,input),setReminderState:input=>call(ipcChannels.controlSetState,input),

@@ -228,3 +228,9 @@ Read-only перевірено src/App.tsx HromadaAID, SHA/HEAD 33eca10733caaf73
 ## 6.5 – Очищення legacy UI
 
 Read-only звірено src/RecipientRegistry.tsx (RecipientFormModal: initial/draft, form refs; RecipientDetails: розділення перегляду й редагування) HromadaAID, SHA/HEAD 33eca10733caaf73b1a99e75a24ff35e706a0afb. Рішення: збережено вже адаптовані спільні Modal/ConfirmDialog/поля/guard HR, прибрано недоступні workspace й legacy-гілку IndicatorEditor, не переносили серверну або предметну логіку. Нових компонентних бібліотек/токенів немає. Фактичний стан: одна форма показника, спільні глобальний/персональний журнали, цільово очищені стилі. Майбутній DOCX-генератор не оцінювався й не переносився у цьому підетапі; під час його окремого впровадження потрібна цільова перевірка сумісного аналога AID з адаптацією до Main. Ручне Windows-приймання відкладено до етапу 8.
+
+## 7.1 – Ядро реєстру документів
+
+Read-only перевірено HromadaAID src/services/decisionRepository.ts і electron/decision-store.ts за HEAD/SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Аналог saveDecision перевіряє input/дублікати/очікуваний updatedAt в BEGIN IMMEDIATE; repository передає expectedUpdatedAt, а addAssignments має окремий requestId. Фактично адаптовано принципи атомарного field/link save, optimistic concurrency та вузького повтору запиту, використавши чинні HR Zod/typed IPC/Storage, числову revision і власний immutable creation fingerprint. Код decision-store, серверні/соціально-допомогові сутності та їхні правила не переносилися; HromadaAID лишився read-only й не runtime-залежністю.
+
+Механізми DOCX/snapshot/preview/temp lifecycle тут не перевірялися як готовий до перенесення генератор і не реалізовані. Це заплановане цільове дослідження перед окремим підетапом генерації, з адаптацією до локального Electron/Main HR. Немає COM/PowerShell, шаблонів, файлових IPC чи нових залежностей. LeaveRecord не запозичено як модель документа.
