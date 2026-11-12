@@ -38,7 +38,7 @@ export interface ProposedLeavePeriod {
   status: 'proposed'
 }
 
-export type LeaveErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED'
+export type LeaveErrorCode = 'LEAVE_DOCUMENT_REQUISITES_LOCKED' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED'
 
 export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
 export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }

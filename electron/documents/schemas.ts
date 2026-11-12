@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { personnelDocumentKinds, documentNumberKey } from '../../shared/documents.js'
+import { leaveTypes } from '../../shared/leave.js'
 import { calendarDate, id } from '../personnel/schemas.js'
 export { id }
 export const revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
@@ -17,3 +18,10 @@ export const updateInput = z.strictObject({...fields, id, expectedRevision: revi
 const outputFields = {...fields, id, revision, createdAt: z.iso.datetime(), updatedAt: z.iso.datetime()}
 export const document = z.strictObject(outputFields).refine(kindValid)
 export const summary = z.strictObject(outputFields).omit({note: true}).refine(kindValid)
+
+export const linkInput=z.strictObject({documentId:id,leaveRecordId:id,expectedDocumentRevision:revision,expectedLeaveRevision:revision})
+export const leaveLink=z.strictObject({documentId:id,leaveRecordId:id,linkedAt:z.iso.datetime(),employeeId:id,leaveRevision:revision,
+ leaveType:z.enum(leaveTypes),
+ startDate:calendarDate,endDate:calendarDate,usedDays:z.number().int().positive(),status:z.enum(['active','cancelled']),orderNumber:z.string().nullable(),orderDate:calendarDate.nullable()})
+export const documentLinks=z.strictObject({document,links:z.array(leaveLink)})
+export const leaveDocument=z.strictObject({document,leaveRecordId:id,linkedAt:z.iso.datetime()})

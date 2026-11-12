@@ -1,3 +1,4 @@
+import DocumentLeaveLinksPanel from './DocumentLeaveLinksPanel'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import type { PersonnelDocument } from '../../../shared/documents'
@@ -14,7 +15,7 @@ import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsaved
 import { documentMessage, kindLabel } from './model'
 import { uncertainDocumentResult } from './mutations'
 
-export default function PersonnelDocumentDetails({id,active,revision,navigationGuard,onBack,onEdit,onDeleted}:{id:string;active:boolean;revision:number;navigationGuard:RefObject<NavigationGuard>;onBack:()=>void;onEdit:()=>void;onDeleted:()=>void}) {
+export default function PersonnelDocumentDetails({id,active,revision,navigationGuard,onBack,onEdit,onDeleted,onChanged}:{id:string;active:boolean;revision:number;navigationGuard:RefObject<NavigationGuard>;onBack:()=>void;onEdit:()=>void;onDeleted:()=>void;onChanged:()=>void}) {
   const [retry,setRetry]=useState(0),[confirm,setConfirm]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[uncertain,setUncertain]=useState(false),[stale,setStale]=useState(false)
   const [state,setState]=useState<{key:string;document?:PersonnelDocument;people?:EmployeeCard[];error?:string}>()
   const pending=useRef(false),alive=useRef(false),owner=useRef<HTMLElement>(null),heading=useRef<HTMLHeadingElement>(null)
@@ -69,6 +70,7 @@ export default function PersonnelDocumentDetails({id,active,revision,navigationG
         {record.employeeIds.length?<ul className="document-people">{record.employeeIds.map(id=>{const person=current?.people?.find(p=>p.id===id);return <li key={id}>{person?<><strong>{fullName(person)}</strong><span>{person.position.name} · {person.department.name}</span></>:<Alert variant="warning">Пов’язаний працівник недоступний. Оновіть дані перед редагуванням.</Alert>}</li>})}</ul>:<p className="employee-hint">Працівника не зазначено.</p>}
         {!!record.employeeIds.length&&<p className="employee-hint">Посаду та підрозділ наведено за поточною особовою карткою, а не станом на дату документа.</p>}
       </InfoSection>
+      <DocumentLeaveLinksPanel document={record} navigationGuard={navigationGuard} onChanged={()=>{onChanged();requestAnimationFrame(()=>heading.current?.focus())}}/>
       <InfoSection title="Відомості реєстру"><dl className="info-grid info-grid-two"><InfoItem label="Створено" value={formatDateTime(record.createdAt)}/><InfoItem label="Остання зміна" value={formatDateTime(record.updatedAt)}/></dl></InfoSection>
       <InfoSection title="Формування документа"><p className="employee-hint">Формування DOCX за шаблоном буде доступне в наступних версіях HromadaHR.</p></InfoSection>
     </>}

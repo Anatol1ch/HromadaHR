@@ -1,3 +1,4 @@
+import { documentLeaveLinksSql } from './document-leave-links-migration.js'
 import { documentsSql } from './documents-migration.js'
 import { currentAppointmentSql } from './current-appointment-migration.js'
 import { serviceBaselineSql } from './service-baseline-migration.js'
@@ -185,6 +186,7 @@ CREATE TABLE personnel_reminder_states (
 ) STRICT;
 `,
 }, { version:19, name:'personnel_documents', requiresBackup:true, sql:documentsSql,
+}, { version:20, name:'document_leave_links', requiresBackup:true, sql:documentLeaveLinksSql,
 }]
 
 function checksum(migration: Migration) {

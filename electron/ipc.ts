@@ -63,6 +63,10 @@ export function registerIpcHandlers(
   control?:PersonnelControlService,
   documents?:DocumentsService,
 ) {
+  register(ipcChannels.documentsLeaveLinks,z.tuple([documentSchemas.id]),documentSchemas.documentLinks,([id])=>documents!.listLeaveLinks(id))
+  register(ipcChannels.documentsLeaveDocument,z.tuple([documentSchemas.id]),documentSchemas.leaveDocument.nullable(),([id])=>documents!.getLeaveDocument(id))
+  register(ipcChannels.documentsLinkLeave,z.tuple([documentSchemas.linkInput]),documentSchemas.documentLinks,([input])=>documents!.linkLeaveRecord(input))
+  register(ipcChannels.documentsUnlinkLeave,z.tuple([documentSchemas.linkInput]),documentSchemas.documentLinks,([input])=>documents!.unlinkLeaveRecord(input))
   register(ipcChannels.documentsList,z.tuple([]),z.array(documentSchemas.summary),()=>documents!.listDocuments())
   register(ipcChannels.documentsGet,z.tuple([documentSchemas.id]),documentSchemas.document,([id])=>documents!.getDocument(id))
   register(ipcChannels.documentsCreate,z.tuple([documentSchemas.createInput]),documentSchemas.document,([input])=>documents!.createDocument(input))

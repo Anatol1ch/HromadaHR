@@ -13,7 +13,7 @@ test('shell has exactly six sections, two active home shortcuts and only the doc
   assert.deepEqual([...shortcuts.matchAll(/id: '([^']+)'/g)].map(m => m[1]),['employees','documents'])
   assert.doesNotMatch(shortcuts,/locked|aria-disabled|available: false/)
   assert.doesNotMatch(app,/LeaveWorkspace|SeniorityRanksWorkspace|sectionDescriptions|active === '(leave|service)'/)
-  assert.match(app,/active === 'documents' \?\s*<DocumentsWorkspace navigationGuard=\{navigationGuard\}/)
+  assert.match(app,/active === 'documents' \?\s*<DocumentsWorkspace initialIntent=\{documentIntent\} navigationGuard=\{navigationGuard\}/)
   assert.match(app,/navigationGuard.current\(\(\) => \{ setEmployeeIntent\(undefined\);setActive\(id\)/)
   assert.match(app,/requestEmployeeNavigation\(issue,[\s\S]*navigationGuard.current/)
   assert.match(app,/className="sidebar-bottom"[\s\S]*section=\{settingsSection\}/)

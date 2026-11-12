@@ -1,3 +1,4 @@
+import EmployeeDocuments from '../documents/EmployeeDocuments'
 import type { EmployeeCardTab } from '../../../shared/personnel-control'
 import { profileSections,profileSection,requestProfileSection } from '../../employees/profile'
 import ProfileIndicatorPanel from '../seniority-ranks/ProfileIndicatorPanel'
@@ -105,6 +106,7 @@ export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onD
             {sections.map(({title,icon:Icon,fields})=><InfoSection key={title} title={title} icon={<Icon size={17}/>}>
               <dl className="info-grid">{fields.map(([field,value])=><InfoItem key={field} label={field} value={value}/>)}</dl>
             </InfoSection>)}
+            <EmployeeDocuments employeeId={id}/>
             <div><button type="button" className="secondary-button danger-action" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>onDelete(id))}><Trash2 size={16} aria-hidden="true"/>Видалити працівника</button></div>
           </>:section==='service'?<>
             <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>

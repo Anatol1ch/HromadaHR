@@ -354,6 +354,7 @@ export class LeaveService {
     return this.run(db => db.transaction(() => {
       const record = this.currentRecord(db, value.id)
       this.checkRevision(record, value.expectedRevision)
+      if((record.orderNumber!==value.orderNumber||record.orderDate!==value.orderDate)&&db.prepare('SELECT 1 FROM personnel_document_leave_records WHERE leave_record_id=?').get(record.id))throw new LeaveError('LEAVE_DOCUMENT_REQUISITES_LOCKED')
       this.validateRegistration(db, { ...value, employeeId: record.employeeId }, record.id)
       db.prepare('DELETE FROM leave_allocations WHERE record_id=?').run(record.id)
       db.prepare(`UPDATE leave_records SET leave_type=?,start_date=?,end_date=?,used_days=?,order_number=?,

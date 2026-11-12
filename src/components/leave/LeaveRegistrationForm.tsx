@@ -31,8 +31,8 @@ import type { RegistrationHistory } from './registry'
 type LeaveConfirmation = { input: LeaveRegistration; employeeName: string; periods: ConfirmationPeriod[]; update?: LeaveUpdate; changes: string[] }
 const unconfirmedRegistration = 'Результат не підтверджено. Повторіть збереження тих самих даних для безпечної перевірки.'
 
-export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onReloadRecord, record, employeePicker, returnFocus, history }: {
-  record?: LeaveRecord; employeePicker?: ReactNode
+export default function LeaveRegistrationForm({ employeeId, employeeName, hireDate, initialType, navigationGuard, onClose, onSaved, onReloadRecord, record, employeePicker, returnFocus, history, documentLinked=false }: {
+  documentLinked?:boolean; record?: LeaveRecord; employeePicker?: ReactNode
   employeeId: string; employeeName?: string; hireDate: string; initialType: LeaveType; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onSaved: (type: LeaveType) => void; onReloadRecord?: () => void; returnFocus?: HTMLElement | null
   history: RegistrationHistory
@@ -338,9 +338,10 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
       </InfoSection>}
       <InfoSection title="Розпорядження" icon={<FileText size={17}/>}
         help={<HelpTip label="Реквізити розпорядження" text="Номер і дату можна додати пізніше через редагування реєстрації." />}>
+      {documentLinked&&<Alert variant="info">Номер і дата розпорядження захищені зв’язком із кадровим документом. Для їх зміни спочатку розірвіть зв’язок у картці документа.</Alert>}
       <div className="info-grid info-grid-two">
-        <label className="recipient-field">Номер<ValidatedInput maxLength={100} disabled={busy || !!uncertain} value={orderNumber} onChange={event => setOrderNumber(event.target.value)} /></label>
-        <label className="recipient-field">Дата<DateField disabled={busy || !!uncertain} value={dates.orderIso} initialDraft={dates.order}
+        <label className="recipient-field">Номер<ValidatedInput maxLength={100} disabled={busy || !!uncertain || documentLinked} value={orderNumber} onChange={event => setOrderNumber(event.target.value)} /></label>
+        <label className="recipient-field">Дата<DateField disabled={busy || !!uncertain || documentLinked} value={dates.orderIso} initialDraft={dates.order}
           onChange={orderIso => setDates(current => ({ ...current, orderIso }))} onDraftChange={order => setDates(current => ({ ...current, order }))} /></label>
       </div></InfoSection>
     </form>

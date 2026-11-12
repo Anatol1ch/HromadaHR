@@ -50,7 +50,7 @@ test('LeaveService uses one read-only snapshot without changing dates, rights, p
  f.db.pragma('query_only=OFF');integrity(f.db)
  await f.reopen();assert.equal(leave.getOmsServiceLeaveProjection(e.id).recommendedDays,9)
  s.saveServiceBaseline(e.id,{...base,years:15});assert.equal(leave.getOmsServiceLeaveProjection(e.id).recommendedDays,15)
- assert.equal(f.db.pragma('user_version',{simple:true}),19)
+ assert.equal(f.db.pragma('user_version',{simple:true}),20)
 })
 test('rights, zero, missing baseline, opt-out and staff remain explicit; controlled service errors survive',async t=>{
  const f=await fixture(t),{leave,e,s,base}=f

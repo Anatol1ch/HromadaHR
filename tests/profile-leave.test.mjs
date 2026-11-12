@@ -60,7 +60,7 @@ test('profile composes the existing editors with fixed identity, retained regist
   assert.match(registration,/if \(history.suspended\) return null/)
   assert.match(registration,/history.open\(\{ employeeId, type, year: '' \}\)/)
   assert.match(journal,/expectedEmployeeId=\{employeeId\}/)
-  assert.ok(action.indexOf('!leaveRecordBelongsToEmployee(record.data, expectedEmployeeId)') < action.indexOf('const [employee, balances]'))
+  assert.ok(action.indexOf('!leaveRecordBelongsToEmployee(record.data, expectedEmployeeId)') < action.indexOf('const [employee, balances, documentLink]'))
   assert.match(action,/record.status === 'cancelled'/)
   assert.match(read('src/components/documents/DocumentsWorkspace.tsx') + read('src/components/documents/LeaveDocumentsJournal.tsx'),/listRecords\(null\)/)
   assert.match(read('src/components/documents/DocumentsWorkspace.tsx') + read('src/components/documents/LeaveDocumentsJournal.tsx'),/employeePicker=/)

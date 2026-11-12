@@ -49,6 +49,13 @@ export function documentInput(draft: DocumentDraft): PersonnelDocumentInput {
 }
 export function documentMessage(code: IpcErrorCode) {
   switch(code) {
+    case 'DOCUMENT_LEAVE_CONFLICT': return 'Відпустку вже пов’язано з іншим документом.'
+    case 'DOCUMENT_EMPLOYEE_REQUIRED': return 'Для зв’язування документ повинен мати рівно одного працівника. Перевірте його в редакторі.'
+    case 'DOCUMENT_EMPLOYEE_MISMATCH': return 'Документ і відпустка належать різним працівникам.'
+    case 'DOCUMENT_REQUISITES_MISSING': return 'Спочатку внесіть номер і дату розпорядження в редакторі відпустки.'
+    case 'DOCUMENT_REQUISITES_MISMATCH': return 'Номер або дата розпорядження у відпустці не відповідають документу.'
+    case 'DOCUMENT_HAS_LEAVE_LINKS': return 'Документ пов’язаний із зареєстрованими відпустками. Спочатку розірвіть відповідні зв’язки.'
+    case 'LEAVE_CANCELLED': return 'Реєстрацію відпустки скасовано. Новий зв’язок не створюється.'
     case 'DOCUMENT_NUMBER_CONFLICT': return 'Такий номер уже внесено для цього виду й року. Перевірте номер і дату.'
     case 'DOCUMENT_REQUEST_CONFLICT': return 'Повторний запит відрізняється від попереднього. Перевірте реєстр перед новим створенням.'
     case 'DOCUMENT_EMPLOYEE_NOT_FOUND': return 'Один із працівників недоступний. Оновіть перелік і перевірте зв’язки.'

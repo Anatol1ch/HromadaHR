@@ -57,6 +57,7 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'LEAVE_DOCUMENT_REQUISITES_LOCKED': return 'Номер і дата розпорядження захищені зв’язком із кадровим документом. Спочатку явно розірвіть зв’язок у картці документа.'
     case 'EMPLOYEE_HAS_DOCUMENTS': return 'Працівник пов’язаний із кадровими документами. Спочатку перевірте й явно врегулюйте ці зв’язки в реєстрі документів.'
     case 'APPOINTMENT_REVIEW_REQUIRED': return 'Посаду або підрозділ змінено. Перевірте й явно підтвердьте нову дату призначення та категорію або залиште їх невідомими.'
     case 'RANK_REQUIRES_OFFICIAL': return 'Ранг можна зберегти лише для посадової особи місцевого самоврядування.'

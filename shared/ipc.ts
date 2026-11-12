@@ -1,4 +1,4 @@
-import type { DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
+import type { DocumentLeaveLinkInput, DocumentLeaveLinks, LeaveDocumentLink, DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
 import type { ServiceBaseline, ServiceBaselineInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
@@ -10,6 +10,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  documentsLeaveLinks:'documents:listLeaveLinks',documentsLeaveDocument:'documents:getLeaveDocument',documentsLinkLeave:'documents:linkLeaveRecord',documentsUnlinkLeave:'documents:unlinkLeaveRecord',
   documentsList:'documents:listDocuments', documentsGet:'documents:getDocument', documentsCreate:'documents:createDocument', documentsUpdate:'documents:updateDocument', documentsDelete:'documents:deleteDocument',
   controlOverview:'personnelControl:getOverview',controlSettings:'personnelControl:getSettings',controlSaveSettings:'personnelControl:saveSettings',controlSetState:'personnelControl:setReminderState',
   seniorityGetRankProjection:'seniorityRanks:getRankProjection',
@@ -75,6 +76,10 @@ export type IpcErrorCode = DocumentsErrorCode | 'STALE_REMINDER' | SeniorityRank
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.documentsLeaveLinks]: {args:[string];result:DocumentLeaveLinks}
+  [ipcChannels.documentsLeaveDocument]: {args:[string];result:LeaveDocumentLink|null}
+  [ipcChannels.documentsLinkLeave]: {args:[DocumentLeaveLinkInput];result:DocumentLeaveLinks}
+  [ipcChannels.documentsUnlinkLeave]: {args:[DocumentLeaveLinkInput];result:DocumentLeaveLinks}
   [ipcChannels.documentsList]: {args:[]; result:PersonnelDocumentSummary[]}
   [ipcChannels.documentsGet]: {args:[string]; result:PersonnelDocument}
   [ipcChannels.documentsCreate]: {args:[PersonnelDocumentCreateInput]; result:PersonnelDocument}

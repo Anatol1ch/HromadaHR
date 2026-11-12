@@ -38,7 +38,7 @@ test('v18→v19 protects the original manifest, ledger and facts; STRICT/CHECK/F
   const old=connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();connection.close()
   connection=await openStorageSafely(file);t.after(()=>{connection.close();clean(root)})
   const db=connection.database
-  assert.equal(connection.schemaVersion,19);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
+  assert.equal(connection.schemaVersion,20);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_documents'").get().strict,1)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_document_employees'").get().strict,1)
   const service=new DocumentsService({getDatabase:()=>db},()=>false),doc=service.createDocument(input())

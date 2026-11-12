@@ -1,3 +1,5 @@
+import { DocumentNavigationContext } from './components/documents/DocumentNavigationContext'
+import { requestDocumentNavigation,type DocumentNavigationIntent } from './components/documents/navigation'
 import PersonnelControlOverview from './components/personnel-control/PersonnelControlOverview'
 import PersonnelControlBell from './components/personnel-control/PersonnelControlBell'
 import usePersonnelControl from './components/personnel-control/usePersonnelControl'
@@ -114,13 +116,15 @@ function StorageNotice() {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [documentIntent,setDocumentIntent]=useState<DocumentNavigationIntent>()
   const [employeeIntent,setEmployeeIntent]=useState<EmployeeNavigationIntent>()
   const intentSequence=useRef(0)
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setActive(id) })
+    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setActive(id);setDocumentIntent(undefined) })
   }
+  const openDocument=(id:string,done:()=>void=()=>{})=>requestDocumentNavigation(id,++intentSequence.current,navigationGuard.current,intent=>{setDocumentIntent(intent);setEmployeeIntent(undefined);setActive('documents')},done)
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
@@ -193,14 +197,14 @@ export default function App() {
           <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setActive('overview');void control.refresh()})}/>
         </div>
       </header>
-      <main id="workspace-content" tabIndex={-1} className="content home-content">
+      <DocumentNavigationContext.Provider value={openDocument}><main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard} /> : active === 'documents' ?
-          <DocumentsWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
+          <DocumentsWorkspace initialIntent={documentIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
           active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
           <DictionariesWorkspace navigationGuard={navigationGuard}/>}
-      </main>
+      </main></DocumentNavigationContext.Provider>
     </div>
     {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
   </div>

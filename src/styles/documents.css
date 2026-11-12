@@ -24,3 +24,7 @@
  .personnel-documents-registry .aid-toolbar .registry-search { flex-basis:100%; }
  .personnel-documents-registry .aid-toolbar button { height:auto; min-height:var(--control-height); white-space:normal; }
 }
+
+.document-leave-selector input[type="radio"] { accent-color:var(--accent); width:var(--space-4); height:var(--space-4); }
+.document-leave-selector input[type="radio"]:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
+.document-leave-selector small { display:block; color:var(--color-text-secondary); }

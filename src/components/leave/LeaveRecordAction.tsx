@@ -1,3 +1,5 @@
+import LeaveDocumentInfo from '../documents/LeaveDocumentInfo'
+import type { LeaveDocumentLink } from '../../../shared/documents'
 import { FileText, List } from 'lucide-react'
 import DictionaryTable from '../DictionaryTable'
 import InfoItem from '../InfoItem'
@@ -26,7 +28,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
   expectedEmployeeId?: string; id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onChanged: () => void; history: RegistrationHistory
 }) {
-  const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
+  const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[]; documentLink:LeaveDocumentLink|null }>()
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
   const opener = useRef(document.activeElement instanceof HTMLElement ? document.activeElement : null)
@@ -43,13 +45,14 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
         if (!active) return
         if (!record.ok) { setError(personnelMessage(record.error.code)); return }
         if (!leaveRecordBelongsToEmployee(record.data, expectedEmployeeId)) { setError('Відпустка не належить цьому працівнику. Оновіть історію.'); return }
-        const [employee, balances] = await Promise.all([
-          window.hromadaHR.personnel.getEmployee(record.data.employeeId), window.hromadaHR.leave.getBalances(record.data.employeeId),
+        const [employee, balances, documentLink] = await Promise.all([
+          window.hromadaHR.personnel.getEmployee(record.data.employeeId), window.hromadaHR.leave.getBalances(record.data.employeeId), window.hromadaHR.documents.getLeaveDocument(record.data.id),
         ])
         if (!active) return
         if (!employee.ok) { setError(personnelMessage(employee.error.code)); return }
         if (!balances.ok) { setError(personnelMessage(balances.error.code)); return }
-        setData({ record: record.data, employee: employee.data, balances: balances.data })
+        if(!documentLink.ok){setError('Не вдалося перевірити зв’язок із кадровим документом.');return}
+        setData({ documentLink:documentLink.data, record: record.data, employee: employee.data, balances: balances.data })
       } catch { if (active) setError('Не вдалося завантажити актуальну відпустку.') }
     }
     void load()
@@ -94,6 +97,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
             {record.grantBasis && <InfoItem label="Підстава надання" value={record.grantBasis} wide/>}
           </dl>
         </InfoSection>}
+        <LeaveDocumentInfo link={data.documentLink} onClose={onClose}/>
         {record.allocations.length > 0 && <InfoSection title="Розподіл днів" icon={<List size={17}/>}>
           <DictionaryTable label="Розподіл днів відпустки" className="leave-table" columns={[{label:'Період'},{label:'Днів',width:'6rem',className:'leave-days-column'}]}>
             {record.allocations.map(allocation => {
@@ -114,7 +118,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     <button type="button" className="secondary-button" onClick={() => { onChanged(); onClose() }}>Закрити та оновити журнал</button>
   </Modal>
   return kind === 'edit' ? <LeaveRegistrationForm employeeId={data.employee.id} employeeName={fullName(data.employee)}
-    hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} navigationGuard={navigationGuard}
+    hireDate={data.employee.hireDate} initialType={data.record.leaveType} record={data.record} documentLinked={!!data.documentLink} navigationGuard={navigationGuard}
     onClose={refreshAndClose} onSaved={changed} onReloadRecord={reload} returnFocus={opener.current} history={history} /> :
     <CancelRegistration record={data.record} employeeName={fullName(data.employee)} navigationGuard={navigationGuard} onClose={refreshAndClose} onChanged={changed} />
 }

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
-import { documentNumberKey, type DocumentsErrorCode, type PersonnelDocument, type PersonnelDocumentCreateInput, type PersonnelDocumentUpdateInput, type PersonnelDocumentInput, type PersonnelDocumentSummary } from '../../shared/documents.js'
+import { documentNumberKey, type DocumentsErrorCode, type DocumentLeaveLinkInput, type DocumentLeaveLinks, type LeaveDocumentLink, type PersonnelDocument, type PersonnelDocumentCreateInput, type PersonnelDocumentUpdateInput, type PersonnelDocumentInput, type PersonnelDocumentSummary } from '../../shared/documents.js'
 import * as schemas from './schemas.js'
 
 export class DocumentsError extends Error { constructor(readonly code: DocumentsErrorCode) { super(code) } }
@@ -75,6 +75,9 @@ export class DocumentsService {
       const current = this.document(db,id)
       if (current.revision !== expectedRevision) throw new DocumentsError('STALE_REVISION')
       if (current.revision === Number.MAX_SAFE_INTEGER) throw new DocumentsError('CONFLICT')
+      if (db.prepare('SELECT 1 FROM personnel_document_leave_records WHERE document_id=? LIMIT 1').get(id) &&
+        (current.kind!==value.kind || current.customKind!==value.customKind || current.number!==value.number || current.issuedOn!==value.issuedOn ||
+         JSON.stringify([...current.employeeIds].sort())!==JSON.stringify([...value.employeeIds].sort()))) throw new DocumentsError('DOCUMENT_HAS_LEAVE_LINKS')
       this.references(db,value.employeeIds); this.number(db,value,id)
       db.prepare(`UPDATE personnel_documents SET kind=?,custom_kind=?,number=?,number_key=?,issued_on=?,title=?,note=?,revision=revision+1,updated_at=? WHERE id=?`)
         .run(value.kind,value.customKind,value.number,documentNumberKey(value.number),value.issuedOn,value.title,value.note,new Date().toISOString(),id)
@@ -86,8 +89,56 @@ export class DocumentsService {
     this.parse(schemas.id,id); this.parse(schemas.revision,expectedRevision)
     return this.run(true, db => {
       if (this.document(db,id).revision !== expectedRevision) throw new DocumentsError('STALE_REVISION')
+      if(db.prepare('SELECT 1 FROM personnel_document_leave_records WHERE document_id=? LIMIT 1').get(id))throw new DocumentsError('DOCUMENT_HAS_LEAVE_LINKS')
       db.prepare('DELETE FROM personnel_documents WHERE id=?').run(id)
       return null
     })
   }
+  private linkSnapshot(db:Database.Database,id:string):DocumentLeaveLinks {
+    const document=this.document(db,id)
+    const links=db.prepare<[string],DocumentLeaveLinks['links'][number]>(`SELECT l.document_id AS documentId,l.leave_record_id AS leaveRecordId,l.linked_at AS linkedAt,
+      r.employee_id AS employeeId,r.revision AS leaveRevision,r.leave_type AS leaveType,r.start_date AS startDate,r.end_date AS endDate,
+      r.used_days AS usedDays,r.status,r.order_number AS orderNumber,r.order_date AS orderDate
+      FROM personnel_document_leave_records l JOIN leave_records r ON r.id=l.leave_record_id WHERE l.document_id=? ORDER BY r.start_date DESC,r.id`).all(id)
+    return {document,links}
+  }
+  listLeaveLinks=(id:string)=>{this.parse(schemas.id,id);return this.run(false,db=>this.linkSnapshot(db,id))}
+  getLeaveDocument=(id:string):LeaveDocumentLink|null=>{
+    this.parse(schemas.id,id)
+    return this.run(false,db=>{
+      if(!db.prepare('SELECT 1 FROM leave_records WHERE id=?').get(id))throw new DocumentsError('NOT_FOUND')
+      const link=db.prepare<[string],{documentId:string;linkedAt:string}>('SELECT document_id AS documentId,linked_at AS linkedAt FROM personnel_document_leave_records WHERE leave_record_id=?').get(id)
+      return link?{document:this.document(db,link.documentId),leaveRecordId:id,linkedAt:link.linkedAt}:null
+    })
+  }
+  private bumpLinkedDocument(db:Database.Database,id:string,revision:number) {
+    if(revision===Number.MAX_SAFE_INTEGER)throw new DocumentsError('CONFLICT')
+    db.prepare('UPDATE personnel_documents SET revision=revision+1,updated_at=? WHERE id=?').run(new Date().toISOString(),id)
+  }
+  private mutateLeaveLink(input:DocumentLeaveLinkInput,unlink:boolean):DocumentLeaveLinks {
+    const value=this.parse(schemas.linkInput,input)
+    return this.run(true,db=>{
+      const document=this.document(db,value.documentId)
+      const leave=db.prepare<[string],{employeeId:string;revision:number;status:string;number:string|null;date:string|null}>(`SELECT employee_id AS employeeId,revision,status,order_number AS number,order_date AS date FROM leave_records WHERE id=?`).get(value.leaveRecordId)
+      if(!leave)throw new DocumentsError('NOT_FOUND')
+      const existing=db.prepare<[string],{id:string}>('SELECT document_id AS id FROM personnel_document_leave_records WHERE leave_record_id=?').get(value.leaveRecordId)
+      if(existing&&existing.id!==value.documentId)throw new DocumentsError('DOCUMENT_LEAVE_CONFLICT')
+      // A factual no-op retry never bumps a revision or writes again.
+      if((!unlink&&existing)||(unlink&&!existing))return this.linkSnapshot(db,value.documentId)
+      if(document.revision!==value.expectedDocumentRevision||leave.revision!==value.expectedLeaveRevision)throw new DocumentsError('STALE_REVISION')
+      if(!unlink){
+        if(document.employeeIds.length!==1)throw new DocumentsError('DOCUMENT_EMPLOYEE_REQUIRED')
+        if(document.employeeIds[0]!==leave.employeeId)throw new DocumentsError('DOCUMENT_EMPLOYEE_MISMATCH')
+        if(leave.status!=='active')throw new DocumentsError('LEAVE_CANCELLED')
+        if(!leave.number||!documentNumberKey(leave.number)||!leave.date)throw new DocumentsError('DOCUMENT_REQUISITES_MISSING')
+        if(documentNumberKey(leave.number)!==documentNumberKey(document.number)||leave.date!==document.issuedOn)throw new DocumentsError('DOCUMENT_REQUISITES_MISMATCH')
+        db.prepare('INSERT INTO personnel_document_leave_records(document_id,leave_record_id,linked_at) VALUES (?,?,?)').run(value.documentId,value.leaveRecordId,new Date().toISOString())
+      }else db.prepare('DELETE FROM personnel_document_leave_records WHERE document_id=? AND leave_record_id=?').run(value.documentId,value.leaveRecordId)
+      this.bumpLinkedDocument(db,value.documentId,document.revision)
+      return this.linkSnapshot(db,value.documentId)
+    })
+  }
+  linkLeaveRecord=(input:DocumentLeaveLinkInput)=>this.mutateLeaveLink(input,false)
+  unlinkLeaveRecord=(input:DocumentLeaveLinkInput)=>this.mutateLeaveLink(input,true)
+
 }
