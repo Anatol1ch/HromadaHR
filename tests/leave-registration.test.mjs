@@ -1,4 +1,4 @@
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -26,7 +26,7 @@ async function fixture(t, manifest = migrations) {
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
   const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
-  const person = (hireDate = '2024-01-01') => personnel.createEmployee({ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
+  const person = (hireDate = '2024-01-01') => seedEmployee(connection, personnel, { lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
     employeeType: 'official', hireDate, positionId: position.id, departmentId: department.id })
   const employee = person()
   const leave = new LeaveService(storage, () => false)
@@ -143,7 +143,7 @@ test('v6 to v12 preserves balances and fails closed without protective snapshot'
   unchanged.close()
   const updated=await openStorageSafely(f.file)
   f.handles.push(updated)
-  assert.equal(updated.schemaVersion,15)
+  assert.equal(updated.schemaVersion,16)
   assert.equal(updated.database.prepare('SELECT confirmed_days FROM leave_period_balances').get().confirmed_days,7)
   assert.deepEqual(updated.database.prepare('SELECT * FROM schema_migrations WHERE version<=6 ORDER BY version').all(),ledger)
   assert.ok(readdirSync(protection).some(name=>name.includes('protect-migration-v7-')))

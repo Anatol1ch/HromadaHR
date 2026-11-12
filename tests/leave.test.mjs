@@ -1,4 +1,4 @@
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -38,8 +38,8 @@ async function employee(connection, hireDate = '2023-06-15') {
   const personnel = new PersonnelService({ getDatabase: () => connection.database }, () => false)
   const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const data = { lastName: 'Тестовий', firstName: 'Працівник', middleName: null, birthDate: null,
-    employeeType: 'official', hireDate, positionId: position.id, departmentId: department.id }
-  return { personnel, department, position, employee: personnel.createEmployee(data), data }
+    employeeType: 'official', positionStartedOn:null,positionCategory:null, hireDate, positionId: position.id, departmentId: department.id }
+  return { personnel, department, position, employee: seedEmployee(connection, personnel, data), data }
 }
 
 test('working-year periods use clamped calendar-year arithmetic and retain the 2027-crossing period', () => {
@@ -101,7 +101,7 @@ test('v10 restore preserves old periods and the v11 service date survives reopen
   f.handles.push({ close: () => { secondBackup.stop(); secondBackup.invalidateSelections(); second.close() } })
   await second.initializeSafely(() => join(f.root, 'second', 'app.db'))
   const dated = await secondBackup.chooseRestore(async () => snapshot)
-  assert.equal(dated.schemaVersion, 15)
+  assert.equal(dated.schemaVersion, 16)
   await secondBackup.confirmRestore(dated.token, async () => true)
   const restored = new LeaveService(second, () => secondBackup.isBusy())
   assert.equal(restored.getServiceLeaveStart(person.id), '2025-01-03')
@@ -116,7 +116,7 @@ test('v5 to v12 migration keeps live personnel and directories and protects the 
   old.close()
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 15)
+  assert.equal(current.schemaVersion, 16)
   assert.equal(db.prepare('SELECT id FROM employees').get().id, created.employee.id)
   assert.equal(db.prepare('SELECT id FROM departments').get().id, created.department.id)
   assert.equal(db.prepare('SELECT id FROM positions').get().id, created.position.id)
@@ -157,11 +157,11 @@ test('restoring a supported v5 copy migrates the active database and leaves the 
   const backups = new BackupService(storage)
   await storage.initializeSafely(() => join(f.root, 'active', 'hromadahr.db'))
   f.handles.push({ close: () => { backups.stop(); backups.invalidateSelections(); storage.close() } })
-  assert.equal(storage.getStatus().schemaVersion, 15)
+  assert.equal(storage.getStatus().schemaVersion, 16)
   const selected = await backups.chooseRestore(async () => sourceFile)
   assert.equal(selected.schemaVersion, 5)
   assert.deepEqual(await backups.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 15)
+  assert.equal(storage.getStatus().schemaVersion, 16)
   assert.equal(new PersonnelService(storage, () => backups.isBusy()).getEmployee(created.employee.id).id, created.employee.id)
   assert.deepEqual(readFileSync(sourceFile), sourceBytes)
 })
@@ -227,7 +227,7 @@ test('hire date changes are blocked only when periods exist; other edits and emp
   const f = fixture(t), connection = await f.open(), { personnel, employee: person, data } = await employee(connection)
   const leave = new LeaveService({ getDatabase: () => connection.database }, () => false)
   leave.savePeriods(person.id, [annual('2023-06-15', '2024-06-14', 2)])
-  assert.throws(() => personnel.updateEmployee(person.id, { ...data, hireDate: '2023-06-16' }), code('HIRE_DATE_HAS_LEAVE_PERIODS'))
+  assert.throws(() => personnel.updateEmployee(person.id, { ...data, positionStartedOn: null, positionCategory: null, hireDate: '2023-06-16' }), code('HIRE_DATE_HAS_LEAVE_PERIODS'))
   const changed = personnel.updateEmployee(person.id, { ...data, firstName: 'Інше ім’я' })
   assert.equal(changed.firstName, 'Інше ім’я')
   connection.database.exec(`CREATE TRIGGER test_block_employee_delete BEFORE DELETE ON employees

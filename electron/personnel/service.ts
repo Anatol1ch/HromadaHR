@@ -10,7 +10,7 @@ export class PersonnelError extends Error {
 type EmployeeRow = EmployeeDetails & { id: string; positionName: string; departmentName: string }
 const employeeQuery = `SELECT e.id, e.last_name AS lastName, e.first_name AS firstName,
   e.middle_name AS middleName, e.birth_date AS birthDate, e.employee_type AS employeeType,
-  e.hire_date AS hireDate, e.position_id AS positionId, e.department_id AS departmentId,
+  e.position_started_on AS positionStartedOn, e.position_category AS positionCategory, e.hire_date AS hireDate, e.position_id AS positionId, e.department_id AS departmentId,
   p.name AS positionName, d.name AS departmentName
   FROM employees e JOIN positions p ON p.id=e.position_id JOIN departments d ON d.id=e.department_id`
 const dictionaries = {
@@ -65,19 +65,23 @@ export class PersonnelService {
       this.checkReferences(db, value)
       const id = randomUUID()
       db.prepare(`INSERT INTO employees (id, last_name, first_name, middle_name, birth_date, employee_type,
-        hire_date, position_id, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        hire_date, position_id, department_id, position_started_on, position_category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .run(id, value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType,
-          value.hireDate, value.positionId, value.departmentId)
+          value.hireDate, value.positionId, value.departmentId, value.positionStartedOn, value.positionCategory)
       return this.card(db, id)
     }).immediate())
   }
-  updateEmployee = (id: string, input: EmployeeDetails) => {
+  updateEmployee = (id: string, input: EmployeeDetails, appointmentReviewed = false) => {
     this.parse(schemas.id, id)
     const value = this.parse(schemas.employeeDetails, input)
+    if (typeof appointmentReviewed !== 'boolean') throw new PersonnelError('INVALID_ARGUMENTS')
     return this.run(db => db.transaction(() => {
       this.checkReferences(db, value)
+      const current = this.card(db,id)
+      if ((current.positionId !== value.positionId || current.departmentId !== value.departmentId) &&
+        (value.positionStartedOn !== null || value.positionCategory !== null) && !appointmentReviewed) throw new PersonnelError('APPOINTMENT_REVIEW_REQUIRED')
       const result = db.prepare(`UPDATE employees SET last_name=?, first_name=?, middle_name=?, birth_date=?,
-        employee_type=?, hire_date=?, position_id=?, department_id=? WHERE id=?`)
+        employee_type=?, hire_date=?, position_id=?, department_id=?, position_started_on=?, position_category=? WHERE id=?`)
       const currentHireDate = db.prepare<[string], { hireDate: string }>('SELECT hire_date AS hireDate FROM employees WHERE id=?').get(id)
       if (!currentHireDate) throw new PersonnelError('NOT_FOUND')
       if (currentHireDate.hireDate !== value.hireDate && db.prepare('SELECT 1 FROM leave_period_balances WHERE employee_id=? LIMIT 1').get(id)) {
@@ -87,7 +91,7 @@ export class PersonnelService {
         throw new PersonnelError('EMPLOYEE_HAS_CURRENT_RANK')
       }
       const changed = result.run(value.lastName, value.firstName, value.middleName, value.birthDate, value.employeeType,
-          value.hireDate, value.positionId, value.departmentId, id)
+          value.hireDate, value.positionId, value.departmentId, value.positionStartedOn, value.positionCategory, id)
       if (!changed.changes) throw new PersonnelError('NOT_FOUND')
       return this.card(db, id)
     }).immediate())

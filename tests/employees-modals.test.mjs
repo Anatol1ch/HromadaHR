@@ -37,7 +37,7 @@ test('nested form cancellation retains the parent card and registry options; onl
 
 test('authoritative mutation replies replace list entries without duplicating or mutating existing rows', () => {
   const rows = [employee, { ...employee, id: ids[1] }]
-  const saved = { ...employee, firstName: 'Оновлений', hireDate: '2000-01-01', position: { name: 'Нова' } }
+  const saved = { ...employee, firstName: 'Оновлений', positionStartedOn: null, positionCategory: null, hireDate: '2000-01-01', position: { name: 'Нова' } }
   const merged = mergeEmployee(rows, saved)
   assert.equal(merged.length, 2)
   assert.equal(merged[0], saved)

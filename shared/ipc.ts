@@ -105,7 +105,7 @@ export interface IpcOperations {
   [ipcChannels.personnelListEmployees]: { args: []; result: EmployeeCard[] }
   [ipcChannels.personnelGetEmployee]: { args: [string]; result: EmployeeCard }
   [ipcChannels.personnelCreateEmployee]: { args: [EmployeeDetails]; result: EmployeeCard }
-  [ipcChannels.personnelUpdateEmployee]: { args: [string, EmployeeDetails]; result: EmployeeCard }
+  [ipcChannels.personnelUpdateEmployee]: { args: [string, EmployeeDetails, boolean?]; result: EmployeeCard }
   [ipcChannels.personnelListDepartments]: { args: []; result: Department[] }
   [ipcChannels.personnelGetDictionary]: { args: [DictionaryKind]; result: DictionarySnapshot }
   [ipcChannels.personnelRenameDictionaryEntry]: { args: [DictionaryKind, string, string, number]; result: DictionarySnapshot }

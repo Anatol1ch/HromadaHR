@@ -209,7 +209,7 @@ test('every personnel channel enforces sender/frame/URL and strict argument sche
   const fixture = setup(() => info, url, personnel)
   const id = '11111111-1111-4111-8111-111111111111'
   const details = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
-    employeeType: 'official', positionId: id, departmentId: id, hireDate: '2026-01-01' }
+    employeeType: 'official', positionId: id, departmentId: id, positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01' }
   const operations = {
     deleteEmployee: [id],
     listEmployees: [], getEmployee: [id], createEmployee: [details],
@@ -228,13 +228,13 @@ test('every personnel channel enforces sender/frame/URL and strict argument sche
     fixture.contents.mainFrame.url = 'https://example.com/'
     assert.deepEqual(await call(fixture.event, ...args), { ok: false, error: { code: 'FORBIDDEN' } })
     fixture.contents.mainFrame.url = url
-    for (const invalid of [[...args, undefined], [{ sql: 'DELETE', path: 'C:\\private' }]]) {
+    for (const invalid of [method==='updateEmployee'?[...args,false,undefined]:[...args,undefined], [{ sql: 'DELETE', path: 'C:\\private' }]]) {
       assert.deepEqual(await call(fixture.event, ...invalid), { ok: false, error: { code: 'INVALID_ARGUMENTS' } }, method)
     }
   }
   assert.equal(executions, 0)
   const create = fixture.handlers.get(ipcChannels.personnelCreateEmployee)
-  for (const change of [{ hireDate: '2026-02-30' }, { firstName: ' ' }, { birthDate: '2027-01-01' }, { unexpected: true }]) {
+  for (const change of [{ positionStartedOn: null, positionCategory: null, hireDate: '2026-02-30' }, { firstName: ' ' }, { birthDate: '2027-01-01' }, { unexpected: true }]) {
     assert.deepEqual(await create(fixture.event, { ...operations.createEmployee[0], ...change }),
       { ok: false, error: { code: 'INVALID_ARGUMENTS' } })
   }
@@ -258,7 +258,7 @@ test('preload personnel methods expose exactly the allowlist and fixed argument 
   const api = preload(async (channel, ...args) => { calls.push([channel, ...args]); return { ok: true, data: null } })
   const methods = Object.values(ipcChannels).filter(c => c.startsWith('personnel:')).map(c => c.split(':')[1])
   assert.deepEqual(Object.keys(api.personnel).sort(), methods.sort())
-  const sizes = { getDictionary: 1, renameDictionaryEntry: 4, deleteDictionaryEntry: 3, reorderDictionary: 3 }
+  const sizes = { updateEmployee: 3, getDictionary: 1, renameDictionaryEntry: 4, deleteDictionaryEntry: 3, reorderDictionary: 3 }
   for (const method of methods) {
     const args = ['id', 'input', 'third', 'fourth', 'extra']
     await api.personnel[method](...args)
@@ -282,13 +282,13 @@ test('built preload → IPC → personnel → isolated SQLite supports current e
   const department = (await api.createDepartment({ name: 'Відділ' })).data
   const position = (await api.createPosition({ name: 'Посада' })).data
   const input = { lastName: 'Тест', firstName: 'Тест', middleName: null, birthDate: null,
-    employeeType: 'official', positionId: position.id, departmentId: department.id, hireDate: '2026-01-01' }
+    employeeType: 'official', positionId: position.id, departmentId: department.id, positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01' }
   const created = await api.createEmployee(input)
   assert.equal(created.ok, true)
   const { id } = created.data
   assert.equal((await api.listEmployees()).data[0].id, id)
   const newPosition = (await api.createPosition({ name: 'Інша посада' })).data
-  const updated = await api.updateEmployee(id, { ...input, positionId: newPosition.id, hireDate: '2026-02-01' })
+  const updated = await api.updateEmployee(id, { ...input, positionId: newPosition.id, positionStartedOn: null, positionCategory: null, hireDate: '2026-02-01' })
   assert.equal(updated.ok, true)
   assert.equal(updated.data.position.id, newPosition.id)
   assert.equal(updated.data.hireDate, '2026-02-01')

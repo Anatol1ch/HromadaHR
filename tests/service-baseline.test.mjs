@@ -20,11 +20,11 @@ async function fixture(t) {
  let c=await openStorageSafely(file,migrations.slice(0,13))
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
  c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,15)
+ assert.equal(c.schemaVersion,16)
  assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=13 ORDER BY version').all(),ledger)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false),s=new SeniorityRanksService(storage,()=>false)
  const departmentId=p.createDepartment({name:'Тест'}).id,positionId=p.createPosition({name:'Тест'}).id
- const details={lastName:'Синтетичний',firstName:'Приклад',middleName:null,birthDate:null,hireDate:'2026-01-01',employeeType:'official',departmentId,positionId}
+ const details={lastName:'Синтетичний',firstName:'Приклад',middleName:null,birthDate:null,positionStartedOn: null, positionCategory: null, hireDate:'2026-01-01',employeeType:'official',departmentId,positionId}
  const e=p.createEmployee(details),staff=p.createEmployee({...details,employeeType:'staff'})
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-baseline-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
  return {s,p,e,staff,storage,get db(){return c.database},async reopen(){c.close();c=await openStorageSafely(file)}}

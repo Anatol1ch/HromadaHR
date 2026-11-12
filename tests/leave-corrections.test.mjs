@@ -1,4 +1,4 @@
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -28,8 +28,8 @@ async function fixture(t, manifest=migrations) {
   const personnel=new PersonnelService(storage,()=>false)
   const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const details={lastName:'Тест',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',
-    hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
-  const employee=personnel.createEmployee(details)
+    positionStartedOn: null, positionCategory: null, hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
+  const employee=seedEmployee(connection, personnel, details)
   const service=new LeaveService(storage,()=>false)
   const period=(year,days,type='annual_main')=>({leaveType:type,periodStart:year+'-01-01',periodEnd:year+'-12-31',
     accountingBasis:year<2027?'initial_balance':'confirmed_entitlement',confirmedDays:days,referenceEntitlementDays:null})
@@ -159,7 +159,7 @@ test('v7 migration preserves legacy mismatches and restore migrates the immutabl
   assert.deepEqual(restored.allocations,[{periodId,days:2}])
   assert.equal(restored.usedDays,2)
   assert.deepEqual(readFileSync(f.file),original)
-  assert.equal(storage.getStatus().schemaVersion,15)
+  assert.equal(storage.getStatus().schemaVersion,16)
 })
 test('v8 requires protection, rolls back failed SQL and preserves all rows',async t=>{
   const f=await fixture(t,migrations.slice(0,7))
@@ -177,8 +177,8 @@ test('v8 requires protection, rolls back failed SQL and preserves all rows',asyn
   check.close()
   const latest=await openStorageSafely(f.file)
   f.handles.push(latest)
-  assert.deepEqual(latest.database.prepare('SELECT * FROM employees').all(),before)
-  assert.equal(latest.schemaVersion,15)
+  assert.deepEqual(latest.database.prepare('SELECT * FROM employees').all(),before.map(row=>({...row,position_started_on:null,position_category:null})))
+  assert.equal(latest.schemaVersion,16)
   const snapshot=join(protection,readdirSync(protection).find(name=>name.includes('protect-migration-v8-')))
   assert.equal(inspectDatabase(snapshot),7)
 })
@@ -188,7 +188,7 @@ test('complete employee deletion with active and cancelled records is atomic and
   const a=f.register([{periodId:p.id,days:16}])
   f.service.cancelLeave(a.id,1,'Причина')
   f.register([{periodId:p.id,days:16}])
-  assert.throws(()=>f.personnel.updateEmployee(f.employee.id,{...f.details,hireDate:'2024-01-02'}),code('HIRE_DATE_HAS_LEAVE_PERIODS'))
+  assert.throws(()=>f.personnel.updateEmployee(f.employee.id,{...f.details,positionStartedOn: null, positionCategory: null, hireDate:'2024-01-02'}),code('HIRE_DATE_HAS_LEAVE_PERIODS'))
   f.connection.database.exec("CREATE TRIGGER block_delete BEFORE DELETE ON leave_period_balances BEGIN SELECT RAISE(ABORT,'fail'); END")
   assert.throws(()=>f.personnel.deleteEmployee(f.employee.id))
   assert.equal(f.service.listRecords(f.employee.id).length,2)

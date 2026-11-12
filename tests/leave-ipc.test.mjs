@@ -36,7 +36,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   const department = personnel.createDepartment({ name: 'Відділ' })
   const position = personnel.createPosition({ name: 'Посада' })
   const employee = personnel.createEmployee({ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
-    employeeType: 'official', hireDate: '2026-06-01', departmentId: department.id, positionId: position.id })
+    employeeType: 'official', positionStartedOn: null, positionCategory: null, hireDate: '2026-06-01', departmentId: department.id, positionId: position.id })
   const handlers = new Map()
   const contents = { isDestroyed: () => false, mainFrame: { url } }
   const win = { isDestroyed: () => false, webContents: contents }

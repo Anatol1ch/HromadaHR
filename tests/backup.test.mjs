@@ -225,7 +225,7 @@ temporaryTest('successful restore retains a verified protective copy and local d
   const department = personnel.createDepartment({ name: 'Тестовий відділ' })
   const position = personnel.createPosition({ name: 'Тестова посада' })
   const input = { lastName: 'Тестовий', firstName: 'Тест', middleName: null, birthDate: null,
-    hireDate: '2026-01-01', employeeType: 'official', departmentId: department.id, positionId: position.id }
+    positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01', employeeType: 'official', departmentId: department.id, positionId: position.id }
   const employee = personnel.createEmployee(input)
   storage.getDatabase().exec("CREATE TABLE test_data(value TEXT); INSERT INTO test_data VALUES ('snapshot')")
   await service.runManual()
@@ -290,7 +290,7 @@ temporaryTest('compatible older backup is migrated on restore without changing i
   const selection = await service.chooseRestore(async () => legacyFile)
   assert.equal(selection.schemaVersion, 1)
   await service.confirmRestore(selection.token, async () => true)
-  assert.equal(storage.getStatus().schemaVersion, 15)
+  assert.equal(storage.getStatus().schemaVersion, 16)
   assert.equal(storage.getDatabase().prepare('SELECT value FROM test_older').get().value, 'legacy')
   assert.deepEqual(readFileSync(legacyFile), before)
 })
@@ -344,7 +344,7 @@ temporaryTest('critical migration never executes when protective-copy creation f
   await assert.rejects(openStorageSafely(file, critical))
   const after = await openStorageSafely(file)
   try {
-    assert.equal(after.schemaVersion, 15)
+    assert.equal(after.schemaVersion, 16)
     assert.equal(after.database.prepare("SELECT name FROM sqlite_schema WHERE name='test_blocked'").get(), undefined)
   } finally { after.close() }
 })

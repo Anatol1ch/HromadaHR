@@ -74,10 +74,10 @@ test('v4 → v13 preserves directories and service tables and protects the origi
   assert.equal(migrations[4].requiresBackup, true)
   const current = await f.open()
   const db = current.database
-  assert.equal(current.schemaVersion, 15)
+  assert.equal(current.schemaVersion, 16)
   assert.deepEqual(tables(db), ['backup_config', 'backup_state', 'departments', 'employee_current_ranks', 'employee_leave_rights', 'employee_seniority_allowances', 'employee_service_baselines', 'employee_service_leave_start', 'employees', 'leave_allocations', 'leave_period_balances', 'leave_records', 'personnel_dictionary_order', 'positions', 'schema_migrations'])
   assert.deepEqual(db.pragma('table_info(employees)').map(column => column.name),
-    ['id', 'last_name', 'first_name', 'middle_name', 'birth_date', 'employee_type', 'hire_date', 'position_id', 'department_id'])
+    ['id', 'last_name', 'first_name', 'middle_name', 'birth_date', 'employee_type', 'hire_date', 'position_id', 'department_id', 'position_started_on', 'position_category'])
   assert.equal(db.pragma('table_list').find(row => row.name === 'employees').strict, 1)
   assert.deepEqual(ledger(db).slice(0, 4), before.ledger)
   assert.deepEqual(db.prepare('SELECT * FROM backup_config').all(), before.config)
@@ -125,7 +125,7 @@ test('fresh v13 validates and updates the current employee atomically with an in
   const f = fixture(t)
   const connection = await f.open()
   assert.equal(connection.created, true)
-  assert.equal(connection.schemaVersion, 15)
+  assert.equal(connection.schemaVersion, 16)
   const db = connection.database
   const service = new PersonnelService({ getDatabase: () => db }, () => false)
   assert.deepEqual(service.listEmployees(), [])
@@ -133,9 +133,9 @@ test('fresh v13 validates and updates the current employee atomically with an in
   const position = service.createPosition({ name: 'Посада' })
   assert.throws(() => service.createDepartment({ name: 'ВІДДІЛ кадрів' }), hasCode('CONFLICT'))
   const input = { lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: '2000-02-29',
-    employeeType: 'staff', hireDate: '2024-02-29', positionId: position.id, departmentId: department.id }
-  for (const change of [{ firstName: ' ' }, { hireDate: undefined }, { hireDate: '2025-02-29' },
-    { birthDate: '0000-01-01' }, { hireDate: '1999-12-31' }, { category: null }]) {
+    employeeType: 'staff', positionStartedOn: null, positionCategory: null, hireDate: '2024-02-29', positionId: position.id, departmentId: department.id }
+  for (const change of [{ firstName: ' ' }, { positionStartedOn: null, positionCategory: null, hireDate: undefined }, { positionStartedOn: null, positionCategory: null, hireDate: '2025-02-29' },
+    { birthDate: '0000-01-01' }, { positionStartedOn: null, positionCategory: null, hireDate: '1999-12-31' }, { category: null }]) {
     assert.throws(() => service.createEmployee({ ...input, ...change }), hasCode('INVALID_ARGUMENTS'))
   }
   assert.throws(() => service.createEmployee({ ...input, positionId: randomUUID() }), hasCode('NOT_FOUND'))
@@ -145,8 +145,8 @@ test('fresh v13 validates and updates the current employee atomically with an in
   const nextDepartment = service.createDepartment({ name: 'Новий відділ' })
   const changed = { ...input, positionId: nextPosition.id, departmentId: nextDepartment.id }
   assert.equal(service.updateEmployee(card.id, changed).hireDate, input.hireDate)
-  const final = service.updateEmployee(card.id, { ...changed, hireDate: '2025-03-01' })
-  assert.deepEqual(final, { ...changed, hireDate: '2025-03-01', id: card.id, position: nextPosition, department: nextDepartment })
+  const final = service.updateEmployee(card.id, { ...changed, positionStartedOn: null, positionCategory: null, hireDate: '2025-03-01' })
+  assert.deepEqual(final, { ...changed, positionStartedOn: null, positionCategory: null, hireDate: '2025-03-01', id: card.id, position: nextPosition, department: nextDepartment })
   assert.throws(() => service.updateEmployee(card.id, { ...changed, departmentId: randomUUID() }), hasCode('NOT_FOUND'))
   assert.deepEqual(service.listEmployees(), [final])
   assert.throws(() => db.prepare('UPDATE employees SET hire_date=? WHERE id=?').run('2025-02-29', card.id), /CHECK constraint/)
@@ -172,7 +172,7 @@ test('restoring a v4 test image applies v13 without altering the source image', 
   const selected = await backup.chooseRestore(async () => f.file)
   assert.equal(selected.schemaVersion, 4)
   assert.deepEqual(await backup.confirmRestore(selected.token, async () => true), { restored: true })
-  assert.equal(storage.getStatus().schemaVersion, 15)
+  assert.equal(storage.getStatus().schemaVersion, 16)
   const db = storage.getDatabase()
   assert.equal(db.prepare('SELECT count(*) AS n FROM employees').get().n, 0)
   assert.equal(tables(db).includes('employee_positions'), false)

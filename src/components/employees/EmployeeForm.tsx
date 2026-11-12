@@ -4,17 +4,18 @@ import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput from '../ValidatedInput'
 import Select from '../Select'
-import { formatDateInput } from '../../lib/dates'
+import { formatDateInput, todayIsoDate } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, RefObject } from 'react'
+import { positionCategories } from '../../../shared/personnel'
 import type { EmployeeCard } from '../../../shared/personnel'
 import Alert from '../Alert'
 import InfoSection from '../InfoSection'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
 import { employeeInput, employeeTypeLabels, emptyValues,
-  personnelMessage, validateEmployee, valuesForEmployee } from '../../employees/model'
+  changeAppointment, personnelMessage, validateEmployee, valuesForEmployee } from '../../employees/model'
 import type { FormErrors, FormValues } from '../../employees/model'
 
 type Props = {
@@ -34,6 +35,10 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const inFlight = useRef(false)
   const alive = useRef(true)
   const form = useRef<HTMLFormElement>(null)
+  const [appointmentRevision,setAppointmentRevision]=useState(0)
+  const [appointmentReviewed,setAppointmentReviewed]=useState(false)
+  const [categoryCleared,setCategoryCleared]=useState(false)
+  const contextChanged=!!employee&&(values.positionId!==initial.positionId||values.departmentId!==initial.departmentId)
   const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({})
   const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial)
   const busy = saving || directory.pending
@@ -46,13 +51,20 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const close = () => requestClose(onCancel)
 
   function change<K extends keyof FormValues>(key: K, value: FormValues[K]) {
-    setValues(current => ({ ...current, [key]: value }))
+    setValues(current => ({ ...current, [key]: value, ...(key==='employeeType'&&value==='staff'?{positionCategory:'' as const}:{}) }))
+    if(key==='employeeType'&&value==='staff'&&values.positionCategory)setCategoryCleared(true)
     setErrors(current => ({ ...current, [key]: undefined }))
+  }
+  function changeDirectory(key:'positionId'|'departmentId',value:string) {
+    if(values[key]===value)return
+    setValues(current=>changeAppointment(current,key,value));setAppointmentRevision(v=>v+1);setAppointmentReviewed(false)
+    setDateDrafts(current=>({...current,positionStartedOn:false}));setErrors(current=>({...current,positionStartedOn:undefined,positionCategory:undefined}))
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (inFlight.current || directory.loading || directory.error) return
     if (directory.draft) { setError('Завершіть або скасуйте додавання запису довідника.'); return }
+    if(contextChanged&&(values.positionStartedOn||values.positionCategory)&&!appointmentReviewed){setError('Підтвердьте перевірку відомостей поточного призначення або залиште їх невідомими.');return}
     const nextErrors = validateEmployee(values)
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors); setError('Перевірте позначені поля.')
@@ -62,7 +74,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     if (!form.current?.checkValidity()) { form.current?.reportValidity(); if (form.current) focusFirstInvalid(form.current); return }
     inFlight.current = true; setSaving(true); setError('')
     try {
-      const result = employee ? await window.hromadaHR.personnel.updateEmployee(employee.id, employeeInput(values)) :
+      const result = employee ? await window.hromadaHR.personnel.updateEmployee(employee.id, employeeInput(values), appointmentReviewed) :
         await window.hromadaHR.personnel.createEmployee(employeeInput(values))
       if (!alive.current) return
       if (!result.ok) {
@@ -78,11 +90,11 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     } catch { if (alive.current) setError('Не вдалося підтвердити збереження. Введені дані залишилися у формі; перевірте реєстр перед повторною спробою.') }
     finally { inFlight.current = false; if (alive.current) setSaving(false) }
   }
-  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'hireDate', label: string, required = false) {
-    const isDate = key === 'birthDate' || key === 'hireDate'
+  function textField(key: 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'hireDate' | 'positionStartedOn', label: string, required = false) {
+    const isDate = key === 'birthDate' || key === 'hireDate' || key === 'positionStartedOn'
     return <div className="recipient-field employee-field">
       <label htmlFor={`employee-${key}`}>{label}{required && <span aria-hidden="true"> *</span>}</label>
-      {isDate ? <DateField id={`employee-${key}`} required={required} disabled={busy} value={values[key]} error={errors[key]}
+      {isDate ? <DateField key={key==='positionStartedOn'?appointmentRevision:key} max={key==='positionStartedOn'?todayIsoDate():undefined} id={`employee-${key}`} required={required} disabled={busy} value={values[key]} error={errors[key]}
         onChange={value => change(key, value)} onDraftChange={display => setDateDrafts(current => ({ ...current, [key]: display !== formatDateInput(initial[key]) }))} /> :
         <ValidatedInput id={`employee-${key}`} name={key} required={required} maxLength={200} value={values[key]} onChange={event => change(key, event.target.value)}
           aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} />}
@@ -114,10 +126,16 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
         <fieldset className="recipient-fieldset" disabled={busy}>
           <div className="employee-form-grid">
             <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
-              onDepartment={id => change('departmentId', id)} onPosition={id => change('positionId', id)} />
+              onDepartment={id => changeDirectory('departmentId', id)} onPosition={id => changeDirectory('positionId', id)} />
             {textField('hireDate', 'Дата прийняття', true)}
+            {textField('positionStartedOn','Дата призначення на поточну посаду')}
+            {values.employeeType==='official'&&<div className="recipient-field employee-field"><span>Категорія посади</span><Select label="Категорія посади" value={values.positionCategory} disabled={busy} error={errors.positionCategory} options={[{value:'',label:'Не зазначено'},...positionCategories.map(value=>({value,label:`${value} категорія`}))]} onChange={value=>change('positionCategory',value as FormValues['positionCategory'])}/></div>}
+
           </div>
         </fieldset>
+        {contextChanged&&<Alert variant="warning">Посаду або підрозділ змінено. Попередні відомості призначення скинуто. Внесіть перевірені дату й категорію або залиште їх невідомими.</Alert>}
+        {contextChanged&&<label className="employee-hint"><input type="checkbox" checked={appointmentReviewed} disabled={busy} onChange={event=>setAppointmentReviewed(event.target.checked)}/> Підтверджую перевірку відомостей поточного призначення</label>}
+        {categoryCleared&&values.employeeType==='staff'&&<Alert variant="info">Категорію ОМС очищено при виборі іншого персоналу. Чинний ранг потрібно очистити окремо, якщо він є.</Alert>}
       </InfoSection>
     </form>
   </Modal>

@@ -192,3 +192,7 @@ Read-only цільово звірено src/RecipientRegistry.tsx HromadaAID н�
 ## 5.3.2 – Календарний прогноз
 
 Read-only звірено src/lib/calendar.ts HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb: календарні Date/місячні helpers. У HR повторно використано чинні daysInMonth/isIsoCalendarDate; UI — наявні switch, InfoSection/InfoItem, Alert. Кадрова конвенція/строгі пороги потребують власного компактного чистого предметного модуля; історичні дати не реконструюються, предметну/серверну логіку AID не переносили. GUI прийматиме замовник.
+
+## 5.3.3 – Поля поточного призначення
+
+Read-only звірено src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb (RecipientFormModal/recipient-field). Використано чинну адаптовану EmployeeForm/EmployeeCard, DateField, Select і кадрову сітку без нових глобальних контролів або стилів. Категорії/дата — власні погоджені кадрові факти HR; предметний код AID не переносився. GUI перевірятиме замовник.

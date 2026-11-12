@@ -11,7 +11,7 @@ import { PersonnelService } from '../dist-electron/electron/personnel/service.js
 import { openStorageSafely, Storage } from '../dist-electron/electron/storage/index.js'
 import { migrations } from '../dist-electron/electron/storage/migrations.js'
 import { moveDictionaryEntry } from '../src/employees/dictionaryOrder.ts'
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 
 const code = value => error => error.code === value
 const personnel = db => new PersonnelService({ getDatabase: () => db }, () => false)
@@ -39,8 +39,8 @@ test('v12 migrates and restores v11 with alphabetic seeds, immutable IDs and lea
   const hr = personnel(db)
   const later = seedDirectories(v11, hr, 'Ясний відділ', 'Ясна посада')
   const first = seedDirectories(v11, hr, 'Абетка', 'Аналітик')
-  const employee = hr.createEmployee({ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
-    employeeType: 'staff', hireDate: '2026-01-01', departmentId: later.department.id, positionId: first.position.id })
+  const employee = seedEmployee(v11,hr,{ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
+    employeeType: 'staff', positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01', departmentId: later.department.id, positionId: first.position.id })
   const leave = new LeaveService({ getDatabase: () => db }, () => false)
   const periods = leave.savePeriods(employee.id, [{ leaveType: 'annual_main', periodStart: '2026-01-01', periodEnd: '2026-12-31',
     accountingBasis: 'initial_balance', confirmedDays: 4, referenceEntitlementDays: null }])
@@ -66,7 +66,7 @@ test('v12 migrates and restores v11 with alphabetic seeds, immutable IDs and lea
   const selected = await backup.chooseRestore(async () => f.file)
   assert.equal(selected.schemaVersion, 11)
   await backup.confirmRestore(selected.token, async () => true)
-  assert.equal(storage.getStatus().schemaVersion, 15)
+  assert.equal(storage.getStatus().schemaVersion, 16)
   assert.deepEqual(readFileSync(f.file), source)
   const upgraded = storage.getDatabase()
   assert.deepEqual(ledger(upgraded).slice(0, 11), prior)
@@ -79,7 +79,7 @@ test('v12 migrates and restores v11 with alphabetic seeds, immutable IDs and lea
   assert.deepEqual(new LeaveService(storage, () => false).getRecord(registration.id), registration)
 
   const current = await f.open()
-  assert.equal(current.schemaVersion, 15)
+  assert.equal(current.schemaVersion, 16)
   const copies = readdirSync(join(f.root, 'protection')).filter(name => name.includes('protect-migration-v12-'))
   assert.ok(copies.length >= 1)
   const protectedCopy = new Database(join(f.root, 'protection', copies[0]), { readonly: true })
@@ -114,7 +114,7 @@ test('independent revisions guard persistent ordering, rename, dependency checks
   assert.throws(() => hr.reorderDictionary('department', [a.id, b.id, c.id], department.revision), code('DICTIONARY_STALE'))
   assert.deepEqual(hr.getDictionary('position'), position)
   const employee = hr.createEmployee({ lastName: 'Тест', firstName: 'Працівник', middleName: null, birthDate: null,
-    employeeType: 'staff', hireDate: '2026-01-01', departmentId: b.id, positionId: q.id })
+    employeeType: 'staff', positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01', departmentId: b.id, positionId: q.id })
   assert.throws(() => hr.renameDictionaryEntry('department', b.id, a.name, 0), code('CONFLICT'))
   const renamed = hr.renameDictionaryEntry('department', b.id, ' Нова   назва ', 0)
   assert.deepEqual(ids(renamed), ids(ordered))

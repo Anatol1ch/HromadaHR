@@ -27,14 +27,14 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,15)
+  assert.equal(connection.schemaVersion,16)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
   const service = new SeniorityRanksService(storage, () => false)
   const departmentId = personnel.createDepartment({ name: 'Тест' }).id
   const positionId = personnel.createPosition({ name: 'Тест' }).id
-  const details = { firstName: 'Тест', lastName: 'Синтетичний', middleName: null, birthDate: null, hireDate: '2026-01-01', employeeType: 'official', departmentId, positionId }
+  const details = { firstName: 'Тест', lastName: 'Синтетичний', middleName: null, birthDate: null, positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01', employeeType: 'official', departmentId, positionId }
   const employee = personnel.createEmployee(details)
   const other = personnel.createEmployee(details)
   t.after(() => {

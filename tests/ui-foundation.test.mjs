@@ -88,12 +88,12 @@ test('backup timestamp presentation is fixed Ukrainian local date/time without s
 
 test('formatted UI fields roundtrip into the employee IPC schema', () => {
   const id = '11111111-1111-4111-8111-111111111111'
-  const fields = { ...emptyValues, firstName: 'Умовний', lastName: 'Тестовий', birthDate: parseDateInput('29.02.2000'), hireDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id }
+  const fields = { ...emptyValues, firstName: 'Умовний', lastName: 'Тестовий', birthDate: parseDateInput('29.02.2000'), positionStartedOn: '', positionCategory: '', hireDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id }
   assert.deepEqual(validateEmployee(fields), {})
   const value = employeeDetails.parse(employeeInput(fields))
   assert.equal(value.birthDate, '2000-02-29')
   assert.equal(value.hireDate, '2026-11-03')
-  assert.equal(employeeDetails.safeParse({ ...value, hireDate: '03.11.2026' }).success, false)
+  assert.equal(employeeDetails.safeParse({ ...value, positionStartedOn: '', positionCategory: '', hireDate: '03.11.2026' }).success, false)
 })
 
 test('source close-confirmation store preserves one pending request, cancellation and disconnected owners', () => {

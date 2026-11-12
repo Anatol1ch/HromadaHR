@@ -113,8 +113,8 @@ export function registerIpcHandlers(
     ([id]) => personnel.getEmployee(id))
   register(ipcChannels.personnelCreateEmployee, z.tuple([personnelSchemas.employeeDetails]), personnelSchemas.employeeCard,
     ([input]) => personnel.createEmployee(input))
-  register(ipcChannels.personnelUpdateEmployee, z.tuple([personnelSchemas.id, personnelSchemas.employeeDetails]), personnelSchemas.employeeCard,
-    ([id, input]) => personnel.updateEmployee(id, input))
+  register(ipcChannels.personnelUpdateEmployee, z.tuple([personnelSchemas.id, personnelSchemas.employeeDetails, z.boolean().optional()]), personnelSchemas.employeeCard,
+    ([id, input, reviewed]) => personnel.updateEmployee(id, input, reviewed))
   register(ipcChannels.personnelListDepartments, z.tuple([]), personnelSchemas.department.array(),
     (_args) => personnel.listDepartments())
   register(ipcChannels.personnelCreateDepartment, z.tuple([personnelSchemas.departmentInput]), personnelSchemas.department,

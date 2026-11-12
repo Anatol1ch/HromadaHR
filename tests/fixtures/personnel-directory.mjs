@@ -15,3 +15,13 @@ export function seedDirectories(connection, personnel, departmentName, positionN
   connection.database.prepare('INSERT INTO positions(id,name,name_key) VALUES (?,?,?)').run(position.id, position.name, nameKey(position.name))
   return { department, position }
 }
+
+// Seed historical employee shapes directly; current Main runs only on migrated storage.
+export function seedEmployee(connection, personnel, input) {
+  const value={positionStartedOn:null,positionCategory:null,...input}
+  if(connection.schemaVersion>=16)return personnel.createEmployee(value)
+  const id=randomUUID(),db=connection.database
+  db.prepare(`INSERT INTO employees(id,last_name,first_name,middle_name,birth_date,employee_type,hire_date,position_id,department_id) VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run(id,value.lastName,value.firstName,value.middleName,value.birthDate,value.employeeType,value.hireDate,value.positionId,value.departmentId)
+  return {...value,id,position:{id:value.positionId,name:db.prepare('SELECT name FROM positions WHERE id=?').get(value.positionId).name},department:{id:value.departmentId,name:db.prepare('SELECT name FROM departments WHERE id=?').get(value.departmentId).name}}
+}

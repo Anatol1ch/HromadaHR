@@ -70,6 +70,8 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
         ['Підрозділ', employee.department.name],
         ['Посада', employee.position.name],
         ['Дата прийняття', displayDate(employee.hireDate)],
+        ['Дата призначення на поточну посаду', employee.positionStartedOn ? displayDate(employee.positionStartedOn) : 'Не внесено'],
+        ...(employee.employeeType==='official' ? [['Категорія посади', employee.positionCategory ? `${employee.positionCategory} категорія` : 'Не зазначено']] : []),
       ],
     },
   ]

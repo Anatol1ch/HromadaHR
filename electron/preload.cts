@@ -27,7 +27,7 @@ const api: HromadaHRApi = {
     listEmployees: () => call(ipcChannels.personnelListEmployees),
     getEmployee: (id) => call(ipcChannels.personnelGetEmployee, id),
     createEmployee: (input) => call(ipcChannels.personnelCreateEmployee, input),
-    updateEmployee: (id, input) => call(ipcChannels.personnelUpdateEmployee, id, input),
+    updateEmployee: (id, input, reviewed) => reviewed === undefined ? call(ipcChannels.personnelUpdateEmployee, id, input) : call(ipcChannels.personnelUpdateEmployee, id, input, reviewed),
     listDepartments: () => call(ipcChannels.personnelListDepartments),
     createDepartment: (input) => call(ipcChannels.personnelCreateDepartment, input),
     listPositions: () => call(ipcChannels.personnelListPositions),

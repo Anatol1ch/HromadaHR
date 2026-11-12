@@ -1,4 +1,5 @@
-import { formatDate, isIsoCalendarDate } from '../lib/dates.ts'
+import { formatDate, isIsoCalendarDate, todayIsoDate } from '../lib/dates.ts'
+import { positionCategories, type PositionCategory } from '../../shared/personnel.ts'
 import type { EmployeeCard, EmployeeDetails, EmployeeType } from '../../shared/personnel'
 import type { IpcErrorCode } from '../../shared/ipc'
 
@@ -14,23 +15,24 @@ export function displayDate(value: string | null) {
 export interface FormValues {
   lastName: string; firstName: string; middleName: string; birthDate: string
   employeeType: EmployeeType; hireDate: string
+  positionStartedOn: string; positionCategory: PositionCategory | ''
   departmentId: string; positionId: string
 }
 export const emptyValues: FormValues = {
   lastName: '', firstName: '', middleName: '', birthDate: '', employeeType: 'official',
-  hireDate: '', departmentId: '', positionId: '',
+  positionStartedOn: '', positionCategory: '', hireDate: '', departmentId: '', positionId: '',
 }
 export function valuesForEmployee(employee: EmployeeCard): FormValues {
   return { lastName: employee.lastName, firstName: employee.firstName, employeeType: employee.employeeType,
     middleName: employee.middleName ?? '', birthDate: employee.birthDate ?? '',
-    hireDate: employee.hireDate, departmentId: employee.departmentId,
+    positionStartedOn: employee.positionStartedOn ?? '', positionCategory: employee.positionCategory ?? '', hireDate: employee.hireDate, departmentId: employee.departmentId,
     positionId: employee.positionId }
 }
 const optional = (value: string) => value.trim() || null
 export function employeeInput(values: FormValues): EmployeeDetails {
   return { lastName: values.lastName.trim(), firstName: values.firstName.trim(), middleName: optional(values.middleName),
     birthDate: optional(values.birthDate), employeeType: values.employeeType,
-    hireDate: values.hireDate, departmentId: values.departmentId, positionId: values.positionId }
+    positionStartedOn: optional(values.positionStartedOn), positionCategory: values.positionCategory || null, hireDate: values.hireDate, departmentId: values.departmentId, positionId: values.positionId }
 }
 export const validDate = isIsoCalendarDate
 export type FormErrors = Partial<Record<keyof FormValues, string>>
@@ -43,6 +45,8 @@ export function validateEmployee(values: FormValues): FormErrors {
   if (!['official', 'staff'].includes(values.employeeType)) errors.employeeType = 'Виберіть тип працівника.'
   if (values.birthDate && !validDate(values.birthDate)) errors.birthDate = 'Введіть коректну календарну дату.'
   if (!validDate(values.hireDate)) errors.hireDate = 'Введіть коректну дату прийняття.'
+  if (values.positionStartedOn && (!validDate(values.positionStartedOn) || values.positionStartedOn > todayIsoDate() || values.positionStartedOn < values.hireDate)) errors.positionStartedOn = 'Вкажіть коректну дату між прийняттям і сьогодні.'
+  if (values.positionCategory && (!positionCategories.some(c=>c===values.positionCategory) || values.employeeType !== 'official')) errors.positionCategory = 'Категорія I–VII доступна лише посадовим особам ОМС.'
   if (!values.departmentId) errors.departmentId = 'Виберіть підрозділ.'
   if (!values.positionId) errors.positionId = 'Виберіть посаду.'
   if (validDate(values.birthDate) && validDate(values.hireDate) && values.birthDate > values.hireDate) {
@@ -53,6 +57,7 @@ export function validateEmployee(values: FormValues): FormErrors {
 export function dictionaryName(value: string) { return value.normalize('NFC').trim().replace(/\s+/gu, ' ') }
 export function personnelMessage(code: IpcErrorCode): string {
   switch (code) {
+    case 'APPOINTMENT_REVIEW_REQUIRED': return 'Посаду або підрозділ змінено. Перевірте й явно підтвердьте нову дату призначення та категорію або залиште їх невідомими.'
     case 'RANK_REQUIRES_OFFICIAL': return 'Ранг можна зберегти лише для посадової особи місцевого самоврядування.'
     case 'EMPLOYEE_HAS_CURRENT_RANK': return 'Спочатку явно очистіть поточний ранг у розділі «Ранги та вислуга», потім змініть тип працівника.'
     case 'SPECIAL_YEAR_CONFLICT': return 'За цей рік уже зареєстровано відпустку такого виду. Виправте або скасуйте помилковий запис.'
@@ -77,4 +82,8 @@ export function personnelMessage(code: IpcErrorCode): string {
     case 'STORAGE_UNAVAILABLE': return 'Локальне сховище зараз недоступне. Спробуйте ще раз після його відновлення.'
     default: return 'Не вдалося виконати операцію. Перевірте доступність застосунку та повторіть спробу.'
   }
+}
+
+export function changeAppointment(values: FormValues, key: 'positionId'|'departmentId', value: string): FormValues {
+ return values[key] === value ? values : { ...values,[key]:value,positionStartedOn:'',positionCategory:'' }
 }

@@ -33,13 +33,13 @@ app.whenReady().then(async () => {
   const first = await openStorageSafely(file)
   let source, employeeId, input
   try {
-    assert.equal(first.schemaVersion, 15)
+    assert.equal(first.schemaVersion, 16)
     first.database.exec("CREATE TABLE test_smoke(value TEXT); INSERT INTO test_smoke VALUES ('persisted')")
     assert.equal(typeof first.database.backup, 'function')
     const personnel = new PersonnelService({ getDatabase: () => first.database }, () => false)
     const department = personnel.createDepartment({ name: 'Тестовий відділ' })
     const position = personnel.createPosition({ name: 'Тестова посада' })
-    input = { departmentId: department.id, positionId: position.id, hireDate: '2026-01-01',
+    input = { positionStartedOn:null, positionCategory:null, departmentId: department.id, positionId: position.id, hireDate: '2026-01-01',
       lastName: 'Тестовий', firstName: 'Умовний', middleName: null, birthDate: null, employeeType: 'staff' }
     employeeId = personnel.createEmployee(input).id
     new LeaveService({ getDatabase: () => first.database }, () => false).savePeriods(employeeId, [

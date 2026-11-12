@@ -1,4 +1,4 @@
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -29,8 +29,8 @@ async function fixture(t, manifest=migrations) {
   const personnel=new PersonnelService(storage,()=>false)
   const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const details={lastName:'Тест',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',
-    hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
-  const employee=personnel.createEmployee(details)
+    positionStartedOn: null, positionCategory: null, hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
+  const employee=seedEmployee(connection, personnel, details)
   const service=new LeaveService(storage,()=>false)
   const period=(year,days,type='annual_main')=>({leaveType:type,periodStart:year+'-01-01',periodEnd:year+'-12-31',
     accountingBasis:year<2027?'initial_balance':'confirmed_entitlement',confirmedDays:days,referenceEntitlementDays:null})
@@ -142,7 +142,7 @@ test('shared date, duration and overlap checks cover every event type',async t=>
   assert.throws(()=>f.service.registerLeave(event(f,'veteran_special_leave')),code('LEAVE_OVERLAP'))
   assert.throws(()=>f.service.updateLeave(f.update(study,{startDate:annual.startDate,endDate:annual.endDate,durationExplanation:'Уточнення',grantBasis:study.grantBasis})),code('LEAVE_OVERLAP'))
   assert.throws(()=>f.service.updateLeave(f.update(study,{expectedRevision:2,grantBasis:study.grantBasis})),code('STALE_REVISION'))
-  const future=f.personnel.createEmployee({...f.details,hireDate:'2028-01-01',firstName:'Інший'})
+  const future=f.personnel.createEmployee({...f.details,positionStartedOn: null, positionCategory: null, hireDate:'2028-01-01',firstName:'Інший'})
   assert.throws(()=>f.service.registerLeave({...event(f),employeeId:future.id}),code('INVALID_ARGUMENTS'))
   integrity(f.connection.database)
 })
@@ -198,7 +198,7 @@ async function legacyV8(t,version=8) {
 test('v8 rebuild preserves every row, relation, trigger, cancellation and legacy idempotency',async t=>{
   const f=await legacyV8(t)
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,15)
+  assert.equal(upgraded.schemaVersion,16)
   const db=upgraded.database,service=new LeaveService({getDatabase:()=>db},()=>false)
   assert.deepEqual(db.prepare('SELECT * FROM leave_records ORDER BY id').all().map(({grant_basis,...row})=>{assert.equal(grant_basis,null);return row}),f.rows)
   assert.deepEqual(db.prepare('SELECT * FROM leave_allocations ORDER BY record_id').all(),f.allocations)
@@ -252,7 +252,7 @@ test('restore v7 and v8 migrates immutable sources, including edited/cancelled r
     assert.equal(selection.schemaVersion,version)
     await backup.confirmRestore(selection.token,async()=>true)
     assert.deepEqual(readFileSync(f.file),before)
-    assert.equal(storage.getStatus().schemaVersion,15)
+    assert.equal(storage.getStatus().schemaVersion,16)
     const service=new LeaveService(storage,()=>backup.isBusy())
     assert.equal(service.registerLeave(f.input).id,f.activeId)
     assert.equal(service.getRecord(f.cancelledId).status,'cancelled')

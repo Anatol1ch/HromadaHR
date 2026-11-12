@@ -1,4 +1,4 @@
-import { seedDirectories } from './fixtures/personnel-directory.mjs'
+import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -29,8 +29,8 @@ async function fixture(t, manifest=migrations) {
   const personnel=new PersonnelService(storage,()=>false)
   const { department, position } = seedDirectories(connection, personnel, 'Відділ', 'Посада')
   const details={lastName:'Тест',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',
-    hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
-  const employee=personnel.createEmployee(details)
+    positionStartedOn: null, positionCategory: null, hireDate:'2024-01-01',departmentId:department.id,positionId:position.id}
+  const employee=seedEmployee(connection, personnel, details)
   const service=new LeaveService(storage,()=>false)
   const period=(year,days,type='annual_main')=>({leaveType:type,periodStart:year+'-01-01',periodEnd:year+'-12-31',
     accountingBasis:year<2027?'initial_balance':'confirmed_entitlement',confirmedDays:days,referenceEntitlementDays:null})
@@ -114,17 +114,17 @@ test('v9 to v12 preserves registrations, cancellations, balances and protective 
   const beforeRestoreService=new LeaveService(storage,()=>backup.isBusy())
   await backup.confirmRestore(selected.token,async()=>true)
   assert.deepEqual(readFileSync(f.file),source)
-  assert.equal(storage.getStatus().schemaVersion,15)
+  assert.equal(storage.getStatus().schemaVersion,16)
   const live=storage.getDatabase()
   for (const [table, rows] of Object.entries(before)) {
     const columns = table === 'departments' || table === 'positions' ? 'id, name, name_key' : '*'
-    assert.deepEqual(live.prepare(`SELECT ${columns} FROM ${table}`).all(), rows)
+    assert.deepEqual(live.prepare(`SELECT ${columns} FROM ${table}`).all(), table==='employees'?rows.map(row=>({...row,position_started_on:null,position_category:null})):rows)
   }
   assert.deepEqual(beforeRestoreService.listRights(f.employee.id),[])
   assert.deepEqual(live.pragma('foreign_key_check'),[])
   assert.deepEqual(live.pragma('integrity_check'),[{integrity_check:'ok'}])
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,15)
+  assert.equal(upgraded.schemaVersion,16)
   const protection=join(f.root,'data','protection')
   assert.equal(inspectDatabase(join(protection,readdirSync(protection).find(x=>x.includes('protect-migration-v10-')))),9)
 })

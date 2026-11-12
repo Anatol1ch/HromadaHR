@@ -9,7 +9,7 @@ const selectEmployees = (rows, query, departmentId) => filterEmployees(rows, { q
 const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333']
 const values = { ...emptyValues, lastName: 'Тестовий', firstName: 'Умовний', hireDate: '2026-01-01', departmentId: ids[0], positionId: ids[1] }
 function card(id, lastName, departmentId = ids[0], middleName = null) {
-  return { id, lastName, firstName: 'Умовне', middleName, birthDate: null, employeeType: 'official', hireDate: '2026-01-01',
+  return { id, lastName, firstName: 'Умовне', middleName, birthDate: null, employeeType: 'official', positionStartedOn: null, positionCategory: null, hireDate: '2026-01-01',
     positionId: ids[1], departmentId,
     position: { id: ids[1], name: 'Тестова посада' }, department: { id: departmentId, name: 'Тестовий підрозділ' } }
 }
@@ -51,7 +51,7 @@ test('edit payload roundtrips current references, hire date and nullable fields'
   const changed = { ...initial, hireDate: '2030-01-01', departmentId: ids[1] }
   assert.deepEqual(employeeDetails.parse(employeeInput(changed)), {
     lastName: 'Тестовий', firstName: 'Умовне', middleName: null, birthDate: null, employeeType: 'official',
-    hireDate: '2030-01-01', departmentId: ids[1], positionId: ids[1],
+    positionStartedOn: null, positionCategory: null, hireDate: '2030-01-01', departmentId: ids[1], positionId: ids[1],
   })
   assert.ok(validateEmployee({ ...initial, birthDate: '2027-01-01' }).birthDate)
 })
