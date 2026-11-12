@@ -29,4 +29,9 @@
 .document-leave-selector input[type="radio"]:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
 .document-leave-selector small { display:block; color:var(--color-text-secondary); }
 
-.personnel-documents-table .document-series-caption { display: block; color: var(--color-text-muted); overflow-wrap: anywhere; margin-top: .2rem; }
+:is(.personnel-documents-table,.employee-documents-table) .document-series-caption { display: block; color: var(--color-text-muted); overflow-wrap: anywhere; margin-top: .2rem; }
+
+.employee-documents-table td { overflow-wrap:anywhere; max-width:26rem; }
+.personnel-dictionaries .document-series-workspace { min-width:0; }
+.document-series-workspace td { overflow-wrap:anywhere; max-width:24rem; }
+.document-series-workspace .registry-row-actions { flex-wrap:wrap; }

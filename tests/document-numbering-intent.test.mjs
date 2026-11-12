@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {submitDocument,updateOutcome} from '../src/components/documents/mutations.ts'
-import {documentRows,emptyDocumentFilters} from '../src/components/documents/model.ts'
+import {documentRows,emptyDocumentFilters,documentSeriesLabel} from '../src/components/documents/model.ts'
 
 test('uncertain automatic creation retains initial intent/requestId without an invented number or a second pending write',async()=>{
  const input={requestId:'one-draft',seriesId:'s1',kind:'head_order',customKind:null,issuedOn:'2027-01-01',title:'Приклад',note:null,employeeIds:[]}
@@ -23,4 +23,15 @@ test('series names participate in search, series filter is independent and updat
  const {revision,...input}=base
  const payload={...input,expectedRevision:0}
  assert.equal(updateOutcome(base,payload),'saved');assert.equal(updateOutcome({...base,seriesId:'s2'},payload),'stale')
+})
+
+test('equal document numbers and equal series names remain distinguishable by series code without treating archived series as invalid',()=>{
+ const active={id:'s1',name:'Кадрові документи',code:'alpha',active:true},archived={...active,id:'s2',code:'beta',active:false}
+ assert.equal(documentSeriesLabel(active),'Кадрові документи · alpha')
+ assert.equal(documentSeriesLabel(archived),'Кадрові документи · beta')
+ assert.notEqual(documentSeriesLabel(active),documentSeriesLabel(archived))
+ assert.equal(documentSeriesLabel(undefined),'Серія недоступна')
+ const base={kind:'head_order',customKind:null,number:'001-к',issuedOn:'2027-01-01',title:'Приклад',employeeIds:[]}
+ const rows=[{...base,id:'doc-a',seriesId:'s1'},{...base,id:'doc-b',seriesId:'s2'}]
+ assert.deepEqual(documentRows(rows,[],{...emptyDocumentFilters,query:'001-к'},{key:'issuedOn',direction:'desc'},[active,archived]).map(r=>r.id),['doc-a','doc-b'])
 })

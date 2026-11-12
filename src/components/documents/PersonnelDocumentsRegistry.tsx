@@ -9,7 +9,7 @@ import DataState from '../DataState'
 import DictionaryTable from '../DictionaryTable'
 import SearchField from '../SearchField'
 import Select from '../Select'
-import { documentKindOptions, documentMessage, documentRows, emptyDocumentFilters, kindLabel, type DocumentSort } from './model'
+import { documentKindOptions, documentMessage, documentRows, emptyDocumentFilters, kindLabel, documentSeriesLabel, type DocumentSort } from './model'
 
 export default function PersonnelDocumentsRegistry({active,revision,onOpen,onCreate}:{active:boolean;revision:number;onOpen:(id:string)=>void;onCreate:()=>void}) {
   const [filters,setFilters]=useState(emptyDocumentFilters),[open,setOpen]=useState(false)
@@ -42,14 +42,14 @@ export default function PersonnelDocumentsRegistry({active,revision,onOpen,onCre
   return <section className="personnel-documents-registry">
     <section className="dashboard-panel aid-registry-panel employee-registry-tools">
       <div className="aid-toolbar">
-        <SearchField label="Пошук кадрових документів" placeholder="Номер, заголовок або працівник" value={filters.query} onChange={query=>setFilters(value=>({...value,query}))}/>
+        <SearchField label="Пошук кадрових документів" placeholder="Номер, назва, працівник або серія" value={filters.query} onChange={query=>setFilters(value=>({...value,query}))}/>
         <button type="button" className="secondary-button aid-filter-toggle" aria-expanded={open} aria-controls={panelId} onClick={()=>setOpen(!open)}><SlidersHorizontal size={17}/>Фільтри{count>0&&<span className="aid-filter-count">{count}</span>}</button>
         <button type="button" className="secondary-button" disabled={!filtered} onClick={reset}><FilterX size={17}/>Очистити фільтри</button>
         <button type="button" className="primary-button" onClick={onCreate}><Plus size={17}/>Додати документ</button>
       </div>
       <div id={panelId} className="aid-filter-panel" hidden={!open}><div className="aid-filter-grid">
         {([{key:'kind',label:'Вид документа',options:documentKindOptions},{key:'year',label:'Календарний рік',options:years.map(value=>({value,label:value}))},
-          {key:'series',label:'Серія реєстрації',options:(current?.series??[]).map(s=>({value:s.id,label:s.name+(s.active?'':' (архівна)')}))},
+          {key:'series',label:'Серія реєстрації',options:(current?.series??[]).map(s=>({value:s.id,label:documentSeriesLabel(s)+(s.active?'':' (архівна)')}))},
           {key:'employee',label:'Пов’язаний працівник',options:people.map(person=>({value:person.id,label:fullName(person)}))}] as const).map(field=><div className="employee-field" key={field.key}><span>{field.label}</span><Select label={field.label} value={filters[field.key]} options={[{value:'',label:'Усі'},...field.options]} searchable={field.key==='employee'} advanceOnSelect={false} onChange={value=>setFilters(current=>({...current,[field.key]:value}))}/></div>)}
       </div></div>
     </section>
@@ -58,7 +58,7 @@ export default function PersonnelDocumentsRegistry({active,revision,onOpen,onCre
       :!rows?<DataState kind="loading" message="Завантаження кадрових документів…"/>
       :<section className="dashboard-panel employee-register-panel"><header className="employee-group-heading"><h2>Реєстр кадрових документів</h2><span>Знайдено: {visible.length}</span></header>
         <DictionaryTable label="Кадрові документи" className="personnel-documents-table" filtered={filtered} columns={[sortable('issuedOn','Дата'),sortable('number','Номер'),sortable('kind','Вид документа'),sortable('title','Назва документа'),{label:'Працівник'},{label:'Дії'}]} empty={!visible.length?(rows.length?'Документів за обраними фільтрами не знайдено.':'Кадрових документів ще немає.'):undefined}>
-          {visible.map(row=><tr key={row.id}><td className="employee-date">{formatDate(row.issuedOn)}</td><td>{row.number}{row.seriesId&&<small className="document-series-caption">{current?.series?.find(s=>s.id===row.seriesId)?.name??'Серія недоступна'}</small>}</td><td>{kindLabel(row)}</td><td>{row.title}</td><td>{row.employeeIds.length>1?'Кілька наявних зв’язків — перевірте картку':row.employeeIds.length?(names.get(row.employeeIds[0])??'Працівник недоступний'):'Не зазначено'}</td><td><button type="button" className="icon-button" aria-label={'Переглянути документ № '+row.number} title="Переглянути" onClick={()=>onOpen(row.id)}><Eye size={17}/></button></td></tr>)}
+          {visible.map(row=><tr key={row.id}><td className="employee-date">{formatDate(row.issuedOn)}</td><td>{row.number}{row.seriesId&&<small className="document-series-caption">{documentSeriesLabel(current?.series?.find(s=>s.id===row.seriesId))}</small>}</td><td>{kindLabel(row)}</td><td>{row.title}</td><td>{row.employeeIds.length>1?'Кілька наявних зв’язків — перевірте картку':row.employeeIds.length?(names.get(row.employeeIds[0])??'Працівник недоступний'):'Не зазначено'}</td><td><button type="button" className="icon-button" aria-label={'Переглянути документ № '+row.number} title="Переглянути" onClick={()=>onOpen(row.id)}><Eye size={17}/></button></td></tr>)}
         </DictionaryTable>
         {!visible.length&&<div className="document-empty-actions"><button type="button" className="secondary-button" onClick={rows.length?reset:onCreate}>{rows.length?'Очистити фільтри':'Додати перший документ'}</button></div>}
       </section>}

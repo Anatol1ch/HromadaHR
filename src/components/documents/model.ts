@@ -64,7 +64,7 @@ export function documentMessage(code: IpcErrorCode) {
     case 'DOCUMENT_REQUISITES_MISMATCH': return 'Номер або дата розпорядження у відпустці не відповідають документу.'
     case 'DOCUMENT_HAS_LEAVE_LINKS': return 'Документ пов’язаний із зареєстрованими відпустками. Спочатку розірвіть відповідні зв’язки.'
     case 'LEAVE_CANCELLED': return 'Реєстрацію відпустки скасовано. Новий зв’язок не створюється.'
-    case 'DOCUMENT_NUMBER_CONFLICT': return 'Такий номер уже внесено в цій серії або для цього виду без серії та року. Перевірте номер і дату.'
+    case 'DOCUMENT_NUMBER_CONFLICT': return 'Такий номер уже зареєстровано в обраній серії та році. Для документа без серії перевіряється вид і рік. Перевірте номер, дату та серію.'
     case 'DOCUMENT_REQUEST_CONFLICT': return 'Повторний запит відрізняється від попереднього. Перевірте реєстр перед новим створенням.'
     case 'DOCUMENT_EMPLOYEE_NOT_FOUND': return 'Один із працівників недоступний. Оновіть перелік і перевірте зв’язки.'
     case 'STALE_REVISION': return 'Документ уже змінено. Чернетку збережено. Перечитайте актуальний запис перед редагуванням.'
@@ -74,3 +74,6 @@ export function documentMessage(code: IpcErrorCode) {
     default: return 'Не вдалося отримати підтверджений результат. Повторіть запит.'
   }
 }
+
+/** Number namespaces are identified by series, never by the displayed number. */
+export const documentSeriesLabel = (series:Pick<DocumentNumberingSeries,'name'|'code'>|undefined) => series ? series.name+' · '+series.code : 'Серія недоступна'

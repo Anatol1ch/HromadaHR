@@ -13,7 +13,7 @@ import Select from '../Select'
 import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import { changeDocumentKind, documentDraft, documentDraftErrors, documentInput, documentKindOptions, documentMessage, reconcileDocumentEmployees, selectDocumentEmployee, type DocumentDraft } from './model'
+import { changeDocumentKind, documentDraft, documentDraftErrors, documentInput, documentKindOptions, documentMessage, reconcileDocumentEmployees, selectDocumentEmployee, documentSeriesLabel, type DocumentDraft } from './model'
 import { submitDocument, updateOutcome, type DocumentAttempt, type SavePayload } from './mutations'
 
 type Props={id?:string;navigationGuard:RefObject<NavigationGuard>;onClose:()=>void;onSaved:(value:PersonnelDocument)=>void;returnFocus:HTMLElement|null}
@@ -59,6 +59,7 @@ function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,peo
   const [iso,setIso]=useState(record?.issuedOn??'')
   const [requestId]=useState(()=>crypto.randomUUID())
   const [errors,setErrors]=useState<Partial<Record<keyof DocumentDraft,string>>>({})
+  const [seriesIssue,setSeriesIssue]=useState(false)
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[stale,setStale]=useState(false),[blocked,setBlocked]=useState(false),[reconcile,setReconcile]=useState(false)
   const attempt=useRef<DocumentAttempt>({pending:false,unresolved:null}),pending=useRef(false),alive=useRef(false),form=useRef<HTMLFormElement>(null),employeeField=useRef<HTMLDivElement>(null)
   const id=useId()
@@ -74,7 +75,7 @@ function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,peo
     const next=documentDraftErrors(automatic?{...draft,number:'1'}:draft);setErrors(next)
     if(Object.keys(next).length){requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
     if(!form.current?.checkValidity()){form.current?.reportValidity();return}
-    pending.current=true;setBusy(true);setError('')
+    pending.current=true;setBusy(true);setError('');setSeriesIssue(false)
     const {number:_number,...autoFields}=documentInput(automatic?{...draft,number:'1'}:draft)
     const payload:SavePayload=automatic?{kind:'automatic',input:{...autoFields,seriesId:draft.seriesId!,requestId}}:record?{kind:'edit',input:{...documentInput(draft),id:record.id,expectedRevision:record.revision}}:{kind:'create',input:{...documentInput(draft),requestId}}
     try {
@@ -82,6 +83,7 @@ function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,peo
       if(!alive.current||!result)return
       if(result.ok){saved(result.data);return}
       setError(result.error.code==='DOCUMENT_REQUEST_CONFLICT'?documentMessage(result.error.code):attempt.current.unresolved?'Результат збереження не підтверджено. Чернетку та надісланий запит збережено; поля тимчасово заблоковано.':documentMessage(result.error.code))
+      setSeriesIssue(result.error.code.startsWith('SERIES_'))
       if(result.error.code==='STALE_REVISION'||result.error.code==='NOT_FOUND')setStale(true)
       if(result.error.code==='DOCUMENT_REQUEST_CONFLICT')setBlocked(true)
       if(result.error.code==='DOCUMENT_NUMBER_CONFLICT')setErrors({number:documentMessage(result.error.code)})
@@ -107,6 +109,7 @@ function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,peo
   const text=(key:'number'|'title'|'customKind',label:string,maxLength:number,placeholder?:string)=><div className="recipient-field employee-field"><label htmlFor={id+key}>{label} *</label><ValidatedInput id={id+key} required maxLength={maxLength} value={draft[key]} placeholder={placeholder} disabled={locked||(identityLocked&&key!=='title')} aria-invalid={!!errors[key]} aria-describedby={errors[key]?id+key+'-error':undefined} onChange={event=>change(key,event.target.value)}/>{errors[key]&&<span id={id+key+'-error'} className="field-error">{errors[key]}</span>}</div>
   return <Modal title={record?'Редагувати документ':'Додати документ'} size="large" className="employee-form-modal document-editor-modal" busy={busy} onClose={close} returnFocus={props.returnFocus}
     footer={<div className="employee-form-footer">{error&&<Alert variant="error">{error}</Alert>}<div className="employee-form-actions">
+      {seriesIssue&&!uncertain&&<button type="button" className="secondary-button" disabled={busy} onClick={reloadSeries}>Оновити серії</button>}
       {stale&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(reloadRecord)}>Перечитати документ</button>}
       {uncertain?.kind==='edit'&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>void verifyUpdate()}>Перевірити фактичний результат</button>}
       <button type="button" className="secondary-button" disabled={busy} onClick={close}>Скасувати</button>
@@ -115,7 +118,7 @@ function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,peo
     <form ref={form} id={id} className="employee-form" noValidate onSubmit={event=>{event.preventDefault();void submit()}}>
       <InfoSection title="Реквізити документа">{seriesError?<Alert variant="error" action={<button type="button" disabled={busy} onClick={reloadSeries}>Повторити</button>}>{seriesError}</Alert>:!series?<DataState kind="loading" compact message="Завантаження серій…"/>:null}{identityLocked&&<Alert variant="info">Документ пов’язаний із відпустками. Можна змінювати назву та примітку; для зміни інших реквізитів спочатку розірвіть зв’язки.</Alert>}<div className="employee-form-grid">
         <div className="recipient-field employee-field"><span>Вид документа *</span><Select label="Вид документа" required value={draft.kind} options={documentKindOptions} disabled={locked||identityLocked} advanceOnSelect={false} onChange={value=>{setDraft(v=>changeDocumentKind(v,value as PersonnelDocumentKind));setAutomatic(false)}}/></div>
-        <div className="recipient-field employee-field"><span>Серія реєстрації</span><Select label="Серія реєстрації" value={draft.seriesId??''} disabled={locked||identityLocked||!series} advanceOnSelect={false} options={[{value:'',label:'Без серії'},...(series??[]).filter(s=>s.kind===draft.kind&&(s.active||s.id===record?.seriesId)).map(s=>({value:s.id,label:s.name+(s.active?'':' (архівна)'),description:s.pattern}))]} onChange={value=>{change('seriesId',value||null);if(!value)setAutomatic(false)}}/></div>
+        <div className="recipient-field employee-field"><span>Серія реєстрації</span><Select label="Серія реєстрації" value={draft.seriesId??''} disabled={locked||identityLocked||!series} advanceOnSelect={false} options={[{value:'',label:'Без серії'},...(series??[]).filter(s=>s.kind===draft.kind&&(s.active||s.id===record?.seriesId)).map(s=>({value:s.id,label:documentSeriesLabel(s)+(s.active?'':' (архівна)'),description:s.pattern}))]} onChange={value=>{change('seriesId',value||null);if(!value)setAutomatic(false)}}/></div>
         {!record&&<div className="recipient-field employee-field"><span>Нумерація</span><Select label="Режим нумерації" value={automatic?'automatic':'manual'} disabled={locked} advanceOnSelect={false} options={[{value:'manual',label:'Ввести номер вручну'},{value:'automatic',label:'Присвоїти автоматично',disabled:!series?.some(s=>s.id===draft.seriesId&&s.active)}]} onChange={value=>setAutomatic(value==='automatic'&&!!series?.some(s=>s.id===draft.seriesId&&s.active))}/></div>}
         {automatic?<p className="employee-hint">Номер буде присвоєно під час збереження документа відповідно до вибраної серії.</p>:text('number','Номер',80,'001-к, 15-ос, 123/2026')}
         <div className="recipient-field employee-field"><label htmlFor={id+'date'}>Дата документа *</label><DateField id={id+'date'} value={iso} initialDraft={draft.issuedOn} required disabled={locked||identityLocked} error={errors.issuedOn} onDraftChange={value=>change('issuedOn',value)} onChange={setIso}/></div>

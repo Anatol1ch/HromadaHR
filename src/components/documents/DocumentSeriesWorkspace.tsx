@@ -48,7 +48,7 @@ export default function DocumentSeriesWorkspace({navigationGuard}:Guard) {
     }catch{if(alive.current){setUncertain(true);setError('Результат зміни стану не підтверджено. Перевірте фактичний стан.')}}
     finally{pending.current=false;if(alive.current)setBusy(false)}
   }
-  return <section ref={owner} className="dashboard-panel personnel-dictionary-panel">
+  return <section ref={owner} className="dashboard-panel personnel-dictionary-panel document-series-workspace">
     <header className="employee-group-heading"><h2>Серії документів</h2><button ref={addButton} type="button" className="primary-button" disabled={busy||!state.rows} onClick={event=>{trigger.current=event.currentTarget;setEditor('create')}}>Додати серію</button></header>
     <p className="employee-hint">Серії визначають незалежну нумерацію за календарними роками. Налаштуйте їх відповідно до вашої системи діловодства.</p>
     {state.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{state.error}</Alert>:!state.rows?<DataState kind="loading" compact message="Завантаження серій…"/>:

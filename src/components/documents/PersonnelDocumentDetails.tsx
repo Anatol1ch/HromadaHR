@@ -12,7 +12,7 @@ import InfoItem from '../InfoItem'
 import ConfirmDialog from '../ConfirmDialog'
 import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import { documentMessage, kindLabel } from './model'
+import { documentMessage, kindLabel, documentSeriesLabel } from './model'
 import { uncertainDocumentResult } from './mutations'
 
 export default function PersonnelDocumentDetails({id,active,revision,navigationGuard,onBack,onEdit,onDeleted,onChanged}:{id:string;active:boolean;revision:number;navigationGuard:RefObject<NavigationGuard>;onBack:()=>void;onEdit:()=>void;onDeleted:()=>void;onChanged:()=>void}) {
@@ -21,7 +21,7 @@ export default function PersonnelDocumentDetails({id,active,revision,navigationG
   const pending=useRef(false),alive=useRef(false),owner=useRef<HTMLElement>(null),heading=useRef<HTMLHeadingElement>(null)
   const key=JSON.stringify([id,revision,retry])
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
-  useEffect(()=>{if(!active){setConfirm(false);return}heading.current?.focus()},[active,id])
+  useEffect(()=>{if(!active){setConfirm(false);return}heading.current?.focus()},[active,id,revision])
   useEffect(()=>{
     if(!active)return
     let current=true
@@ -65,18 +65,18 @@ export default function PersonnelDocumentDetails({id,active,revision,navigationG
     </div>
     <h2 ref={heading} tabIndex={-1}>Картка кадрового документа</h2>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={reload}>Повторити</button>}>{current.error} Поверніться до реєстру, якщо запис видалено.</Alert>:!record?<DataState kind="loading" message="Завантаження документа…"/>:<>
-      <InfoSection title={kindLabel(record)}><dl className="info-grid info-grid-two"><InfoItem label="Номер" value={record.number}/><InfoItem label="Серія реєстрації" value={record.seriesId?(current?.series?.find(s=>s.id===record.seriesId)?.name??'Серія недоступна'):'Без серії'}/><InfoItem label="Дата документа" value={formatDate(record.issuedOn)}/><InfoItem label="Назва документа" value={record.title} wide/>{record.note&&<InfoItem label="Примітка" value={record.note} wide/>}</dl></InfoSection>
+      <InfoSection title={kindLabel(record)}><dl className="info-grid info-grid-two"><InfoItem label="Номер" value={record.number}/><InfoItem label="Серія реєстрації" value={record.seriesId?(documentSeriesLabel(current?.series?.find(s=>s.id===record.seriesId))):'Без серії'}/><InfoItem label="Дата документа" value={formatDate(record.issuedOn)}/><InfoItem label="Назва документа" value={record.title} wide/>{record.note&&<InfoItem label="Примітка" value={record.note} wide/>}</dl></InfoSection>
       <InfoSection title="Працівник">
         {record.employeeIds.length>1&&<Alert variant="warning">Збережено кілька зв’язків попередньої моделі. Редактор підтримує одного працівника; заміна потребує явного узгодження.</Alert>}
         {record.employeeIds.length?<ul className="document-people">{record.employeeIds.map(id=>{const person=current?.people?.find(p=>p.id===id);return <li key={id}>{person?<><strong>{fullName(person)}</strong><span>{person.position.name} · {person.department.name}</span></>:<Alert variant="warning">Пов’язаний працівник недоступний. Оновіть дані перед редагуванням.</Alert>}</li>})}</ul>:<p className="employee-hint">Працівника не зазначено.</p>}
         {!!record.employeeIds.length&&<p className="employee-hint">Посаду та підрозділ наведено за поточною особовою карткою, а не станом на дату документа.</p>}
       </InfoSection>
-      <DocumentLeaveLinksPanel document={record} navigationGuard={navigationGuard} onChanged={()=>{onChanged();requestAnimationFrame(()=>heading.current?.focus())}}/>
+      {active&&<DocumentLeaveLinksPanel document={record} navigationGuard={navigationGuard} onChanged={()=>{onChanged();requestAnimationFrame(()=>heading.current?.focus())}}/>}
       <InfoSection title="Відомості реєстру"><dl className="info-grid info-grid-two"><InfoItem label="Створено" value={formatDateTime(record.createdAt)}/><InfoItem label="Остання зміна" value={formatDateTime(record.updatedAt)}/></dl></InfoSection>
       <InfoSection title="Формування документа"><p className="employee-hint">Формування DOCX за шаблоном буде доступне в наступних версіях HromadaHR.</p></InfoSection>
     </>}
     {active&&confirm&&record&&<ConfirmDialog title="Видалити запис документа?" confirmLabel="Видалити запис" confirmDisabled={busy||uncertain||stale} error={error} onCancel={()=>{if(!pending.current)setConfirm(false)}} onConfirm={()=>remove()}
-      message={<div className="document-delete-summary"><p>{kindLabel(record)} № {record.number} від {formatDate(record.issuedOn)}</p><strong>{record.title}</strong><p>Запис документа буде видалено з реєстру. Ця дія не скасовує сам документ як юридичний акт.</p>
+      message={<div className="document-delete-summary"><p>{record.seriesId?documentSeriesLabel(current?.series?.find(s=>s.id===record.seriesId)):'Без серії'}</p><p>{kindLabel(record)} № {record.number} від {formatDate(record.issuedOn)}</p><strong>{record.title}</strong><p>Запис документа буде видалено з реєстру. Ця дія не скасовує сам документ як юридичний акт.</p>
         {uncertain&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>void remove(true)}>Перевірити фактичний результат</button>}
         {stale&&<button type="button" className="secondary-button" disabled={busy} onClick={reload}>Перечитати документ</button>}
       </div>}/>}

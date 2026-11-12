@@ -53,7 +53,7 @@ test('document deep-link closes the current preview only after the shared guard 
 test('document, leave preview and employee profile reuse existing editors with scoped reads and typed guarded navigation',()=>{
  const details=read('components/documents/PersonnelDocumentDetails.tsx'),links=read('components/documents/DocumentLeaveLinksPanel.tsx'),dialog=read('components/documents/DocumentLeaveLinkDialog.tsx')
  const action=read('components/leave/LeaveRecordAction.tsx'),form=read('components/leave/LeaveRegistrationForm.tsx'),editor=read('components/documents/PersonnelDocumentEditor.tsx')
- assert.match(details,/<DocumentLeaveLinksPanel/);assert.match(links,/title="Пов’язані відпустки"/)
+ assert.match(details,/active&&<DocumentLeaveLinksPanel/);assert.match(details,/\[active,id,revision\]/);assert.match(links,/title="Пов’язані відпустки"/)
  assert.match(links,/ConfirmDialog title="Розірвати зв’язок/);assert.match(links,/Реєстрацію відпустки скасовано/)
  assert.match(links,/if\(pending.current\|\|!unlink/);assert.match(links,/verifyLeaveLink/)
  assert.match(dialog,/leave.listRecords\(snapshot.data.document.employeeIds\[0\]\)/);assert.doesNotMatch(dialog,/LeaveJournal|listRecords\(null\)/)
@@ -62,10 +62,11 @@ test('document, leave preview and employee profile reuse existing editors with s
  assert.match(form,/documentLinked/);assert.match(form,/disabled=\{busy \|\| !!uncertain \|\| documentLinked\}/)
  assert.match(editor,/documents.listLeaveLinks\(props.id\)/);assert.match(editor,/identityLocked&&key!=='title'/)
  const employee=read('components/documents/EmployeeDocuments.tsx')
- assert.match(employee,/documents.listDocuments\(\)/);assert.match(employee,/row.employeeIds.includes\(employeeId\)/)
+ assert.match(employee,/documents.listSeries\(\)/);assert.match(employee,/documentSeriesLabel/);assert.match(employee,/documents.listDocuments\(\)/);assert.match(employee,/row.employeeIds.includes\(employeeId\)/)
  assert.doesNotMatch(employee,/createDocument|updateDocument|deleteDocument/)
  assert.match(read('components/employees/EmployeeProfilePage.tsx'),/<EmployeeDocuments employeeId=\{id\}/)
  assert.match(read('App.tsx'),/requestDocumentNavigation\(id,[\s\S]*navigationGuard.current/)
+ assert.match(read('components/documents/LeaveDocumentInfo.tsx'),/documents.listSeries\(\)/);assert.match(read('components/documents/LeaveDocumentInfo.tsx'),/if\(!current\)return/);
  assert.match(read('components/documents/LeaveDocumentInfo.tsx'),/open\(link.document.id,onClose\)/)
  assert.match(read('components/documents/PersonnelDocumentsPanel.tsx'),/setSelected\(initialIntent.documentId\)/)
 })
