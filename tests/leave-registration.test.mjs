@@ -143,7 +143,7 @@ test('v6 to v12 preserves balances and fails closed without protective snapshot'
   unchanged.close()
   const updated=await openStorageSafely(f.file)
   f.handles.push(updated)
-  assert.equal(updated.schemaVersion,16)
+  assert.equal(updated.schemaVersion,17)
   assert.equal(updated.database.prepare('SELECT confirmed_days FROM leave_period_balances').get().confirmed_days,7)
   assert.deepEqual(updated.database.prepare('SELECT * FROM schema_migrations WHERE version<=6 ORDER BY version').all(),ledger)
   assert.ok(readdirSync(protection).some(name=>name.includes('protect-migration-v7-')))

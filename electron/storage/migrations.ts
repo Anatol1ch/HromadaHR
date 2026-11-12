@@ -161,6 +161,11 @@ INSERT INTO personnel_dictionary_order VALUES ('department', 0), ('position', 0)
 }, { version: 14, name: 'employee_service_baselines', requiresBackup: true, sql: serviceBaselineSql,
 }, { version: 15, name: 'baseline_auto_accrual', requiresBackup: true, sql: `ALTER TABLE employee_service_baselines ADD COLUMN auto_accrue_after_baseline INTEGER NOT NULL DEFAULT 0 CHECK(auto_accrue_after_baseline IN (0,1))`,
 }, { version: 16, name: 'current_appointment', requiresBackup: true, sql: currentAppointmentSql,
+}, { version: 17, name: 'rank_origin', requiresBackup: true, sql: `
+ALTER TABLE employee_current_ranks ADD COLUMN origin TEXT NOT NULL DEFAULT 'unknown' CHECK(origin IN ('unknown','oms_assigned','oms_retained','civil_service_equivalence','oms_early','pension_exception','other'));
+ALTER TABLE employee_current_ranks ADD COLUMN review_anchor_on TEXT CHECK(review_anchor_on IS NULL OR (length(review_anchor_on)=10 AND review_anchor_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(review_anchor_on,1,4)!='0000' AND coalesce(date(review_anchor_on,'+0 days')=review_anchor_on,0)));
+ALTER TABLE employee_current_ranks ADD COLUMN origin_note TEXT CHECK(origin_note IS NULL OR length(trim(origin_note)) BETWEEN 1 AND 500);
+`,
 }]
 
 function checksum(migration: Migration) {

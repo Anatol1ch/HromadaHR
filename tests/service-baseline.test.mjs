@@ -20,7 +20,7 @@ async function fixture(t) {
  let c=await openStorageSafely(file,migrations.slice(0,13))
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
  c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,16)
+ assert.equal(c.schemaVersion,17)
  assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=13 ORDER BY version').all(),ledger)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false),s=new SeniorityRanksService(storage,()=>false)
  const departmentId=p.createDepartment({name:'Тест'}).id,positionId=p.createPosition({name:'Тест'}).id
@@ -40,7 +40,7 @@ test('v13→v14 baseline CRUD, zero, live connection, atomic failures, independe
  s.saveServiceBaseline(staff.id,{...zero,years:4})
  const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
  s.saveAllowance(e.id,{...basis,status:'confirmed',percentage:15,effectiveOn:'2020-01-01'})
- s.saveRank(e.id,{...basis,rank:13,assignedOn:'2020-01-01',effectiveOn:null})
+ s.saveRank(e.id,{...basis,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-01-01',effectiveOn:null})
  const leave=new LeaveService(f.storage,()=>false)
  leave.saveServiceLeaveStart(e.id,'2020-05-01');leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}])
  leave.savePeriods(e.id,[{leaveType:'oms_service_additional',periodStart:'2026-01-01',periodEnd:'2026-12-31',accountingBasis:'initial_balance',confirmedDays:5,referenceEntitlementDays:null}])

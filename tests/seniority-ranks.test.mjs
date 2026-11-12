@@ -14,7 +14,7 @@ import { registerIpcHandlers } from '../dist-electron/electron/ipc.js'
 import { ipcChannels } from '../dist-electron/shared/ipc.js'
 const basis = { documentType: null, documentNumber: null, documentDate: null, reviewOn: null }
 const allowance = { ...basis, status: 'confirmed', percentage: 0, effectiveOn: '2020-01-01' }
-const rank = { ...basis, rank: 15, assignedOn: '2020-01-01', effectiveOn: null }
+const rank = { ...basis, origin:'unknown', reviewAnchorOn:null, originNote:null, rank:15, assignedOn: '2020-01-01', effectiveOn: null }
 const code = expected => error => error.code === expected
 function integrity(db) {
   assert.equal(db.pragma('integrity_check', { simple: true }), 'ok')
@@ -27,7 +27,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,16)
+  assert.equal(connection.schemaVersion,17)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
@@ -60,7 +60,7 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   assert.equal(s.getAllowance(e.id),null)
   s.saveAllowance(other.id,allowance)
   assert.equal(s.saveRank(e.id,rank).effectiveOn,null)
-  assert.equal(s.saveRank(e.id,{...rank,rank:1,documentDate:'2021-02-01'}).rank,1)
+  assert.equal(s.saveRank(e.id,{...rank,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:1,documentDate:'2021-02-01'}).rank,1)
   assert.throws(()=>p.updateEmployee(e.id,{...details,employeeType:'staff'}),code('EMPLOYEE_HAS_CURRENT_RANK'))
   assert.throws(()=>f.db.prepare("UPDATE employees SET employee_type='staff' WHERE id=?").run(e.id))
   s.clearRank(e.id)
@@ -87,7 +87,7 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   assert.equal(s.getAllowance(e.id).percentage,0)
   assert.throws(()=>new SeniorityRanksService(f.storage,()=>true).getRank(e.id),code('BUSY'))
   assert.throws(()=>new SeniorityRanksService({getDatabase(){throw Error('private path')}},()=>false).getRank(e.id),code('STORAGE_UNAVAILABLE'))
-  for (const method of ['getAllowance','getRank','clearAllowance','clearRank']) assert.throws(()=>s[method](randomUUID()),code('NOT_FOUND'))
+  for (const method of ['getAllowance','getRank','getRankProjection','clearAllowance','clearRank']) assert.throws(()=>s[method](randomUUID()),code('NOT_FOUND'))
   assert.throws(()=>s.saveRank(randomUUID(),rank),code('NOT_FOUND'))
   assert.throws(()=>s.saveAllowance(randomUUID(),allowance),code('NOT_FOUND'))
   const leave = new LeaveService(f.storage,()=>false)
@@ -106,7 +106,7 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
 test('Zod and SQLite reject invalid indicators and dates', async t => {
   const f=await fixture(t),s=f.service,id=f.employee.id
   for(const v of [{percentage:5},{percentage:10.5},{percentage:null},{status:'unknown'},{effectiveOn:'2026-02-30'},{effectiveOn:'2099-01-01'},{status:'not_applicable'},{confirmedAt:'2020-01-01T00:00:00.000Z'},{documentDate:'2025-02-29'}]) assert.throws(()=>s.saveAllowance(id,{...allowance,...v}),code('INVALID_ARGUMENTS'))
-  for(const v of [{rank:0},{rank:16},{rank:1.5},{assignedOn:'2099-01-01'},{effectiveOn:'2099-01-01'},{assignedOn:'2025-02-29'}]) assert.throws(()=>s.saveRank(id,{...rank,...v}),code('INVALID_ARGUMENTS'))
+  for(const v of [{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:0},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:16},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:1.5},{assignedOn:'2099-01-01'},{effectiveOn:'2099-01-01'},{assignedOn:'2025-02-29'}]) assert.throws(()=>s.saveRank(id,{...rank,...v}),code('INVALID_ARGUMENTS'))
   s.saveAllowance(id,allowance);s.saveRank(id,rank)
   for(const sql of ["UPDATE employee_seniority_allowances SET percentage=5", "UPDATE employee_seniority_allowances SET status='not_applicable'", "UPDATE employee_seniority_allowances SET effective_on='2025-02-29'", "UPDATE employee_current_ranks SET rank=16", "UPDATE employee_current_ranks SET assigned_on='2099-01-01'", "UPDATE employee_current_ranks SET effective_on='2099-01-01'", "UPDATE employee_current_ranks SET assigned_on=NULL"]) assert.throws(()=>f.db.exec(sql))
   integrity(f.db)
@@ -130,7 +130,7 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
  assert.equal(overviewHandler(event,'extra').error.code,'INVALID_ARGUMENTS')
  contents.mainFrame.url='https://invalid.test/'
  assert.equal(overviewHandler(event).error.code,'FORBIDDEN');contents.mainFrame.url=url
- assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','clearServiceBaseline','getAllowance','getRank','getServiceBaseline','getServiceProjection','listOverview','saveAllowance','saveRank','saveServiceBaseline'])
+ assert.deepEqual(Object.keys(api).sort(),['clearAllowance','clearRank','clearServiceBaseline','getAllowance','getRank','getRankProjection','getServiceBaseline','getServiceProjection','listOverview','saveAllowance','saveRank','saveServiceBaseline'])
  for(const [save,get,clear,value] of [['saveAllowance','getAllowance','clearAllowance',allowance],['saveRank','getRank','clearRank',rank]]) {
   assert.equal((await api[get](id)).data,null)
   assert.equal((await api[save](id,value)).ok,true)
@@ -144,7 +144,7 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
   assert.equal(handle(event,...args,'extra').error.code,'INVALID_ARGUMENTS')
  }
  const h=handlers.get(ipcChannels.senioritySaveRank)
- for(const args of [[id],[id,{...rank,rank:16}],[id,{...rank,confirmedAt:'injected'}],['bad',rank],[id,rank,'extra']]) assert.equal(h(event,...args).error.code,'INVALID_ARGUMENTS')
+ for(const args of [[id],[id,{...rank,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:16}],[id,{...rank,confirmedAt:'injected'}],['bad',rank],[id,rank,'extra']]) assert.equal(h(event,...args).error.code,'INVALID_ARGUMENTS')
  for(const bad of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}]) assert.equal(h(bad,id,rank).error.code,'FORBIDDEN')
  contents.mainFrame.url='https://invalid.test/'
  assert.equal(h(event,id,rank).error.code,'FORBIDDEN');contents.mainFrame.url=url

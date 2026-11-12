@@ -1,3 +1,4 @@
+import { projectRank } from '../../shared/rank-projection.js'
 import { projectService } from '../../shared/service-calculations.js'
 import { PersonnelService } from '../personnel/service.js'
 import type Database from 'better-sqlite3'
@@ -45,7 +46,7 @@ export class SeniorityRanksService {
     return db.prepare<[string], Allowance>(`SELECT ${columns}, status, percentage FROM employee_seniority_allowances WHERE employee_id=?`).get(id) ?? null
   }
   private rank(db: Database.Database, id: string) {
-    return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
+    return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
   private baseline(db: Database.Database, id: string) {
     const row = db.prepare<[string], Omit<ServiceBaseline, 'autoAccrueAfterBaseline'> & {autoAccrueAfterBaseline:number}>(`SELECT employee_id AS employeeId, years, months, days, auto_accrue_after_baseline AS autoAccrueAfterBaseline,
@@ -53,6 +54,10 @@ export class SeniorityRanksService {
       FROM employee_service_baselines WHERE employee_id=?`).get(id)
     return row ? {...row,autoAccrueAfterBaseline:row.autoAccrueAfterBaseline===1} : null
   }
+  getRankProjection = (id:string) => this.run(id,db => {
+    const employee=new PersonnelService(this.storage,this.isBusy).getEmployee(id)
+    return projectRank(employee,this.rank(db,id),todayIsoDate())
+  })
   getServiceProjection = (id:string) => this.run(id,(db,type) => projectService(this.baseline(db,id),todayIsoDate(),type as 'official'|'staff',this.allowance(db,id)))
   getServiceBaseline = (id: string) => this.run(id, db => this.baseline(db, id))
   clearServiceBaseline = (id: string) => this.run(id, db => {
@@ -71,7 +76,7 @@ export class SeniorityRanksService {
   }
   listOverview = () => this.run(null, db => {
     const allowances = new Map(db.prepare<[], Allowance>(`SELECT ${columns}, status, percentage FROM employee_seniority_allowances`).all().map(row => [row.employeeId, row]))
-    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
+    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
     return new PersonnelService(this.storage, this.isBusy).listEmployees().map(employee => ({
       employee, allowance: allowances.get(employee.id) ?? null, rank: ranks.get(employee.id) ?? null,
     }))
@@ -97,11 +102,11 @@ export class SeniorityRanksService {
     this.checkDate(v.assignedOn,v.effectiveOn)
     return this.run(id, (db,type) => {
       if (type !== 'official') throw new SeniorityRanksError('RANK_REQUIRES_OFFICIAL')
-      db.prepare(`INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,effective_on,document_type,document_number,document_date,review_on,confirmed_at)
-        VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET rank=excluded.rank,assigned_on=excluded.assigned_on,
+      db.prepare(`INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,effective_on,document_type,document_number,document_date,review_on,confirmed_at,origin,review_anchor_on,origin_note)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET rank=excluded.rank,assigned_on=excluded.assigned_on,
         effective_on=excluded.effective_on,document_type=excluded.document_type,document_number=excluded.document_number,
-        document_date=excluded.document_date,review_on=excluded.review_on,confirmed_at=excluded.confirmed_at`)
-        .run(id,v.rank,v.assignedOn,v.effectiveOn,v.documentType,v.documentNumber,v.documentDate,v.reviewOn,new Date().toISOString())
+        document_date=excluded.document_date,review_on=excluded.review_on,confirmed_at=excluded.confirmed_at,origin=excluded.origin,review_anchor_on=excluded.review_anchor_on,origin_note=excluded.origin_note`)
+        .run(id,v.rank,v.assignedOn,v.effectiveOn,v.documentType,v.documentNumber,v.documentDate,v.reviewOn,new Date().toISOString(),v.origin,v.reviewAnchorOn,v.originNote)
       return this.rank(db,id)!
     })
   }

@@ -1,17 +1,22 @@
 import { employeeStructure, withDirectoryNames, type DirectoryOrder } from '../../employees/registry.ts'
-import { allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank, type SeniorityOverview } from '../../../shared/seniority-ranks.ts'
+import { rankOrigins, type RankOrigin, allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank, type SeniorityOverview } from '../../../shared/seniority-ranks.ts'
 import { formatDate, formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
 import { fullName, normalizeText } from '../../employees/model.ts'
 export type Kind = 'allowance' | 'rank'
-export interface Draft { status: string; percentage: string; rank: string; assignedOn: string; effectiveOn: string; documentType: string; documentNumber: string; documentDate: string; reviewOn: string }
+export interface Draft { status: string; percentage: string; rank: string; assignedOn: string; effectiveOn: string; origin: string; reviewAnchorOn: string; originNote: string; documentType: string; documentNumber: string; documentDate: string; reviewOn: string }
 export function draftFor(value: Allowance | CurrentRank | null): Draft {
- return { status: value && 'status' in value ? value.status : 'confirmed', percentage: value && 'percentage' in value ? String(value.percentage ?? '') : '', rank: value && 'rank' in value ? String(value.rank) : '', assignedOn: value && 'assignedOn' in value ? formatDateInput(value.assignedOn) : '', effectiveOn: formatDateInput(value?.effectiveOn ?? ''), documentType: value?.documentType ?? '', documentNumber: value?.documentNumber ?? '', documentDate: formatDateInput(value?.documentDate ?? ''), reviewOn: formatDateInput(value?.reviewOn ?? '') }
+ return { origin:value&&'origin' in value?value.origin:'unknown', reviewAnchorOn:value&&'reviewAnchorOn' in value?formatDateInput(value.reviewAnchorOn??''):'', originNote:value&&'originNote' in value?value.originNote??'':'', status: value && 'status' in value ? value.status : 'confirmed', percentage: value && 'percentage' in value ? String(value.percentage ?? '') : '', rank: value && 'rank' in value ? String(value.rank) : '', assignedOn: value && 'assignedOn' in value ? formatDateInput(value.assignedOn) : '', effectiveOn: formatDateInput(value?.effectiveOn ?? ''), documentType: value?.documentType ?? '', documentNumber: value?.documentNumber ?? '', documentDate: formatDateInput(value?.documentDate ?? ''), reviewOn: formatDateInput(value?.reviewOn ?? '') }
 }
 export function validateDraft(kind: Kind, v: Draft, today = todayIsoDate()) {
  const errors: Partial<Record<keyof Draft,string>> = {}
  if (kind === 'allowance' && !['confirmed','not_applicable'].includes(v.status)) errors.status = 'Оберіть статус.'
  if (kind === 'allowance' && v.status === 'confirmed' && (!v.percentage || !allowancePercentages.some(n => String(n) === v.percentage))) errors.percentage = 'Оберіть відсоток надбавки.'
  if (kind === 'rank' && (!/^([1-9]|1[0-5])$/.test(v.rank))) errors.rank = 'Оберіть номер рангу від 1 до 15.'
+ if(kind==='rank'){
+  if(!rankOrigins.some(origin=>origin===v.origin))errors.origin='Оберіть походження рангу.'
+  if(v.reviewAnchorOn&&!parseDateInput(v.reviewAnchorOn))errors.reviewAnchorOn='Введіть коректну дату ДД.ММ.РРРР.'
+  if(v.originNote.trim().length>500)errors.originNote='Не більше 500 символів.'
+ }
  for (const key of ['assignedOn','effectiveOn','documentDate','reviewOn'] as const) {
   if (key === 'assignedOn' && kind !== 'rank') continue
   if (key === 'effectiveOn' && kind === 'allowance' && v.status === 'not_applicable') continue
@@ -31,7 +36,7 @@ export function allowanceInput(v: Draft): AllowanceInput {
 }
 export function rankInput(v: Draft): RankInput {
  if (Object.keys(validateDraft('rank',v)).length) throw new Error('INVALID_DRAFT')
- return { ...basis(v),rank:Number(v.rank),assignedOn:parseDateInput(v.assignedOn)!,effectiveOn:parseDateInput(v.effectiveOn) === parseDateInput(v.assignedOn) ? null : parseDateInput(v.effectiveOn) }
+ return { ...basis(v),origin:v.origin as RankOrigin,reviewAnchorOn:parseDateInput(v.reviewAnchorOn),originNote:v.originNote.trim()||null,rank:Number(v.rank),assignedOn:parseDateInput(v.assignedOn)!,effectiveOn:parseDateInput(v.effectiveOn) === parseDateInput(v.assignedOn) ? null : parseDateInput(v.effectiveOn) }
 }
 export const allowanceLabel = (value: Allowance | null) => value === null ? 'Не внесено' : value.status === 'not_applicable' ? 'Не застосовується' : `${value.percentage}%`
 export const rankLabel = (row: SeniorityOverview) => row.employee.employeeType === 'staff' ? 'Не застосовується' : row.rank ? `${row.rank.rank} ранг` : 'Не внесено'
@@ -78,4 +83,8 @@ export function canCopyDocumentDate(v: Draft, today = todayIsoDate()) {
 }
 export function copyDocumentDate(v: Draft, today = todayIsoDate()): Draft {
   return canCopyDocumentDate(v, today) ? { ...v, effectiveOn: v.documentDate } : v
+}
+
+export const rankOriginLabels:Record<RankOrigin,string>={
+ unknown:'Походження не зазначено',oms_assigned:'Звичайне присвоєння в ОМС',oms_retained:'Раніше присвоєний і збережений ранг ОМС',civil_service_equivalence:'Установлено з урахуванням державної служби',oms_early:'Дострокове присвоєння в ОМС',pension_exception:'Присвоєння у зв’язку з виходом на пенсію',other:'Інша документально підтверджена підстава',
 }

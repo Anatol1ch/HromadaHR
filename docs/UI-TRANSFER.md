@@ -551,3 +551,7 @@ Read-only звірено src/lib/calendar.ts HromadaAID за SHA 33eca10733caaf7
 ## 5.3.3 – Поля поточного призначення
 
 Read-only звірено src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb (RecipientFormModal/recipient-field). Використано чинну адаптовану EmployeeForm/EmployeeCard, DateField, Select і кадрову сітку без нових глобальних контролів або стилів. Категорії/дата — власні погоджені кадрові факти HR; предметний код AID не переносився. GUI перевірятиме замовник.
+
+## 5.3.4 – Перегляд і контроль рангу
+
+Read-only звірено RecipientDetails у src/RecipientRegistry.tsx HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Використано чинні адаптовані InfoSection/InfoItem, Select, DateField, ValidatedTextarea й згорнуту native details-секцію з локальними токенами. RankProjectionPanel — один read-only компонент для двох чинних контекстів; другого редактора чи реєстру немає. Предметні правила джерела не переносилися. Для дворічної дати використано наявний HR daysInMonth; saturating shiftMonths не підходить через вимогу явно відхиляти рік >9999. Windows GUI прийматиме замовник.

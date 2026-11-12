@@ -6,7 +6,7 @@ import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
 const notApplicable={...basis,status:'not_applicable',percentage:null,effectiveOn:null}
-const rank={...basis,rank:13,assignedOn:'2020-02-29',effectiveOn:null}
+const rank={...basis,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-02-29',effectiveOn:null}
 function row(id,type,allowance=null,current=null) { return {employee:{id,lastName:id,firstName:'Тест',middleName:null,employeeType:type,position:{name:'Інспектор'},department:{name:'Відділ'}},allowance,rank:current} }
 test('missing, zero, not applicable and staff ranks remain distinct in registry filters',()=>{
  assert.equal(allowanceLabel(null),'Не внесено')

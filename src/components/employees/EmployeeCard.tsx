@@ -1,3 +1,4 @@
+import RankProjectionPanel from '../seniority-ranks/RankProjectionPanel'
 import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
 import Modal from '../Modal'
 import { navigateTabs } from '../../lib/tabNavigation'
@@ -104,7 +105,7 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
             </dl>
           </section>)}
         </div> : index === 1 ? (tab === 1 && <LeaveOverview onOpen={destination => onOpenLeave({ ...destination, employeeId: id })} employeeId={id} revision={revision} />)
-          : index === 2 ? (tab === 2 && <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy}/>) : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
+          : index === 2 ? (tab === 2 && <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy}/>) : index === 3 ? (tab === 3 && <RankProjectionPanel key={id} employeeId={id} refreshKey={revision}/>) : <DataState kind="planned" message="Функціональність буде додано пізніше" compact />}
       </div>)}
     </article>
   </Modal>

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { Allowance, CurrentRank, SeniorityOverview } from '../../../shared/seniority-ranks'
 import { allowancePercentages } from '../../../shared/seniority-ranks'
+import RankProjectionPanel from './RankProjectionPanel'
 import InfoSection from '../InfoSection'
 import InfoItem from '../InfoItem'
 import DateField from '../DateField'
@@ -8,7 +9,7 @@ import Select from '../Select'
 import Alert from '../Alert'
 import ConfirmDialog from '../ConfirmDialog'
 import Modal from '../Modal'
-import ValidatedInput from '../ValidatedInput'
+import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import { UserRound, Pencil, Check, X, Trash2 } from 'lucide-react'
 import { navigateTabs } from '../../lib/tabNavigation'
@@ -16,7 +17,7 @@ import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate, parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage, fullName, employeeTypeLabels } from '../../employees/model'
-import { directionsFor, documentTypeOptions, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate, allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { rankOriginLabels, directionsFor, documentTypeOptions, documentLabel, toggleSeparateDate, canCopyDocumentDate, copyDocumentDate, allowanceInput, allowanceLabel, rankLabel, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
@@ -38,19 +39,20 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
  const [clearing,setClearing]=useState(false)
  const [separateDate,setSeparateDate]=useState(!!value?.effectiveOn)
  const [effectiveRevision,setEffectiveRevision]=useState(0)
+ const details=useRef<HTMLDetailsElement>(null)
  const form=useRef<HTMLFormElement>(null), owner=useRef<HTMLDivElement>(null), alive=useRef(true)
  const id=useId()
  const dirty=editing && JSON.stringify(initial)!==JSON.stringify(draft)
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  const requestClose=useUnsavedChanges(dirty,inFlight,navigationGuard,owner)
- function dateValues(v: Draft) { return { assignedOn:parseDateInput(v.assignedOn)??'', effectiveOn:parseDateInput(v.effectiveOn)??'', documentDate:parseDateInput(v.documentDate)??'', reviewOn:parseDateInput(v.reviewOn)??'' } }
+ function dateValues(v: Draft) { return { assignedOn:parseDateInput(v.assignedOn)??'', effectiveOn:parseDateInput(v.effectiveOn)??'', documentDate:parseDateInput(v.documentDate)??'', reviewOn:parseDateInput(v.reviewOn)??'', reviewAnchorOn:parseDateInput(v.reviewAnchorOn)??'' } }
  function reset(next: Allowance | CurrentRank | null) { const v=draftFor(next);setInitial(v);setDraft(v);setDates(dateValues(v));setEditing(false);setSeparateDate(!!next?.effectiveOn);setErrors({});setError('') }
  function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined})) }
  async function mutate(clear=false) {
   if(inFlight.current) return
   if(!clear) {
    const next=validateDraft(kind,draft);setErrors(next)
-   if(Object.keys(next).length) {setError('Перевірте позначені поля.');requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
+   if(Object.keys(next).length) {if((next.origin||next.reviewAnchorOn||next.originNote)&&details.current)details.current.open=true;setError('Перевірте позначені поля.');requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
    if(!form.current?.checkValidity()) {form.current?.reportValidity();return}
   }
   inFlight.current=true;onBusy(true);setError('')
@@ -67,7 +69,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
  function field(key: keyof Draft, label: string, control: ReactNode, required=false) {
   return <div className="recipient-field employee-field"><label htmlFor={id+key}>{label}{required&&<span aria-hidden="true"> *</span>}</label>{control}</div>
  }
- function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewOn',label:string,required=false) {
+ function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewOn'|'reviewAnchorOn',label:string,required=false) {
   return field(key,label,<DateField key={key==='effectiveOn'?effectiveRevision:key} id={id+key} value={dates[key]} initialDraft={draft[key]} required={required} disabled={busy}
    max={key==='assignedOn'||key==='effectiveOn'?todayIsoDate():undefined} error={errors[key]}
    onDraftChange={v=>change(key,v)} onChange={v=>setDates(current=>({...current,[key]:v}))}/>,required)
@@ -77,7 +79,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
    aria-invalid={!!errors[key]} aria-describedby={errors[key]?id+key+'-error':undefined} onChange={e=>change(key,e.target.value)}/>
    {errors[key]&&<span className="field-error" id={id+key+'-error'}>{errors[key]}</span>}</>)
  }
- function select(key: 'status'|'percentage'|'rank'|'documentType',label:string,options:{value:string;label:string}[],required=false) {
+ function select(key: 'status'|'percentage'|'rank'|'documentType'|'origin',label:string,options:{value:string;label:string}[],required=false) {
   return <div className="recipient-field employee-field"><span>{label}{required?' *':''}</span>
    <Select label={label} value={draft[key]} options={options} required={required} disabled={busy} onChange={v=>change(key,v)} error={errors[key]}/>
   </div>
@@ -123,6 +125,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
       {value.reviewOn&&<InfoItem label="Наступна перевірка" value={formatDate(value.reviewOn)}/>}
      </dl>}
      {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
+     {kind==='rank'&&<RankProjectionPanel employeeId={employeeId} refreshKey={row.rank} showCurrent={false}/>}
     </section>:<form id={id} ref={form} noValidate className="employee-form" aria-busy={busy} onSubmit={e=>{e.preventDefault();void mutate()}}>
      <InfoSection title={kind==='allowance'?'Відомості про надбавку':'Відомості про ранг'}>
       <fieldset className="recipient-fieldset" disabled={busy}><div className="employee-form-grid">
@@ -148,6 +151,14 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onSwitch, 
        {separateDate&&<div id={id+'-separate-field'} className="employee-form-grid">{date('effectiveOn','Дата початку дії')}</div>}
       </>}
      </InfoSection>
+     {kind==='rank'&&<details ref={details} className="employee-card-section">
+      <summary>Додаткові відомості про ранг</summary>
+      <div className="employee-form-grid">
+       {select('origin','Походження рангу',Object.entries(rankOriginLabels).map(([value,label])=>({value,label})))}
+       {date('reviewAnchorOn','Опорна дата для контрольного строку')}
+       <div className="recipient-field employee-field"><label htmlFor={id+'originNote'}>Пояснення особливої підстави</label><ValidatedTextarea id={id+'originNote'} value={draft.originNote} maxLength={500} rows={3} disabled={busy} aria-invalid={!!errors.originNote} onChange={e=>change('originNote',e.target.value)}/>{errors.originNote&&<span className="field-error">{errors.originNote}</span>}</div>
+      </div>
+     </details>}
      <InfoSection title="Документальна підстава"><fieldset className="recipient-fieldset" disabled={busy}><div className="employee-form-grid">
       {select('documentType','Тип документа',documentTypeOptions(draft.documentType))}{text('documentNumber','Номер документа',100)}{date('documentDate','Дата документа')}
      </div></fieldset></InfoSection>

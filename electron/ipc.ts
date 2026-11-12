@@ -57,6 +57,7 @@ export function registerIpcHandlers(
   zoom?: Pick<ZoomController, 'get' | 'set'>,
   seniority?: SeniorityRanksService,
 ) {
+  register(ipcChannels.seniorityGetRankProjection,z.tuple([senioritySchemas.id]),senioritySchemas.rankProjection,([id])=>seniority!.getRankProjection(id))
   register(ipcChannels.seniorityGetServiceProjection, z.tuple([senioritySchemas.id]), senioritySchemas.serviceProjection, ([id]) => seniority!.getServiceProjection(id))
   register(ipcChannels.seniorityGetServiceBaseline, z.tuple([senioritySchemas.id]), senioritySchemas.serviceBaseline.nullable(), ([id]) => seniority!.getServiceBaseline(id))
   register(ipcChannels.senioritySaveServiceBaseline, z.tuple([senioritySchemas.id, senioritySchemas.serviceBaselineInput]), senioritySchemas.serviceBaseline, ([id, input]) => seniority!.saveServiceBaseline(id, input))
