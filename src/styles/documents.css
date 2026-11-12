@@ -1,0 +1,26 @@
+.documents-workspace { display:grid; gap:var(--space-3); min-width:0; container:documents-workspace / inline-size; }
+.documents-workspace [hidden] { display:none !important; }
+.documents-workspace > .settings-section-nav { flex-wrap:wrap; }
+.personnel-documents-panel, .personnel-documents-registry, .personnel-document-details { display:grid; gap:var(--space-3); min-width:0; }
+.personnel-documents-table { min-width:740px; }
+.personnel-documents-table td { overflow-wrap:anywhere; max-width:26rem; }
+.personnel-documents-registry .dictionary-table-wrap { max-width:100%; overflow-x:auto; }
+.document-context-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.document-context-actions button { height:auto; min-height:var(--control-height); white-space:normal; }
+.document-empty-actions { padding:var(--space-3); }
+.personnel-document-details > h2 { margin:0; font-size:20px; }
+.personnel-document-details :is(h2,.info-item dd) { overflow-wrap:anywhere; }
+.personnel-document-details .info-item dd { white-space:pre-wrap; }
+.document-people { display:grid; gap:var(--space-2); padding:0; margin:0; list-style:none; }
+.document-people li { display:grid; gap:var(--space-1); overflow-wrap:anywhere; }
+.document-people li > span { color:var(--color-text-secondary); font-size:13px; }
+.document-delete-summary { display:grid; gap:var(--space-2); overflow-wrap:anywhere; }
+.document-delete-summary p { margin:0; }
+.documents-workspace :is(h1,h2,[tabindex="-1"]):focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
+.document-editor-modal .employee-form-actions { flex-wrap:wrap; }
+.document-editor-modal .employee-form-actions button { height:auto; min-height:var(--control-height); white-space:normal; }
+@container documents-workspace (max-width:900px) {
+ .personnel-documents-registry .aid-toolbar { flex-wrap:wrap; }
+ .personnel-documents-registry .aid-toolbar .registry-search { flex-basis:100%; }
+ .personnel-documents-registry .aid-toolbar button { height:auto; min-height:var(--control-height); white-space:normal; }
+}

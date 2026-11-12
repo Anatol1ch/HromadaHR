@@ -12,8 +12,8 @@ import LeaveRecordAction from './LeaveRecordAction'
 import { leaveLabels, leaveGroupOptions, specialOptions } from './presentation'
 import { leaveRecordBelongsToEmployee, recordCountLabel, journalRows, emptyLeaveFilters, contextualLeaveFilters, personName, type LeaveFilters, type LeaveJournalContext, type LeaveSortKey, type RegistrationHistory } from './registry'
 import { sortedLeaveYears } from './usage'
-export default function LeaveJournal({records,employeeRows=[], navigationGuard,onChanged,onRegister, history, context, onResume, employeeId}: {
-  employeeId?: string; records:LeaveRecord[]; employeeRows?:EmployeeCard[]; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void;
+export default function LeaveJournal({records,employeeRows=[], navigationGuard,onChanged,onRegister, history, context, onResume, employeeId, active=true}: {
+  active?:boolean; employeeId?: string; records:LeaveRecord[]; employeeRows?:EmployeeCard[]; navigationGuard:RefObject<NavigationGuard>; onChanged:()=>void; onRegister?:()=>void;
   history: RegistrationHistory; context: LeaveJournalContext | null; onResume: () => void
 }) {
   const panelId=useId()
@@ -31,6 +31,7 @@ export default function LeaveJournal({records,employeeRows=[], navigationGuard,o
   useEffect(() => { if (context) resumeButton.current?.focus() }, [context])
   const [sort,setSort]=useState<{key:LeaveSortKey;direction:'asc'|'desc'}>({key:'startDate',direction:'desc'})
   const [action,setAction]=useState<{id:string;kind:'view'|'edit'|'cancel'}|null>(null)
+  useEffect(()=>{if(!active){setAction(null);setContextView(undefined)}},[active])
   const scopedRecords = records.filter(record => leaveRecordBelongsToEmployee(record, employeeId))
   const visible=journalRows(scopedRecords,employeeRows,filters,sort.key,sort.direction,!!context || !!employeeId)
   const people=new Map(employeeRows.map(person=>[person.id,person]))
@@ -66,8 +67,8 @@ export default function LeaveJournal({records,employeeRows=[], navigationGuard,o
         <td><div className="registry-row-actions"><HelpTip label="Переглянути відпустку" text="Переглянути" icon={<Eye size={17}/>} onClick={()=>view ? setContextView({ ...view, previewId: record.id }) : setAction({id:record.id,kind:'view'})}/>{!context&&record.status==='active'&&<><HelpTip label="Редагувати відпустку" text="Редагувати" icon={<Pencil size={16}/>} onClick={()=>setAction({id:record.id,kind:'edit'})}/><HelpTip label="Скасувати реєстрацію" text="Скасувати реєстрацію" icon={<Ban size={16}/>} onClick={()=>setAction({id:record.id,kind:'cancel'})}/></>}</div></td>
       </tr>})}
     </DictionaryTable></section>}
-    {action&&<LeaveRecordAction key={action.id+action.kind} {...action} expectedEmployeeId={employeeId} navigationGuard={navigationGuard} onClose={()=>setAction(null)} onChanged={onChanged} history={history}/>}
-    {view?.previewId && <LeaveRecordAction key={view.previewId + '-context'} id={view.previewId} kind="view" expectedEmployeeId={employeeId} navigationGuard={navigationGuard}
+    {active&&action&&<LeaveRecordAction key={action.id+action.kind} {...action} expectedEmployeeId={employeeId} navigationGuard={navigationGuard} onClose={()=>setAction(null)} onChanged={onChanged} history={history}/>}
+    {active&&view?.previewId && <LeaveRecordAction key={view.previewId + '-context'} id={view.previewId} kind="view" expectedEmployeeId={employeeId} navigationGuard={navigationGuard}
       onClose={() => setContextView({ ...view, previewId: undefined })} onChanged={onChanged} history={history}/>}
   </section>
 }

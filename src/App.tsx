@@ -61,7 +61,7 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
       <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
       <div className="workspace-shortcuts">{([
         { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound },
-        { id: 'documents', title: 'Документи', text: 'Журнал відпусток', icon: FileText },
+        { id: 'documents', title: 'Документи', text: 'Кадрові документи та журнал відпусток', icon: FileText },
       ] as const).map(({ id, title, text, icon: Icon }) => <button type="button" key={id}
         aria-label={title} onClick={() => onNavigate(id)}>
         <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}</small></span><ArrowUpRight size={18} aria-hidden="true"/>

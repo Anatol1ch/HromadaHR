@@ -21,17 +21,17 @@ test('shell has exactly six sections, two active home shortcuts and only the doc
 })
 
 test('documents composes the unscoped journal and existing global form with explicit loading/error/retry', () => {
-  const documents = read('src/components/documents/DocumentsWorkspace.tsx')
+  const documents = read('src/components/documents/DocumentsWorkspace.tsx') + read('src/components/documents/LeaveDocumentsJournal.tsx')
   assert.match(documents,/>Документи<\/h1>/)
   assert.match(documents,/leave.listRecords\(null\)/)
   assert.match(documents,/personnel.listEmployees\(\)/)
-  const journal = documents.slice(documents.indexOf('<LeaveJournal'), documents.indexOf('{creating &&'))
+  const journal = documents.slice(documents.indexOf('<LeaveJournal'), documents.indexOf('{active && creating &&'))
   assert.doesNotMatch(journal,/employeeId=|key=/)
   assert.match(journal,/onChanged=\{refresh\}/)
   assert.match(documents,/employeePicker=/)
   assert.match(documents,/onChange=\{id => \{ if \(id !== selected\) navigationGuard.current/)
   assert.match(documents,/key=\{selected \|\| 'new'\}/)
-  assert.match(documents,/creating && \(!currentEmployees\?\.data \? <Modal/)
+  assert.match(documents,/active && creating && \(!currentEmployees\?\.data \? <Modal/)
   assert.match(documents,/currentEmployees\?\.error \? <Alert/)
   assert.match(documents,/!people.length && <p>Додайте працівника/)
   assert.match(documents,/records\?\.revision === revision/)
@@ -41,8 +41,8 @@ test('documents composes the unscoped journal and existing global form with expl
 })
 
 test('registration history suspends the same form; shared actions and personal isolation remain intact', () => {
-  const documents = read('src/components/documents/DocumentsWorkspace.tsx')
-  assert.match(documents,/open: next => \{ setContext\(next\); refresh\(\) \}, suspended: context !== null/)
+  const documents = read('src/components/documents/DocumentsWorkspace.tsx') + read('src/components/documents/LeaveDocumentsJournal.tsx')
+  assert.match(documents,/open: next => \{ setContext\(next\); refresh\(\) \}, suspended: !active \|\| context !== null/)
   assert.match(documents,/onResume=\{\(\) => setContext\(null\)\}/)
   assert.doesNotMatch(documents,/creating && !context|key=\{context/)
   assert.match(read('src/components/leave/LeaveRegistrationForm.tsx'),/if \(history.suspended\) return null/)
