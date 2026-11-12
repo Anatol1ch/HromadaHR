@@ -27,7 +27,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,17)
+  assert.equal(connection.schemaVersion,18)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)

@@ -1,3 +1,5 @@
+import type { EmployeeCardTab } from '../../../shared/personnel-control'
+import { employeeTabIndex } from '../../employees/navigation'
 import RankProjectionPanel from '../seniority-ranks/RankProjectionPanel'
 import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
 import Modal from '../Modal'
@@ -13,7 +15,8 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 
 const tabs = ['Загальна інформація', 'Відпустки', 'Стаж і вислуга', 'Ранги'] as const
-export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision, onOpenLeave, navigationGuard }: {
+export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, revision, onOpenLeave, navigationGuard,initialTab='general',tabRequestId=0 }: {
+  initialTab?:EmployeeCardTab;tabRequestId?:number
   onOpenLeave: (intent: LeaveNavigationIntent) => void; id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
   navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
@@ -22,7 +25,8 @@ export default function EmployeeCard({ id, onClose, onEdit, onLoaded, onDelete, 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [retry, setRetry] = useState(0)
-  const [tab, setTab] = useState(0)
+  const [tab, setTab] = useState(()=>employeeTabIndex(initialTab))
+  useEffect(()=>setTab(employeeTabIndex(initialTab)),[id,initialTab,tabRequestId])
   const [baselineBusy,setBaselineBusy]=useState(false)
   const close=()=>navigationGuard.current(onClose)
   const tabId = useId()

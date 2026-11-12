@@ -23,7 +23,7 @@ async function fixture(t){
  c.database.prepare('INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,confirmed_at,review_on) VALUES (?,?,?,?,?)').run(employee.id,15,'2023-01-01','2023-01-01T00:00:00.000Z','2030-01-01')
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file)
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-rank-projection-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
- assert.equal(c.schemaVersion,17);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
+ assert.equal(c.schemaVersion,18);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
  const s=new SeniorityRanksService(storage,()=>false),leave=new LeaveService(storage,()=>false)
  return {s,p,leave,storage,employee,staff,get db(){return c.database},async reopen(){c.close();c=await openStorageSafely(file)}}
 }

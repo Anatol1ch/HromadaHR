@@ -9,6 +9,11 @@ async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOpera
 }
 
 const api: HromadaHRApi = {
+  personnelControl:{
+    getOverview:()=>call(ipcChannels.controlOverview),getSettings:()=>call(ipcChannels.controlSettings),
+    saveSettings:input=>call(ipcChannels.controlSaveSettings,input),setReminderState:input=>call(ipcChannels.controlSetState,input),
+    onChanged:listener=>{const handler=()=>listener();ipcRenderer.on('personnelControl:changed',handler);return()=>{ipcRenderer.removeListener('personnelControl:changed',handler)}},
+  },
   seniorityRanks: {
     getRankProjection:id=>call(ipcChannels.seniorityGetRankProjection,id),
     getServiceProjection: id => call(ipcChannels.seniorityGetServiceProjection, id),

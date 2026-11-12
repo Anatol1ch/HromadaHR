@@ -1,3 +1,5 @@
+import { PersonnelControlError,type PersonnelControlService } from './personnel-control/service.js'
+import * as controlSchemas from './personnel-control/schemas.js'
 import { SeniorityRanksError } from './seniority-ranks/service.js'
 import type { SeniorityRanksService } from './seniority-ranks/service.js'
 import * as senioritySchemas from './seniority-ranks/schemas.js'
@@ -56,7 +58,12 @@ export function registerIpcHandlers(
   getBackupHistory: () => import('../shared/backupHistory.js').BackupHistory = () => ({ available: false, events: [] }),
   zoom?: Pick<ZoomController, 'get' | 'set'>,
   seniority?: SeniorityRanksService,
+  control?:PersonnelControlService,
 ) {
+  register(ipcChannels.controlOverview,z.tuple([]),controlSchemas.overview,()=>control!.getOverview())
+  register(ipcChannels.controlSettings,z.tuple([]),controlSchemas.settings,()=>control!.getSettings())
+  register(ipcChannels.controlSaveSettings,z.tuple([controlSchemas.settings]),controlSchemas.settings,([input])=>control!.saveSettings(input))
+  register(ipcChannels.controlSetState,z.tuple([controlSchemas.stateInput]),controlSchemas.overview,([input])=>control!.setReminderState(input))
   register(ipcChannels.seniorityGetRankProjection,z.tuple([senioritySchemas.id]),senioritySchemas.rankProjection,([id])=>seniority!.getRankProjection(id))
   register(ipcChannels.seniorityGetServiceProjection, z.tuple([senioritySchemas.id]), senioritySchemas.serviceProjection, ([id]) => seniority!.getServiceProjection(id))
   register(ipcChannels.seniorityGetServiceBaseline, z.tuple([senioritySchemas.id]), senioritySchemas.serviceBaseline.nullable(), ([id]) => seniority!.getServiceBaseline(id))
@@ -183,15 +190,25 @@ export function registerIpcHandlers(
         }
         const parsed = argsSchema.safeParse(args)
         if (!parsed.success) return { ok: false, error: { code: 'INVALID_ARGUMENTS' } }
+        const notify = () => {
+          const channels = new Set<string>([
+            ipcChannels.controlSaveSettings,ipcChannels.controlSetState,
+            ipcChannels.personnelCreateEmployee,ipcChannels.personnelUpdateEmployee,ipcChannels.personnelDeleteEmployee,
+            ipcChannels.senioritySaveServiceBaseline,ipcChannels.seniorityClearServiceBaseline,ipcChannels.senioritySaveAllowance,ipcChannels.seniorityClearAllowance,ipcChannels.senioritySaveRank,ipcChannels.seniorityClearRank,
+            ipcChannels.leaveSaveServiceLeaveStart,ipcChannels.leaveSaveRights,ipcChannels.leaveSavePeriods,ipcChannels.leaveDeletePeriod,ipcChannels.backupConfirmRestore,
+          ])
+          if(channels.has(channel))try{contents.send?.('personnelControl:changed')}catch{/* A refresh failure cannot undo a successful mutation. */}
+        }
+        const accept=(data:IpcOperations[Channel]['result'])=>{const value=resultSchema.parse(data);notify();return {ok:true as const,data:value}}
         const result = execute(parsed.data)
         // Keep synchronous diagnostics synchronous; await privileged operations
         // before validating output and normalizing errors. No authentication.
-        if (result instanceof Promise) return result.then(data => ({ ok: true as const, data: resultSchema.parse(data) }))
-          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError) ? error.code : 'INTERNAL_ERROR' as const } }))
-        return { ok: true, data: resultSchema.parse(result) }
+        if (result instanceof Promise) return result.then(accept)
+          .catch(error => ({ ok: false as const, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' as const } }))
+        return accept(result)
       } catch (error) {
         // Never return exceptions, paths or Electron objects to the renderer.
-        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError) ? error.code : 'INTERNAL_ERROR' } }
+        return { ok: false, error: { code: (error instanceof BackupError || error instanceof PersonnelError || error instanceof LeaveError || error instanceof SeniorityRanksError || error instanceof PersonnelControlError) ? error.code : 'INTERNAL_ERROR' } }
       }
     })
   }

@@ -20,7 +20,7 @@ async function fixture(t) {
  let c=await openStorageSafely(file,migrations.slice(0,13))
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
  c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,17)
+ assert.equal(c.schemaVersion,18)
  assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=13 ORDER BY version').all(),ledger)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false),s=new SeniorityRanksService(storage,()=>false)
  const departmentId=p.createDepartment({name:'Тест'}).id,positionId=p.createPosition({name:'Тест'}).id

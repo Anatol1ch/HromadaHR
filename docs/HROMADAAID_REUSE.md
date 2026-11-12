@@ -204,3 +204,7 @@ Read-only звірено RecipientDetails у src/RecipientRegistry.tsx HromadaAI
 ## 5.3.5 – Розрахункова підказка відпустки
 
 Read-only перевірено src/RecipientRegistry.tsx (RecipientDetails, recipient-detail-section/grid/item, Alert/DataState та форми recipient-field) HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Збережено вже адаптовані HR InfoSection/InfoItem/Alert/DataState/ConfirmDialog і BalanceEditor; додано один спільний компактний read-only блок та локальну кнопку підстановки. Власні відпускні правила й транзакції LeaveService не мають сумісного предметного аналога в реєстрі допомоги; не переносили сервер/предметну логіку AID. Нової дизайн-системи чи редактора немає. Windows GUI прийматиме замовник.
+
+## 5.3.6 – Дзвіночок, огляд і налаштування кадрового контролю
+
+Read-only перевірено src/App.tsx (topbar/top-actions) та src/SettingsPage.tsx (settings-section-nav) HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. У перевіреному дереві та App готового кадрового Bell/reminder-механізму не знайдено. Геометрія topbar й секції налаштувань збережені через чинні адаптації HR. Повторно використано Modal compact (Tab/Escape/focus), Select, InfoSection, Alert, DataState, navigationGuard та спільні токени. Нові компоненти лише компонують предметні питання; сервіс/сховище станів відповідають окремо погодженій HR-моделі. Авторизація/сервер AID не переносилися; GUI прийматиме замовник.

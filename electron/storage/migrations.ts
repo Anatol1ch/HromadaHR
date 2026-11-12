@@ -166,6 +166,23 @@ ALTER TABLE employee_current_ranks ADD COLUMN origin TEXT NOT NULL DEFAULT 'unkn
 ALTER TABLE employee_current_ranks ADD COLUMN review_anchor_on TEXT CHECK(review_anchor_on IS NULL OR (length(review_anchor_on)=10 AND review_anchor_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(review_anchor_on,1,4)!='0000' AND coalesce(date(review_anchor_on,'+0 days')=review_anchor_on,0)));
 ALTER TABLE employee_current_ranks ADD COLUMN origin_note TEXT CHECK(origin_note IS NULL OR length(trim(origin_note)) BETWEEN 1 AND 500);
 `,
+}, { version:18,name:'personnel_control',requiresBackup:true,sql:`
+CREATE TABLE personnel_control_settings (
+ id INTEGER PRIMARY KEY CHECK(id=1),
+ horizon_days INTEGER NOT NULL DEFAULT 30 CHECK(horizon_days IN (7,14,30,60,90))
+) STRICT;
+INSERT INTO personnel_control_settings(id,horizon_days) VALUES (1,30);
+CREATE TABLE personnel_reminder_states (
+ employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+ issue_key TEXT NOT NULL CHECK(length(issue_key) BETWEEN 1 AND 180),
+ fingerprint TEXT NOT NULL CHECK(length(fingerprint)=64 AND fingerprint NOT GLOB '*[^a-f0-9]*'),
+ state TEXT NOT NULL CHECK(state IN ('reviewed','snoozed')),
+ snoozed_until TEXT CHECK(snoozed_until IS NULL OR (length(snoozed_until)=10 AND snoozed_until GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(snoozed_until,1,4)!='0000' AND coalesce(date(snoozed_until,'+0 days')=snoozed_until,0))),
+ updated_at TEXT NOT NULL,
+ PRIMARY KEY(employee_id,issue_key),
+ CHECK((state='reviewed' AND snoozed_until IS NULL) OR (state='snoozed' AND snoozed_until IS NOT NULL))
+) STRICT;
+`,
 }]
 
 function checksum(migration: Migration) {

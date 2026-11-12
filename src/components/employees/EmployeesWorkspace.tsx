@@ -1,3 +1,4 @@
+import type { EmployeeNavigationIntent,EmployeeCardTab } from '../../../shared/personnel-control'
 import type { LeaveNavigationIntent } from '../leave/navigation'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { RefObject } from 'react'
@@ -12,7 +13,7 @@ import EmployeeForm from './EmployeeForm'
 import EmployeeActionDialog from './EmployeeActionDialog'
 import type { NavigationGuard } from './useUnsavedChanges'
 
-export default function EmployeesWorkspace({ navigationGuard, onOpenLeave }: { onOpenLeave: (intent: LeaveNavigationIntent) => void; navigationGuard: RefObject<NavigationGuard> }) {
+export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initialIntent,onIntentHandled }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; onOpenLeave: (intent: LeaveNavigationIntent) => void; navigationGuard: RefObject<NavigationGuard> }) {
   const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,6 +23,12 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave }: { o
   const [directoriesLoading, setDirectoriesLoading] = useState(true)
   const [directoriesError, setDirectoriesError] = useState('')
   const [directoryRetry, setDirectoryRetry] = useState(0)
+  const [cardTab,setCardTab]=useState<EmployeeCardTab>('general'),[cardRequest,setCardRequest]=useState(0)
+  useEffect(()=>{
+    if(!initialIntent)return
+    setCardTab(initialIntent.tab);setCardRequest(value=>value+1)
+    dispatch({type:'card',id:initialIntent.employeeId});onIntentHandled?.()
+  },[initialIntent,onIntentHandled])
   const opener = useRef<HTMLElement | null>(null)
   const rememberOpener = () => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }
   const restoreOpener = () => requestAnimationFrame(() => {
@@ -81,11 +88,11 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave }: { o
       onRetryDirectories={() => setDirectoryRetry(value => value + 1)}
       state={workspace.registry} onState={registry => dispatch({ type: 'registry', registry })}
       onClear={() => dispatch({ type: 'clearFilters' })} onRetry={() => setRetry(value => value + 1)}
-      onCreate={() => { rememberOpener(); dispatch({ type: 'form', form: { kind: 'create' } }) }}
-      onOpen={employee => { rememberOpener(); dispatch({ type: 'card', id: employee.id }) }}
+      onCreate={() => { rememberOpener();setCardTab('general'); dispatch({ type: 'form', form: { kind: 'create' } }) }}
+      onOpen={employee => { rememberOpener();setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) }}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/>
-    {workspace.cardId && <EmployeeCard onOpenLeave={onOpenLeave} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
+    {workspace.cardId && <EmployeeCard onOpenLeave={onOpenLeave} initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
       onLoaded={updateFromCard}
       onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}

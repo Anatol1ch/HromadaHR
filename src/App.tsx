@@ -1,3 +1,8 @@
+import PersonnelControlOverview from './components/personnel-control/PersonnelControlOverview'
+import PersonnelControlBell from './components/personnel-control/PersonnelControlBell'
+import usePersonnelControl from './components/personnel-control/usePersonnelControl'
+import { requestEmployeeNavigation } from './employees/navigation'
+import type { PersonnelIssue,EmployeeNavigationIntent } from '../shared/personnel-control'
 import SeniorityRanksWorkspace from './components/seniority-ranks/SeniorityRanksWorkspace'
 import StartupScreen from './components/StartupScreen'
 import { STARTUP_MINIMUM_MS, waitForStartupGate } from './lib/startup-timing'
@@ -124,14 +129,19 @@ function StorageNotice() {
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const [leaveIntent, setLeaveIntent] = useState<LeaveNavigationIntent>()
+  const [employeeIntent,setEmployeeIntent]=useState<EmployeeNavigationIntent>()
+  const intentSequence=useRef(0)
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => { setLeaveIntent(undefined); setActive(id) })
+    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setLeaveIntent(undefined); setActive(id) })
   }
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
+  const control=usePersonnelControl(startupReady&&storage.state==='ready')
+  useEffect(()=>{if(active==='overview')void control.refresh()},[active,control.refresh])
+  const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeIntent(intent);setLeaveIntent(undefined);setActive('employees')},done)
   useEffect(() => {
     let alive = true, pending = false, settled = false
     const accept = (status: StorageStatus) => {
@@ -196,13 +206,15 @@ export default function App() {
               <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>
             </ol>
           </nav>
+          <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setActive('overview');void control.refresh()})}/>
         </div>
       </header>
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace onOpenLeave={intent => navigationGuard.current(() => { setLeaveIntent(intent); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
-          <LeaveWorkspace initialIntent={leaveIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage /> :
+          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} onOpenLeave={intent => navigationGuard.current(() => { setLeaveIntent(intent); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
+          <LeaveWorkspace initialIntent={leaveIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
+          active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
           active === 'service' ? <SeniorityRanksWorkspace navigationGuard={navigationGuard}/> :
           active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :
           <div className="page-transition">

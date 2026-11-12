@@ -9,6 +9,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  controlOverview:'personnelControl:getOverview',controlSettings:'personnelControl:getSettings',controlSaveSettings:'personnelControl:saveSettings',controlSetState:'personnelControl:setReminderState',
   seniorityGetRankProjection:'seniorityRanks:getRankProjection',
   seniorityGetServiceProjection: 'seniorityRanks:getServiceProjection',
   seniorityGetServiceBaseline: 'seniorityRanks:getServiceBaseline',
@@ -68,10 +69,14 @@ export interface SystemInfo {
   mode: 'dev' | 'built'
 }
 
-export type IpcErrorCode = SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
+export type IpcErrorCode = 'STALE_REMINDER' | SeniorityRanksErrorCode | 'FORBIDDEN' | 'INVALID_ARGUMENTS' | 'INTERNAL_ERROR' | 'UNAVAILABLE' | BackupErrorCode | PersonnelErrorCode | LeaveErrorCode
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.controlOverview]:{args:[];result:import('./personnel-control.js').ControlOverview}
+  [ipcChannels.controlSettings]:{args:[];result:import('./personnel-control.js').ControlSettings}
+  [ipcChannels.controlSaveSettings]:{args:[import('./personnel-control.js').ControlSettings];result:import('./personnel-control.js').ControlSettings}
+  [ipcChannels.controlSetState]:{args:[import('./personnel-control.js').ReminderStateInput];result:import('./personnel-control.js').ControlOverview}
   [ipcChannels.seniorityGetRankProjection]:{args:[string];result:import('./rank-projection.js').RankProjection}
   [ipcChannels.seniorityGetServiceProjection]: { args: [string]; result: import('./service-calculations.js').ServiceProjection }
   [ipcChannels.seniorityGetServiceBaseline]: { args: [string]; result: ServiceBaseline | null }
@@ -135,6 +140,7 @@ export interface IpcOperations {
 }
 
 export interface HromadaHRApi {
+  readonly personnelControl:import('./personnel-control.js').PersonnelControlApi
   readonly seniorityRanks: SeniorityRanksApi
   readonly personnel: PersonnelApi
   readonly leave: LeaveApi

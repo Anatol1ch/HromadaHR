@@ -1,11 +1,15 @@
+import PersonnelControlSettings from './personnel-control/PersonnelControlSettings'
+import type { RefObject } from 'react'
+import type { NavigationGuard } from './employees/useUnsavedChanges'
 // Adapted from HromadaAID 33eca10733caaf73b1a99e75a24ff35e706a0afb src/SettingsPage.tsx.
 import { Code2, HardDrive, Info, MapPin } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import hromadaHRLogo from '../../assets/hromadahr.svg?no-inline'
 import BackupSettings from './BackupSettings'
 
-export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState<'backup' | 'about'>('backup')
+export default function SettingsPage({navigationGuard}:{navigationGuard:RefObject<NavigationGuard>}) {
+  const [activeSection, setActiveSection] = useState<'backup' | 'about'|'control'>('backup')
+  const selectSection=(section:typeof activeSection)=>navigationGuard.current(()=>setActiveSection(section))
   const [appVersion, setAppVersion] = useState<string | null>(null)
   useEffect(() => {
     let active = true
@@ -18,9 +22,11 @@ export default function SettingsPage() {
     <header className="page-heading settings-heading"><div><div className="eyebrow">СИСТЕМА</div><h1>Налаштування</h1><p className="subtitle">Параметри застосунку та інформація про програму.</p></div>
     </header>
     <nav className="settings-section-nav" aria-label="Розділи налаштувань">
-      <button type="button" className={`settings-section-current${activeSection === 'backup' ? ' is-selected' : ''}`} aria-current={activeSection === 'backup' ? 'page' : undefined} onClick={() => setActiveSection('backup')}><HardDrive size={17} aria-hidden="true"/>Резервне копіювання</button>
-      <button type="button" className={`settings-section-current${activeSection === 'about' ? ' is-selected' : ''}`} aria-current={activeSection === 'about' ? 'page' : undefined} onClick={() => setActiveSection('about')}><Info size={16} aria-hidden="true"/><span>Про програму</span></button>
+      <button type="button" className={`settings-section-current${activeSection === 'backup' ? ' is-selected' : ''}`} aria-current={activeSection === 'backup' ? 'page' : undefined} onClick={() => selectSection('backup')}><HardDrive size={17} aria-hidden="true"/>Резервне копіювання</button>
+      <button type="button" className={`settings-section-current${activeSection === 'about' ? ' is-selected' : ''}`} aria-current={activeSection === 'about' ? 'page' : undefined} onClick={() => selectSection('about')}><Info size={16} aria-hidden="true"/><span>Про програму</span></button>
+      <button type="button" className={`settings-section-current${activeSection === 'control' ? ' is-selected' : ''}`} aria-current={activeSection === 'control' ? 'page' : undefined} onClick={()=>selectSection('control')}><Info size={16} aria-hidden="true"/>Кадровий контроль</button>
     </nav>
+    {activeSection==='control'&&<PersonnelControlSettings navigationGuard={navigationGuard}/>}
     <div hidden={activeSection !== 'backup'}><BackupSettings /></div>
     {activeSection === 'about' && <div className="settings-about-page">
       <section className="dashboard-panel settings-about-identity" aria-label="Про HromadaHR">
