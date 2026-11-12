@@ -1,3 +1,4 @@
+import DocumentSeriesWorkspace from '../documents/DocumentSeriesWorkspace'
 import { useCallback, useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { DictionaryEntry, DictionaryKind, DictionarySnapshot } from '../../../shared/personnel'
@@ -12,21 +13,21 @@ import DictionaryTable from '../DictionaryTable'
 import DirectoryForm from './DirectoryForm'
 import useUnsavedChanges, { type NavigationGuard } from './useUnsavedChanges'
 
-const tabs = { department: 'Підрозділи', position: 'Посади' }
+const tabs = { department: 'Підрозділи', position: 'Посади', series:'Серії документів' }
 
 export default function DictionariesWorkspace({ navigationGuard }: { navigationGuard: RefObject<NavigationGuard> }) {
-  const [kind, setKind] = useState<DictionaryKind>('department')
+  const [kind, setKind] = useState<DictionaryKind|'series'>('department')
   const tabId = useId()
   return <div className="page-transition personnel-dictionaries">
     <header className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Довідники</h1></div></header>
     <nav className="settings-section-nav" role="tablist" aria-label="Довідники" onKeyDown={navigateTabs}>
-      {(['department', 'position'] as const).map(value => <button key={value} type="button" role="tab" id={tabId + value}
+      {(['department', 'position', 'series'] as const).map(value => <button key={value} type="button" role="tab" id={tabId + value}
         aria-controls={tabId + value + '-panel'} aria-selected={kind === value} tabIndex={kind === value ? 0 : -1}
         className={'settings-section-current' + (kind === value ? ' is-selected' : '')}
         onClick={() => { if (kind !== value) navigationGuard.current(() => setKind(value)) }}>{tabs[value]}</button>)}
     </nav>
     <div role="tabpanel" id={tabId + kind + '-panel'} aria-labelledby={tabId + kind}>
-      <PersonnelDictionary key={kind} kind={kind} navigationGuard={navigationGuard}/>
+      {kind==='series'?<DocumentSeriesWorkspace navigationGuard={navigationGuard}/>:<PersonnelDictionary key={kind} kind={kind} navigationGuard={navigationGuard}/>}
     </div>
   </div>
 }

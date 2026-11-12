@@ -41,7 +41,7 @@ test('v19→v20 keeps checksums 1–19, creates strict restrictive indexed links
  assert.equal(createHash('sha256').update(JSON.stringify(migrations.slice(0,19))).digest('hex'),'26e64ee02c09c199c47b90ba812fb7ba1cefe1e12bdab88e59771cade9fb4f71')
  const root=mkdtempSync(join(tmpdir(),'hr-doc-links-')),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,19))
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,20);assert.equal(migrations[19].requiresBackup,true)
+ assert.equal(c.schemaVersion,21);assert.equal(migrations[19].requiresBackup,true)
  assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=19 ORDER BY version').all(),ledger)
  assert.equal(c.database.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_document_leave_records'").get().strict,1)
  assert.equal(c.database.prepare('SELECT count(*) AS n FROM personnel_document_leave_records').get().n,0)

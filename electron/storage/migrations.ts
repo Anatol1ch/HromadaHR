@@ -1,3 +1,4 @@
+import { documentNumberingSql } from './document-numbering-migration.js'
 import { documentLeaveLinksSql } from './document-leave-links-migration.js'
 import { documentsSql } from './documents-migration.js'
 import { currentAppointmentSql } from './current-appointment-migration.js'
@@ -187,7 +188,7 @@ CREATE TABLE personnel_reminder_states (
 `,
 }, { version:19, name:'personnel_documents', requiresBackup:true, sql:documentsSql,
 }, { version:20, name:'document_leave_links', requiresBackup:true, sql:documentLeaveLinksSql,
-}]
+}, {version:21,name:"document_numbering",requiresBackup:true,sql:documentNumberingSql}]
 
 function checksum(migration: Migration) {
   return createHash('sha256').update(`${migration.name}\n${migration.sql}`).digest('hex')

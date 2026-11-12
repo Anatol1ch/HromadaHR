@@ -1,3 +1,4 @@
+import type { DocumentNumberingSeries, DocumentSeriesInput, DocumentSeriesUpdateInput, AutoNumberedDocumentInput } from './documents.js'
 import type { DocumentLeaveLinkInput, DocumentLeaveLinks, LeaveDocumentLink, DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
 import type { ServiceBaseline, ServiceBaselineInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
@@ -10,6 +11,7 @@ import type { LeaveApi, LeaveErrorCode, ConfirmedLeavePeriod, LeavePeriodInput, 
 // Only explicitly listed operations may cross the privilege boundary.
 import type { AvailableBackups, BackupApi, BackupStatus, FolderSelection, RestoreSelection, BackupSlot, BackupErrorCode } from './backup.js'
 export const ipcChannels = {
+  documentsSeriesList:'documents:listSeries',documentsSeriesCreate:'documents:createSeries',documentsSeriesUpdate:'documents:updateSeries',documentsSeriesActive:'documents:setSeriesActive',documentsAutoCreate:'documents:createAutoNumberedDocument',
   documentsLeaveLinks:'documents:listLeaveLinks',documentsLeaveDocument:'documents:getLeaveDocument',documentsLinkLeave:'documents:linkLeaveRecord',documentsUnlinkLeave:'documents:unlinkLeaveRecord',
   documentsList:'documents:listDocuments', documentsGet:'documents:getDocument', documentsCreate:'documents:createDocument', documentsUpdate:'documents:updateDocument', documentsDelete:'documents:deleteDocument',
   controlOverview:'personnelControl:getOverview',controlSettings:'personnelControl:getSettings',controlSaveSettings:'personnelControl:saveSettings',controlSetState:'personnelControl:setReminderState',
@@ -76,6 +78,11 @@ export type IpcErrorCode = DocumentsErrorCode | 'STALE_REMINDER' | SeniorityRank
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: { code: IpcErrorCode } }
 
 export interface IpcOperations {
+  [ipcChannels.documentsSeriesList]:{args:[];result:DocumentNumberingSeries[]}
+  [ipcChannels.documentsSeriesCreate]:{args:[DocumentSeriesInput];result:DocumentNumberingSeries}
+  [ipcChannels.documentsSeriesUpdate]:{args:[DocumentSeriesUpdateInput];result:DocumentNumberingSeries}
+  [ipcChannels.documentsSeriesActive]:{args:[string,number,boolean];result:DocumentNumberingSeries}
+  [ipcChannels.documentsAutoCreate]:{args:[AutoNumberedDocumentInput];result:PersonnelDocument}
   [ipcChannels.documentsLeaveLinks]: {args:[string];result:DocumentLeaveLinks}
   [ipcChannels.documentsLeaveDocument]: {args:[string];result:LeaveDocumentLink|null}
   [ipcChannels.documentsLinkLeave]: {args:[DocumentLeaveLinkInput];result:DocumentLeaveLinks}

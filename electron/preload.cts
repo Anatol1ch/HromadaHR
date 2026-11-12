@@ -10,6 +10,9 @@ async function call<C extends keyof IpcOperations>(channel: C, ...args: IpcOpera
 
 const api: HromadaHRApi = {
   documents: {
+    listSeries:()=>call(ipcChannels.documentsSeriesList),createSeries:input=>call(ipcChannels.documentsSeriesCreate,input),
+    updateSeries:input=>call(ipcChannels.documentsSeriesUpdate,input),setSeriesActive:(id,revision,active)=>call(ipcChannels.documentsSeriesActive,id,revision,active),
+    createAutoNumberedDocument:input=>call(ipcChannels.documentsAutoCreate,input),
     listLeaveLinks:id=>call(ipcChannels.documentsLeaveLinks,id),getLeaveDocument:id=>call(ipcChannels.documentsLeaveDocument,id),
     linkLeaveRecord:input=>call(ipcChannels.documentsLinkLeave,input),unlinkLeaveRecord:input=>call(ipcChannels.documentsUnlinkLeave,input),
     listDocuments:()=>call(ipcChannels.documentsList), getDocument:id=>call(ipcChannels.documentsGet,id),

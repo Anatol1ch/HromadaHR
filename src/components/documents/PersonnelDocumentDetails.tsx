@@ -1,7 +1,7 @@
 import DocumentLeaveLinksPanel from './DocumentLeaveLinksPanel'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
-import type { PersonnelDocument } from '../../../shared/documents'
+import type { DocumentNumberingSeries, PersonnelDocument } from '../../../shared/documents'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName } from '../../employees/model'
 import { formatDate, formatDateTime } from '../../lib/dates'
@@ -17,7 +17,7 @@ import { uncertainDocumentResult } from './mutations'
 
 export default function PersonnelDocumentDetails({id,active,revision,navigationGuard,onBack,onEdit,onDeleted,onChanged}:{id:string;active:boolean;revision:number;navigationGuard:RefObject<NavigationGuard>;onBack:()=>void;onEdit:()=>void;onDeleted:()=>void;onChanged:()=>void}) {
   const [retry,setRetry]=useState(0),[confirm,setConfirm]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[uncertain,setUncertain]=useState(false),[stale,setStale]=useState(false)
-  const [state,setState]=useState<{key:string;document?:PersonnelDocument;people?:EmployeeCard[];error?:string}>()
+  const [state,setState]=useState<{key:string;document?:PersonnelDocument;people?:EmployeeCard[];series?:DocumentNumberingSeries[];error?:string}>()
   const pending=useRef(false),alive=useRef(false),owner=useRef<HTMLElement>(null),heading=useRef<HTMLHeadingElement>(null)
   const key=JSON.stringify([id,revision,retry])
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
@@ -26,11 +26,12 @@ export default function PersonnelDocumentDetails({id,active,revision,navigationG
     if(!active)return
     let current=true
     setState(undefined)
-    void Promise.all([window.hromadaHR.documents.getDocument(id),window.hromadaHR.personnel.listEmployees()]).then(([record,people])=>{
+    void Promise.all([window.hromadaHR.documents.getDocument(id),window.hromadaHR.personnel.listEmployees(),window.hromadaHR.documents.listSeries()]).then(([record,people,series])=>{
       if(!current)return
       if(!record.ok){setState({key,error:documentMessage(record.error.code)});return}
       if(!people.ok){setState({key,error:'Не вдалося завантажити працівників. Повторіть читання зв’язків документа.'});return}
-      setState({key,document:record.data,people:people.data})
+      if(!series.ok){setState({key,error:documentMessage(series.error.code)});return}
+      setState({key,document:record.data,people:people.data,series:series.data})
     }).catch(()=>{if(current)setState({key,error:'Не вдалося завантажити картку документа.'})})
     return()=>{current=false}
   },[active,key,id])
@@ -64,7 +65,7 @@ export default function PersonnelDocumentDetails({id,active,revision,navigationG
     </div>
     <h2 ref={heading} tabIndex={-1}>Картка кадрового документа</h2>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={reload}>Повторити</button>}>{current.error} Поверніться до реєстру, якщо запис видалено.</Alert>:!record?<DataState kind="loading" message="Завантаження документа…"/>:<>
-      <InfoSection title={kindLabel(record)}><dl className="info-grid info-grid-two"><InfoItem label="Номер" value={record.number}/><InfoItem label="Дата документа" value={formatDate(record.issuedOn)}/><InfoItem label="Назва документа" value={record.title} wide/>{record.note&&<InfoItem label="Примітка" value={record.note} wide/>}</dl></InfoSection>
+      <InfoSection title={kindLabel(record)}><dl className="info-grid info-grid-two"><InfoItem label="Номер" value={record.number}/><InfoItem label="Серія реєстрації" value={record.seriesId?(current?.series?.find(s=>s.id===record.seriesId)?.name??'Серія недоступна'):'Без серії'}/><InfoItem label="Дата документа" value={formatDate(record.issuedOn)}/><InfoItem label="Назва документа" value={record.title} wide/>{record.note&&<InfoItem label="Примітка" value={record.note} wide/>}</dl></InfoSection>
       <InfoSection title="Працівник">
         {record.employeeIds.length>1&&<Alert variant="warning">Збережено кілька зв’язків попередньої моделі. Редактор підтримує одного працівника; заміна потребує явного узгодження.</Alert>}
         {record.employeeIds.length?<ul className="document-people">{record.employeeIds.map(id=>{const person=current?.people?.find(p=>p.id===id);return <li key={id}>{person?<><strong>{fullName(person)}</strong><span>{person.position.name} · {person.department.name}</span></>:<Alert variant="warning">Пов’язаний працівник недоступний. Оновіть дані перед редагуванням.</Alert>}</li>})}</ul>:<p className="employee-hint">Працівника не зазначено.</p>}

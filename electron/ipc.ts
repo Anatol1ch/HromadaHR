@@ -63,6 +63,11 @@ export function registerIpcHandlers(
   control?:PersonnelControlService,
   documents?:DocumentsService,
 ) {
+  register(ipcChannels.documentsSeriesList,z.tuple([]),z.array(documentSchemas.series),()=>documents!.listSeries())
+  register(ipcChannels.documentsSeriesCreate,z.tuple([documentSchemas.seriesInput]),documentSchemas.series,([input])=>documents!.createSeries(input))
+  register(ipcChannels.documentsSeriesUpdate,z.tuple([documentSchemas.seriesUpdate]),documentSchemas.series,([input])=>documents!.updateSeries(input))
+  register(ipcChannels.documentsSeriesActive,z.tuple([documentSchemas.id,documentSchemas.revision,z.boolean()]),documentSchemas.series,([id,revision,active])=>documents!.setSeriesActive(id,revision,active))
+  register(ipcChannels.documentsAutoCreate,z.tuple([documentSchemas.autoInput]),documentSchemas.document,([input])=>documents!.createAutoNumberedDocument(input))
   register(ipcChannels.documentsLeaveLinks,z.tuple([documentSchemas.id]),documentSchemas.documentLinks,([id])=>documents!.listLeaveLinks(id))
   register(ipcChannels.documentsLeaveDocument,z.tuple([documentSchemas.id]),documentSchemas.leaveDocument.nullable(),([id])=>documents!.getLeaveDocument(id))
   register(ipcChannels.documentsLinkLeave,z.tuple([documentSchemas.linkInput]),documentSchemas.documentLinks,([input])=>documents!.linkLeaveRecord(input))

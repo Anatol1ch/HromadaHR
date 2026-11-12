@@ -1,3 +1,5 @@
+import { formatDocumentNumber, parseDocumentOrdinal, MAX_DOCUMENT_ORDINAL } from '../../shared/document-numbering.js'
+import type { AutoNumberedDocumentInput, DocumentSeriesInput, DocumentSeriesUpdateInput, DocumentNumberingSeries } from '../../shared/documents.js'
 import { createHash, randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
@@ -5,7 +7,7 @@ import { documentNumberKey, type DocumentsErrorCode, type DocumentLeaveLinkInput
 import * as schemas from './schemas.js'
 
 export class DocumentsError extends Error { constructor(readonly code: DocumentsErrorCode) { super(code) } }
-const columns = `id,kind,custom_kind AS customKind,number,issued_on AS issuedOn,title,note,revision,created_at AS createdAt,updated_at AS updatedAt`
+const columns = `id,kind,custom_kind AS customKind,number,series_id AS seriesId,issued_on AS issuedOn,title,note,revision,created_at AS createdAt,updated_at AS updatedAt`
 type Row = Omit<PersonnelDocument, 'employeeIds'>
 export class DocumentsService {
   constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean) {}
@@ -38,8 +40,62 @@ export class DocumentsService {
     if (ids.some(id => !employee.get(id))) throw new DocumentsError('DOCUMENT_EMPLOYEE_NOT_FOUND')
   }
   private number(db: Database.Database, value: PersonnelDocumentInput, exclude = '') {
-    if (db.prepare(`SELECT 1 FROM personnel_documents WHERE kind=? AND substr(issued_on,1,4)=? AND number_key=? AND id!=?`)
-      .get(value.kind, value.issuedOn.slice(0,4), documentNumberKey(value.number), exclude)) throw new DocumentsError('DOCUMENT_NUMBER_CONFLICT')
+    if (db.prepare(`SELECT 1 FROM personnel_documents WHERE ((? IS NULL AND series_id IS NULL AND kind=?) OR series_id=?) AND substr(issued_on,1,4)=? AND number_key=? AND id!=?`)
+      .get(value.seriesId??null,value.kind,value.seriesId??null,value.issuedOn.slice(0,4),documentNumberKey(value.number),exclude)) throw new DocumentsError('DOCUMENT_NUMBER_CONFLICT')
+  }
+  private series(db:Database.Database,id:string):DocumentNumberingSeries {
+    const row=db.prepare(`SELECT id,kind,code,name,pattern,min_digits AS minDigits,start_at AS startAt,active,revision,created_at AS createdAt,updated_at AS updatedAt,
+      EXISTS(SELECT 1 FROM personnel_document_number_claims c WHERE c.series_id=s.id) AS used FROM personnel_document_series s WHERE id=?`).get(id) as (Omit<DocumentNumberingSeries,'active'|'used'>&{active:number;used:number})|undefined
+    if(!row)throw new DocumentsError('SERIES_NOT_FOUND')
+    return {...row,active:!!row.active,used:!!row.used}
+  }
+  private eligibleSeries(db:Database.Database,id:string,kind:string) {
+    const series=this.series(db,id)
+    if(!series.active)throw new DocumentsError('SERIES_INACTIVE')
+    if(series.kind!==kind)throw new DocumentsError('SERIES_KIND_MISMATCH')
+    return series
+  }
+  private claim(db:Database.Database,value:PersonnelDocumentInput,id:string,now:string) {
+    if(!value.seriesId)return
+    const series=this.eligibleSeries(db,value.seriesId,value.kind),year=Number(value.issuedOn.slice(0,4))
+    const ordinal=parseDocumentOrdinal(series,value.number,year)
+    if(ordinal===null)throw new DocumentsError('SERIES_PATTERN_MISMATCH')
+    if(db.prepare('SELECT 1 FROM personnel_document_number_claims WHERE series_id=? AND calendar_year=? AND (ordinal=? OR number_key=?)').get(series.id,year,ordinal,documentNumberKey(value.number)))throw new DocumentsError('SERIES_NUMBER_TAKEN')
+    db.prepare('INSERT INTO personnel_document_number_claims(series_id,calendar_year,ordinal,number_key,document_id,assigned_at) VALUES (?,?,?,?,?,?)').run(series.id,year,ordinal,documentNumberKey(value.number),id,now)
+  }
+  listSeries=()=>this.run(false,db=>db.prepare('SELECT id FROM personnel_document_series ORDER BY name,code,id').all().map(row=>this.series(db,(row as {id:string}).id)))
+  createSeries=(input:DocumentSeriesInput)=>{
+    const value=this.parse(schemas.seriesInput,input)
+    return this.run(true,db=>{
+      if(db.prepare('SELECT 1 FROM personnel_document_series WHERE kind=? AND code_key=?').get(value.kind,documentNumberKey(value.code)))throw new DocumentsError('SERIES_CODE_CONFLICT')
+      const id=randomUUID(),now=new Date().toISOString()
+      db.prepare('INSERT INTO personnel_document_series(id,kind,code,code_key,name,pattern,min_digits,start_at,active,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,1,0,?,?)').run(id,value.kind,value.code,documentNumberKey(value.code),value.name,value.pattern,value.minDigits,value.startAt,now,now)
+      return this.series(db,id)
+    })
+  }
+  updateSeries=(input:DocumentSeriesUpdateInput)=>{
+    const {id,expectedRevision,...value}=this.parse(schemas.seriesUpdate,input)
+    return this.run(true,db=>{
+      const current=this.series(db,id)
+      if(current.revision!==expectedRevision)throw new DocumentsError('STALE_REVISION')
+      if(current.revision===Number.MAX_SAFE_INTEGER)throw new DocumentsError('CONFLICT')
+      if(current.used&&(['kind','code','pattern','minDigits','startAt'] as const).some(key=>current[key]!==value[key]))throw new DocumentsError('SERIES_USED')
+      if(db.prepare('SELECT 1 FROM personnel_document_series WHERE kind=? AND code_key=? AND id!=?').get(value.kind,documentNumberKey(value.code),id))throw new DocumentsError('SERIES_CODE_CONFLICT')
+      db.prepare('UPDATE personnel_document_series SET kind=?,code=?,code_key=?,name=?,pattern=?,min_digits=?,start_at=?,revision=revision+1,updated_at=? WHERE id=?').run(value.kind,value.code,documentNumberKey(value.code),value.name,value.pattern,value.minDigits,value.startAt,new Date().toISOString(),id)
+      return this.series(db,id)
+    })
+  }
+  setSeriesActive=(id:string,expectedRevision:number,active:boolean)=>{
+    this.parse(schemas.id,id);this.parse(schemas.revision,expectedRevision)
+    if(typeof active!=='boolean')throw new DocumentsError('INVALID_ARGUMENTS')
+    return this.run(true,db=>{
+      const current=this.series(db,id)
+      if(current.revision!==expectedRevision)throw new DocumentsError('STALE_REVISION')
+      if(current.active===active)return current
+      if(current.revision===Number.MAX_SAFE_INTEGER)throw new DocumentsError('CONFLICT')
+      db.prepare('UPDATE personnel_document_series SET active=?,revision=revision+1,updated_at=? WHERE id=?').run(Number(active),new Date().toISOString(),id)
+      return this.series(db,id)
+    })
   }
   private links(db: Database.Database, id: string, employeeIds: string[]) {
     db.prepare('DELETE FROM personnel_document_employees WHERE document_id=?').run(id)
@@ -52,19 +108,35 @@ export class DocumentsService {
       return summary
     }))
   getDocument = (id: string) => { this.parse(schemas.id,id); return this.run(false, db => this.document(db,id)) }
-  createDocument = (input: PersonnelDocumentCreateInput) => {
-    const {requestId, ...value} = this.parse(schemas.createInput,input)
-    const fingerprint = createHash('sha256').update(JSON.stringify({...value, employeeIds:[...value.employeeIds].sort()})).digest('hex')
-    return this.run(true, db => {
-      const existing = db.prepare<[string], {id:string; fingerprint:string}>('SELECT id,request_fingerprint AS fingerprint FROM personnel_documents WHERE request_id=?').get(requestId)
-      if (existing) {
-        if (existing.fingerprint !== fingerprint) throw new DocumentsError('DOCUMENT_REQUEST_CONFLICT')
+  createDocument = (input: PersonnelDocumentCreateInput) => this.create(this.parse(schemas.createInput,input),false)
+  createAutoNumberedDocument=(input:AutoNumberedDocumentInput)=>this.create(this.parse(schemas.autoInput,input),true)
+  private create(input:PersonnelDocumentCreateInput|AutoNumberedDocumentInput,automatic:boolean) {
+    const {requestId,...intent}=input
+    // Keep the v19/v20 fingerprint for manual documents without a series.
+    const {seriesId,...legacy}=intent
+    const payload=automatic?{automatic:true,...intent}:seriesId?intent:legacy
+    const fingerprint=createHash('sha256').update(JSON.stringify({...payload,employeeIds:[...intent.employeeIds].sort()})).digest('hex')
+    return this.run(true,db=>{
+      const existing=db.prepare<[string],{id:string;fingerprint:string}>('SELECT id,request_fingerprint AS fingerprint FROM personnel_documents WHERE request_id=?').get(requestId)
+      if(existing){
+        if(existing.fingerprint!==fingerprint)throw new DocumentsError('DOCUMENT_REQUEST_CONFLICT')
         return this.document(db,existing.id)
       }
-      this.references(db,value.employeeIds); this.number(db,value)
-      const id = randomUUID(), now = new Date().toISOString()
-      db.prepare(`INSERT INTO personnel_documents(id,kind,custom_kind,number,number_key,issued_on,title,note,revision,created_at,updated_at,request_id,request_fingerprint)
-        VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?)`).run(id,value.kind,value.customKind,value.number,documentNumberKey(value.number),value.issuedOn,value.title,value.note,now,now,requestId,fingerprint)
+      this.references(db,intent.employeeIds)
+      let number='number' in intent?intent.number:''
+      if(automatic){
+        const series=this.eligibleSeries(db,seriesId!,intent.kind),year=Number(intent.issuedOn.slice(0,4))
+        const max=db.prepare('SELECT max(ordinal) AS value FROM personnel_document_number_claims WHERE series_id=? AND calendar_year=?').get(series.id,year) as {value:number|null}
+        const ordinal=Math.max(series.startAt,(max.value??0)+1)
+        if(ordinal>MAX_DOCUMENT_ORDINAL)throw new DocumentsError('SERIES_EXHAUSTED')
+        number=formatDocumentNumber(series,ordinal,year)
+      }
+      const value:PersonnelDocumentInput={...intent,number,seriesId:seriesId??null}
+      this.number(db,value)
+      const id=randomUUID(),now=new Date().toISOString()
+      db.prepare(`INSERT INTO personnel_documents(id,kind,custom_kind,number,number_key,issued_on,title,note,revision,created_at,updated_at,request_id,request_fingerprint,series_id)
+        VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?)`).run(id,value.kind,value.customKind,value.number,documentNumberKey(value.number),value.issuedOn,value.title,value.note,now,now,requestId,fingerprint,value.seriesId)
+      this.claim(db,value,id,now)
       this.links(db,id,value.employeeIds)
       return this.document(db,id)
     })
@@ -76,11 +148,16 @@ export class DocumentsService {
       if (current.revision !== expectedRevision) throw new DocumentsError('STALE_REVISION')
       if (current.revision === Number.MAX_SAFE_INTEGER) throw new DocumentsError('CONFLICT')
       if (db.prepare('SELECT 1 FROM personnel_document_leave_records WHERE document_id=? LIMIT 1').get(id) &&
-        (current.kind!==value.kind || current.customKind!==value.customKind || current.number!==value.number || current.issuedOn!==value.issuedOn ||
+        ((current.seriesId??null)!==value.seriesId || current.kind!==value.kind || current.customKind!==value.customKind || current.number!==value.number || current.issuedOn!==value.issuedOn ||
          JSON.stringify([...current.employeeIds].sort())!==JSON.stringify([...value.employeeIds].sort()))) throw new DocumentsError('DOCUMENT_HAS_LEAVE_LINKS')
       this.references(db,value.employeeIds); this.number(db,value,id)
-      db.prepare(`UPDATE personnel_documents SET kind=?,custom_kind=?,number=?,number_key=?,issued_on=?,title=?,note=?,revision=revision+1,updated_at=? WHERE id=?`)
-        .run(value.kind,value.customKind,value.number,documentNumberKey(value.number),value.issuedOn,value.title,value.note,new Date().toISOString(),id)
+      const reassigned=(current.seriesId??null)!==value.seriesId||current.number!==value.number||current.issuedOn.slice(0,4)!==value.issuedOn.slice(0,4)||current.kind!==value.kind
+      if(reassigned){
+        db.prepare('UPDATE personnel_document_number_claims SET document_id=NULL WHERE document_id=?').run(id)
+        this.claim(db,value,id,new Date().toISOString())
+      }
+      db.prepare(`UPDATE personnel_documents SET kind=?,custom_kind=?,number=?,number_key=?,issued_on=?,title=?,note=?,series_id=?,revision=revision+1,updated_at=? WHERE id=?`)
+        .run(value.kind,value.customKind,value.number,documentNumberKey(value.number),value.issuedOn,value.title,value.note,value.seriesId,new Date().toISOString(),id)
       this.links(db,id,value.employeeIds)
       return this.document(db,id)
     })

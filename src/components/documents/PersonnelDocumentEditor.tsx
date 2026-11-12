@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
-import type { PersonnelDocument, PersonnelDocumentKind } from '../../../shared/documents'
+import type { DocumentNumberingSeries, PersonnelDocument, PersonnelDocumentKind } from '../../../shared/documents'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { fullName } from '../../employees/model'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
@@ -18,6 +18,7 @@ import { submitDocument, updateOutcome, type DocumentAttempt, type SavePayload }
 
 type Props={id?:string;navigationGuard:RefObject<NavigationGuard>;onClose:()=>void;onSaved:(value:PersonnelDocument)=>void;returnFocus:HTMLElement|null}
 export default function PersonnelDocumentEditor(props:Props) {
+  const [series,setSeries]=useState<DocumentNumberingSeries[]>(),[seriesError,setSeriesError]=useState(''),[seriesRetry,setSeriesRetry]=useState(0)
   const [retry,setRetry]=useState(0),[peopleRetry,setPeopleRetry]=useState(0)
   const [record,setRecord]=useState<{key:string;value?:PersonnelDocument|null;linked?:boolean;error?:string}>()
   const [people,setPeople]=useState<{key:number;data?:EmployeeCard[];error?:string}>()
@@ -39,16 +40,22 @@ export default function PersonnelDocumentEditor(props:Props) {
       .catch(()=>{if(alive)setPeople({key:peopleRetry,error:'Перелік працівників тимчасово недоступний.'})})
     return()=>{alive=false}
   },[peopleRetry])
+  useEffect(()=>{
+    let alive=true;setSeries(undefined);setSeriesError('')
+    void window.hromadaHR.documents.listSeries().then(result=>{if(alive){if(result.ok)setSeries(result.data);else setSeriesError(documentMessage(result.error.code))}}).catch(()=>{if(alive)setSeriesError('Не вдалося завантажити серії.')})
+    return()=>{alive=false}
+  },[seriesRetry])
   const current=record?.key===key?record:undefined,currentPeople=people?.key===peopleRetry?people:undefined
-  if(current?.value!==undefined)return <DocumentForm key={key} {...props} record={current.value??undefined} identityLocked={!!current.linked} people={currentPeople?.data} peopleError={currentPeople?.error}
+  if(current?.value!==undefined)return <DocumentForm key={key} {...props} record={current.value??undefined} identityLocked={!!current.linked} series={series} seriesError={seriesError} reloadSeries={()=>setSeriesRetry(v=>v+1)} people={currentPeople?.data} peopleError={currentPeople?.error}
     reloadPeople={()=>setPeopleRetry(v=>v+1)} reloadRecord={()=>setRetry(v=>v+1)}/>
   return <Modal title={props.id?'Редагувати документ':'Додати документ'} onClose={props.onClose} returnFocus={props.returnFocus} size="large">
     {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:<DataState kind="loading" message="Завантаження актуального документа…"/>}
   </Modal>
 }
 
-function DocumentForm({record,identityLocked,people,peopleError,reloadPeople,reloadRecord,...props}:Props&{record?:PersonnelDocument;identityLocked:boolean;people?:EmployeeCard[];peopleError?:string;reloadPeople:()=>void;reloadRecord:()=>void}) {
+function DocumentForm({record,identityLocked,series,seriesError,reloadSeries,people,peopleError,reloadPeople,reloadRecord,...props}:Props&{record?:PersonnelDocument;identityLocked:boolean;series?:DocumentNumberingSeries[];seriesError:string;reloadSeries:()=>void;people?:EmployeeCard[];peopleError?:string;reloadPeople:()=>void;reloadRecord:()=>void}) {
   const [draft,setDraft]=useState(()=>documentDraft(record)),initial=useRef(JSON.stringify(documentDraft(record)))
+  const [automatic,setAutomatic]=useState(false)
   const [iso,setIso]=useState(record?.issuedOn??'')
   const [requestId]=useState(()=>crypto.randomUUID())
   const [errors,setErrors]=useState<Partial<Record<keyof DocumentDraft,string>>>({})
@@ -56,19 +63,20 @@ function DocumentForm({record,identityLocked,people,peopleError,reloadPeople,rel
   const attempt=useRef<DocumentAttempt>({pending:false,unresolved:null}),pending=useRef(false),alive=useRef(false),form=useRef<HTMLFormElement>(null),employeeField=useRef<HTMLDivElement>(null)
   const id=useId()
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
-  const requestClose=useUnsavedChanges(JSON.stringify(draft)!==initial.current||!!attempt.current.unresolved,pending,props.navigationGuard,form)
+  const requestClose=useUnsavedChanges((JSON.stringify(draft)!==initial.current||automatic)||!!attempt.current.unresolved,pending,props.navigationGuard,form)
   const uncertain=attempt.current.unresolved,locked=busy||!!uncertain||blocked
   const missing=!!people&&draft.employeeIds.some(id=>!people.some(person=>person.id===id)),multiple=draft.employeeIds.length>1
   function change<K extends keyof DocumentDraft>(key:K,value:DocumentDraft[K]){setDraft(v=>({...v,[key]:value}));setErrors(v=>({...v,[key]:undefined}))}
   function saved(value:PersonnelDocument){initial.current=JSON.stringify(draft);attempt.current.unresolved=null;props.onSaved(value);notifySystemToast('success',record?'Документ оновлено':'Документ створено','Реквізити збережено.')}
   async function submit() {
-    if(pending.current||stale||blocked||!people||missing||multiple)return
+    if(pending.current||stale||blocked||!people||!series||missing||multiple)return
     if(uncertain?.kind==='edit')return
-    const next=documentDraftErrors(draft);setErrors(next)
+    const next=documentDraftErrors(automatic?{...draft,number:'1'}:draft);setErrors(next)
     if(Object.keys(next).length){requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
     if(!form.current?.checkValidity()){form.current?.reportValidity();return}
     pending.current=true;setBusy(true);setError('')
-    const payload:SavePayload=record?{kind:'edit',input:{...documentInput(draft),id:record.id,expectedRevision:record.revision}}:{kind:'create',input:{...documentInput(draft),requestId}}
+    const {number:_number,...autoFields}=documentInput(automatic?{...draft,number:'1'}:draft)
+    const payload:SavePayload=automatic?{kind:'automatic',input:{...autoFields,seriesId:draft.seriesId!,requestId}}:record?{kind:'edit',input:{...documentInput(draft),id:record.id,expectedRevision:record.revision}}:{kind:'create',input:{...documentInput(draft),requestId}}
     try {
       const result=await submitDocument(window.hromadaHR.documents,attempt.current,payload)
       if(!alive.current||!result)return
@@ -102,12 +110,14 @@ function DocumentForm({record,identityLocked,people,peopleError,reloadPeople,rel
       {stale&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(reloadRecord)}>Перечитати документ</button>}
       {uncertain?.kind==='edit'&&<button type="button" className="secondary-button" disabled={busy} onClick={()=>void verifyUpdate()}>Перевірити фактичний результат</button>}
       <button type="button" className="secondary-button" disabled={busy} onClick={close}>Скасувати</button>
-      <button type="submit" form={id} className="primary-button" disabled={busy||stale||blocked||!people||missing||multiple||uncertain?.kind==='edit'}>{busy?'Збереження…':uncertain?'Повторити той самий запит':'Зберегти'}</button>
+      <button type="submit" form={id} className="primary-button" disabled={busy||stale||blocked||!people||!series||missing||multiple||uncertain?.kind==='edit'}>{busy?'Збереження…':uncertain?'Повторити той самий запит':'Зберегти'}</button>
     </div></div>}>
     <form ref={form} id={id} className="employee-form" noValidate onSubmit={event=>{event.preventDefault();void submit()}}>
-      <InfoSection title="Реквізити документа">{identityLocked&&<Alert variant="info">Документ пов’язаний із відпустками. Можна змінювати назву та примітку; для зміни інших реквізитів спочатку розірвіть зв’язки.</Alert>}<div className="employee-form-grid">
-        <div className="recipient-field employee-field"><span>Вид документа *</span><Select label="Вид документа" required value={draft.kind} options={documentKindOptions} disabled={locked||identityLocked} advanceOnSelect={false} onChange={value=>setDraft(v=>changeDocumentKind(v,value as PersonnelDocumentKind))}/></div>
-        {text('number','Номер',80,'001-к, 15-ос, 123/2026')}
+      <InfoSection title="Реквізити документа">{seriesError?<Alert variant="error" action={<button type="button" disabled={busy} onClick={reloadSeries}>Повторити</button>}>{seriesError}</Alert>:!series?<DataState kind="loading" compact message="Завантаження серій…"/>:null}{identityLocked&&<Alert variant="info">Документ пов’язаний із відпустками. Можна змінювати назву та примітку; для зміни інших реквізитів спочатку розірвіть зв’язки.</Alert>}<div className="employee-form-grid">
+        <div className="recipient-field employee-field"><span>Вид документа *</span><Select label="Вид документа" required value={draft.kind} options={documentKindOptions} disabled={locked||identityLocked} advanceOnSelect={false} onChange={value=>{setDraft(v=>changeDocumentKind(v,value as PersonnelDocumentKind));setAutomatic(false)}}/></div>
+        <div className="recipient-field employee-field"><span>Серія реєстрації</span><Select label="Серія реєстрації" value={draft.seriesId??''} disabled={locked||identityLocked||!series} advanceOnSelect={false} options={[{value:'',label:'Без серії'},...(series??[]).filter(s=>s.kind===draft.kind&&(s.active||s.id===record?.seriesId)).map(s=>({value:s.id,label:s.name+(s.active?'':' (архівна)'),description:s.pattern}))]} onChange={value=>{change('seriesId',value||null);if(!value)setAutomatic(false)}}/></div>
+        {!record&&<div className="recipient-field employee-field"><span>Нумерація</span><Select label="Режим нумерації" value={automatic?'automatic':'manual'} disabled={locked} advanceOnSelect={false} options={[{value:'manual',label:'Ввести номер вручну'},{value:'automatic',label:'Присвоїти автоматично',disabled:!series?.some(s=>s.id===draft.seriesId&&s.active)}]} onChange={value=>setAutomatic(value==='automatic'&&!!series?.some(s=>s.id===draft.seriesId&&s.active))}/></div>}
+        {automatic?<p className="employee-hint">Номер буде присвоєно під час збереження документа відповідно до вибраної серії.</p>:text('number','Номер',80,'001-к, 15-ос, 123/2026')}
         <div className="recipient-field employee-field"><label htmlFor={id+'date'}>Дата документа *</label><DateField id={id+'date'} value={iso} initialDraft={draft.issuedOn} required disabled={locked||identityLocked} error={errors.issuedOn} onDraftChange={value=>change('issuedOn',value)} onChange={setIso}/></div>
       </div>{draft.kind==='other'&&text('customKind','Уточніть вид документа',120)}{text('title','Назва документа',500)}
         <label className="recipient-field employee-field">Примітка<ValidatedTextarea rows={3} maxLength={2000} value={draft.note} disabled={locked} onChange={event=>change('note',event.target.value)}/>{errors.note&&<span className="field-error">{errors.note}</span>}</label>

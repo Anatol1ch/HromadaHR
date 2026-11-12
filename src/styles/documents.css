@@ -28,3 +28,5 @@
 .document-leave-selector input[type="radio"] { accent-color:var(--accent); width:var(--space-4); height:var(--space-4); }
 .document-leave-selector input[type="radio"]:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
 .document-leave-selector small { display:block; color:var(--color-text-secondary); }
+
+.personnel-documents-table .document-series-caption { display: block; color: var(--color-text-muted); overflow-wrap: anywhere; margin-top: .2rem; }

@@ -591,3 +591,7 @@ Read-only перевірено HromadaAID src/DecisionRegistry.tsx, src/Recipien
 ## 7.3 – Явні зв’язки документа з відпустками
 
 Read-only перевірено HromadaAID electron/decision-store.ts (expected revision/захист реквізитів рішення за наявності assignments) і src/DecisionRegistry.tsx (пов’язані записи та явна форма їх додавання) за HEAD/SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Фактично адаптовані принципи транзакційного зв’язування й захисту реквізитів; використані вже перенесені HR InfoSection/DictionaryTable/Modal/ConfirmDialog/guard. Модель assignments, серверні/RBAC/фінансові механізми й request ledger AID не переносилися. Новий selector читає тільки відпустки однієї особи; результат link/unlink після transport uncertainty узгоджується read-only, а не blind retry. Немає копії глобального журналу чи нового навігаційного менеджера. DOCX/file lifecycle лишаються майбутнім окремим підетапом. Windows GUI відкладено до етапу 8.
+
+## 7.4 – Серії документів
+
+Референс read-only: HromadaAID src/DecisionRegistry.tsx, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Повторно використані вже перенесені до HR DictionaryTable, Select, ValidatedInput, Modal/ConfirmDialog, InfoItem/Alert та guard/focus-поведінка. Новий довідник серій і поля документа адаптовано до сиреневих семантичних токенів HR; приклад формату прямо позначений незарезервованим. Окремої бібліотеки чи сервісного транспорту AID не додавали. Ручне Windows GUI/масштаби залишені етапу 8.
