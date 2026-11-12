@@ -208,3 +208,7 @@ Read-only перевірено src/RecipientRegistry.tsx (RecipientDetails, reci
 ## 5.3.6 – Дзвіночок, огляд і налаштування кадрового контролю
 
 Read-only перевірено src/App.tsx (topbar/top-actions) та src/SettingsPage.tsx (settings-section-nav) HromadaAID, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. У перевіреному дереві та App готового кадрового Bell/reminder-механізму не знайдено. Геометрія topbar й секції налаштувань збережені через чинні адаптації HR. Повторно використано Modal compact (Tab/Escape/focus), Select, InfoSection, Alert, DataState, navigationGuard та спільні токени. Нові компоненти лише компонують предметні питання; сервіс/сховище станів відповідають окремо погодженій HR-моделі. Авторизація/сервер AID не переносилися; GUI прийматиме замовник.
+
+## 6.1 – Повноцінна сторінка особової картки
+
+Read-only звірено src/SettingsPage.tsx (settings-section-nav/current, умовне монтування вмісту) та src/RecipientRegistry.tsx (RecipientDetails і detail section/grid/item) HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Еталонний RecipientDetails модальний, тому не переносився як оболонка: замовник прямо погодив повноцінну сторінку. У HR адаптовано наявний навігаційний патерн settings та InfoSection/InfoItem, збережено чинні форми/перегляди/guard. Новий employee-profile.css ізольований; палітра/висоти контролів/адаптивні інформаційні сітки лишаються на спільних токенах. Нової дизайн-системи або серверної/предметної логіки AID немає. Windows GUI перевірить замовник.

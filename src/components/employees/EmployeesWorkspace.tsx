@@ -8,7 +8,7 @@ import type { RegistryDirectories } from '../../employees/registry'
 import { initialWorkspace, mergeEmployee, workspaceReducer } from '../../employees/workspace.ts'
 import { notifySystemToast } from '../SystemToastHost'
 import EmployeeRegistry from './EmployeeRegistry'
-import EmployeeCard from './EmployeeCard'
+import EmployeeProfilePage from './EmployeeProfilePage'
 import EmployeeForm from './EmployeeForm'
 import EmployeeActionDialog from './EmployeeActionDialog'
 import type { NavigationGuard } from './useUnsavedChanges'
@@ -30,7 +30,8 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initia
     dispatch({type:'card',id:initialIntent.employeeId});onIntentHandled?.()
   },[initialIntent,onIntentHandled])
   const opener = useRef<HTMLElement | null>(null)
-  const rememberOpener = () => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }
+  const registryScroll=useRef(0)
+  const rememberOpener = () => { registryScroll.current=window.scrollY;opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }
   const restoreOpener = () => requestAnimationFrame(() => {
     if (opener.current?.isConnected) opener.current.focus({ preventScroll: true })
     else {
@@ -38,6 +39,7 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initia
       const replacement = target && document.getElementById(target)
       ;(replacement || document.getElementById('employees-title'))?.focus({ preventScroll: true })
     }
+    window.scrollTo({top:registryScroll.current})
   })
   useEffect(() => {
     let alive = true
@@ -83,16 +85,16 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initia
     restoreOpener()
   }
   return <div className="employees-workspace page-transition">
-    <EmployeeRegistry employees={employees} loading={loading} error={error}
+    <div hidden={!!workspace.cardId}><EmployeeRegistry employees={employees} loading={loading} error={error}
       directories={directories} directoriesLoading={directoriesLoading} directoriesError={directoriesError}
       onRetryDirectories={() => setDirectoryRetry(value => value + 1)}
       state={workspace.registry} onState={registry => dispatch({ type: 'registry', registry })}
       onClear={() => dispatch({ type: 'clearFilters' })} onRetry={() => setRetry(value => value + 1)}
       onCreate={() => { rememberOpener();setCardTab('general'); dispatch({ type: 'form', form: { kind: 'create' } }) }}
-      onOpen={employee => { rememberOpener();setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) }}
+      onOpen={employee => navigationGuard.current(()=>{ rememberOpener();setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) })}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
-      onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/>
-    {workspace.cardId && <EmployeeCard onOpenLeave={onOpenLeave} initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
+      onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/></div>
+    {workspace.cardId && <EmployeeProfilePage onOpenLeave={onOpenLeave} initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
       onLoaded={updateFromCard}
       onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}

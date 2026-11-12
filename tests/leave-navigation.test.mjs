@@ -21,7 +21,7 @@ test('five visible groups preserve all six actual types and explicit special sel
   assert.notEqual(leaveLabels.veteran_special_leave,leaveLabels.chernobyl_special_leave)
 })
 test('employee-card leave boundary mounts the read-only module without mutation imports', () => {
-  const card=readFileSync(new URL('../src/components/employees/EmployeeCard.tsx',import.meta.url),'utf8')
+  const card=readFileSync(new URL('../src/components/employees/EmployeeProfilePage.tsx',import.meta.url),'utf8')
   const overview=readFileSync(new URL('../src/components/leave/LeaveOverview.tsx',import.meta.url),'utf8')
   assert.match(card,/<LeaveOverview /)
   assert.doesNotMatch(card,/LeaveBalances|LeaveRegistrationForm|LeaveRecordAction|BalanceEditor/)
@@ -65,7 +65,7 @@ test('card destinations initialize the exact worker, top tab and all six account
 test('the card forwards the intent to the single App guard and sidebar navigation clears it', () => {
   const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
   const workspace = readFileSync(new URL('../src/components/employees/EmployeesWorkspace.tsx', import.meta.url), 'utf8')
-  assert.match(workspace, /<EmployeeCard onOpenLeave=\{onOpenLeave\}/)
+  assert.match(workspace, /<EmployeeProfilePage onOpenLeave=\{onOpenLeave\}/)
   assert.match(app, /onOpenLeave=\{intent => navigationGuard.current\(\(\) => \{ setLeaveIntent\(intent\); setActive\('leave'\)/)
   assert.match(app, /setLeaveIntent\(undefined\); setActive\(id\)/)
 })

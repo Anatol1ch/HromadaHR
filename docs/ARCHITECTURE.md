@@ -1,6 +1,6 @@
 # Фактична архітектура HromadaHR
 
-Документ описує HromadaHR 0.1.0 після підетапу 5.3.6. Чинна схема **SQLite v18**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
+Документ описує HromadaHR 0.1.0 після підетапу 6.1. Чинна схема **SQLite v18**. Вона зберігає поточні кадрові записи, довідники з ручною черговістю, права, підтверджені періоди, реєстрації відпусток та розподіли, поточні надбавки/ранги й опорний підтверджений стаж. [Поточний стан і приймання](HANDOFF.md).
 
 ## Чинна модель
 
@@ -534,3 +534,15 @@ API personnelControl: getOverview(), getSettings(), saveSettings({horizonDays}),
 PersonnelControlBell використовує наявний Modal size=compact, тож Escape/Tab/focus-return не дублюються новим popover. Показує до п'яти актуальних питань, помилку/повтор та «Усі нагадування». PersonnelControlOverview — предметні питання з напрямом/станом, компактним текстовим підсумком, діями перегляду/відкладення 1/7/30 днів/повернення та згортаними неповними даними. PersonnelControlSettings додає один Select у SettingsPage; вибір зберігається явно після зміни, без нової чернетки. Backup/About збережено.
 
 Перехід requestEmployeeNavigation проходить один App navigationGuard й передає тільки employeeId/tab/requestId у EmployeesWorkspace. EmployeeCard перечитує актуальний запис через getEmployee й відкриває general/leave/service/rank. Після закриття лишається реєстр «Працівники»; фокус повертається до стабільного елемента. Видалений працівник дає контрольовану помилку чинної картки. Глобальний employee-first редизайн, історія завдань, native/email повідомлення, планувальники та автоматичні кадрові рішення не реалізовані.
+
+## 6.1 – Повноцінна сторінка працівника
+
+EmployeeCard.tsx перенесено й перетворено на EmployeeProfilePage.tsx, без паралельної модальної копії та без нового кадрового API. EmployeesWorkspace лишається власником workspaceReducer, реєстру, актуальних employee rows, форм і підтвердження видалення. За cardId він показує сторінку у центральній області чинної App-shell; EmployeeRegistry залишається змонтованим, але hidden, тому фільтри/групування/DOM-стан таблиці збережені. «До списку працівників» очищує лише cardId, повертає фокус до початкової кнопки або employees-title та позицію прокручування реєстру.
+
+Профіль має контекст «Працівники / Особова картка», компактний header (ПІБ, посада/підрозділ, тип, категорія для official, Edit), локальну навігацію та одну робочу область. Локальні кнопки використовують перевірений settings-section-nav/current патерн: вертикально на широкій області, горизонтально з перенесенням на вузькій через container query. Це звичайна nav з aria-current, стандартним Tab і видимим фокусом, без другої глобальної sidebar. Нові стилі лише employee-profile.css; спільні InfoSection/InfoItem й токени незмінні.
+
+Semantic section keys general/service/rank/leave збережені для EmployeeNavigationIntent/requestEmployeeNavigation кадрового контролю. src/employees/profile.ts визначає порядок general→service→rank→leave, приховує rank для staff та нормалізує непридатний intent до general. Числову employeeTabIndex мапу вилучено як непотрібну; IPC-тип EmployeeCardTab та сам механізм нагадувань не змінено. App guard залишається єдиним guard переходу з Bell/Overview; локальні зміни розділу й вихід проходять той самий navigationGuard, з чинним useUnsavedChanges ServiceBaselinePanel/EmployeeForm.
+
+getEmployee викликається за id/revision/retry/tabRequestId; cleanup відкидає старі відповіді. Заголовок і прихований реєстр оновлюються через чинні onLoaded/mergeEmployee/saved. Ключ робочої області включає id/requestId/section: схвалений повторний intent перечитує перегляд і скидає лише явно відкинуту чернетку, навіть коли працівник і розділ ті самі. Невідомий/видалений працівник має повноцінний Alert/retry та дію повернення, а не порожню модалку. Edit і Delete залишаються на чинних EmployeeForm/EmployeeActionDialog; після delete reducer повертає список.
+
+General повторно використовує кадрові поля й форматування попередньої картки на InfoSection/InfoItem. Service монтує ServiceBaselinePanel і його ServiceProjectionView, Rank — RankProjectionPanel, Leave — LeaveOverview з чинним переходом до LeaveWorkspace. Невидимі предметні перегляди не монтуються й не запитують даних. Складні редактори надбавок/рангів і відпусток лишаються у SeniorityRanksWorkspace/LeaveWorkspace. SQLite v18, 0.1.0, міграції, Main/IPC, формули, права/залишки, backup та security не змінено. Нових залежностей/Router/вікон Electron немає.

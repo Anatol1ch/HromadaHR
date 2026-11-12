@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildPersonnelIssues,controlDay,comparePersonnelIssues } from '../dist-electron/shared/personnel-control-calculations.js'
 import { warningHorizons } from '../dist-electron/shared/personnel-control.js'
-import { requestEmployeeNavigation,employeeTabIndex } from '../src/employees/navigation.ts'
+import { requestEmployeeNavigation } from '../src/employees/navigation.ts'
 import { createCloseGuards } from '../src/employees/closeGuards.ts'
 import { createControlRequests } from '../src/components/personnel-control/requests.ts'
 const base={years:4,months:0,days:0,asOfDate:'2026-01-01',autoAccrueAfterBaseline:true,basisNote:null}
@@ -74,7 +74,6 @@ test('calendar shifts and priority order are deterministic, bounded and independ
  assert.deepEqual(rows.sort(comparePersonnelIssues).map(r=>r.id),['a','c','b','z'])
 })
 test('navigation carries only identity and tab and obeys the existing draft guard exactly once',()=>{
- assert.deepEqual(['general','leave','service','rank'].map(employeeTabIndex),[0,1,2,3])
  const guards=createCloseGuards();let dirty=true,confirmation,accepted,closed=0
  guards.register({dirty:()=>dirty,busy:()=>false,confirm:(changed,proceed)=>{confirmation=proceed}})
  requestEmployeeNavigation({employeeId:'employee',tab:'rank'},9,proceed=>guards.requestAll(proceed),intent=>{accepted=intent},()=>closed++)
