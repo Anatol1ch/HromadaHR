@@ -63,7 +63,7 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
         {label:'Вид',width:'37%'},{label:'Дати',width:'24%'},{label:'Днів',width:'7%',className:'leave-days-column'},{label:'Статус',width:'16%'},{label:'Розпорядження',width:'16%'},
       ]}>
         {data.records.slice(0,5).map(record => <tr key={record.id}>
-          <td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small role="status">Розподіл потребує перевірки у розділі «Відпустки».</small>}</td>
+          <td>{leaveLabels[record.leaveType]}{record.allocationWarning && <small role="status">Розподіл потребує перевірки в історії відпусток.</small>}</td>
           <td>{formatDate(record.startDate)}–{formatDate(record.endDate)}</td>
           <td className="leave-days-column">{record.usedDays}</td>
           <td><LeaveStatus status={record.status}/></td>
@@ -73,7 +73,7 @@ export default function LeaveOverview({ employeeId, revision, onOpen }: { employ
     </InfoSection>
     <div className="leave-dialog-actions">
       <button type="button" className="secondary-button" onClick={() => onOpen({ section: 'rights' })}><ShieldCheck size={16} aria-hidden="true"/>Перевірити права</button>
-      <button type="button" className="primary-button" onClick={() => onOpen({ section: 'balances' })}><ArrowRight size={16} aria-hidden="true"/>Перейти до обліку</button>
+      <button type="button" className="secondary-button" onClick={() => onOpen({ section: 'balances' })}><ArrowRight size={16} aria-hidden="true"/>Перейти до обліку</button>
     </div>
   </section>
 }

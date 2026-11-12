@@ -1,5 +1,4 @@
 import type { EmployeeNavigationIntent,EmployeeCardTab } from '../../../shared/personnel-control'
-import type { LeaveNavigationIntent } from '../leave/navigation'
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
@@ -13,7 +12,7 @@ import EmployeeForm from './EmployeeForm'
 import EmployeeActionDialog from './EmployeeActionDialog'
 import type { NavigationGuard } from './useUnsavedChanges'
 
-export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initialIntent,onIntentHandled }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; onOpenLeave: (intent: LeaveNavigationIntent) => void; navigationGuard: RefObject<NavigationGuard> }) {
+export default function EmployeesWorkspace({ navigationGuard,initialIntent,onIntentHandled }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; navigationGuard: RefObject<NavigationGuard> }) {
   const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +93,7 @@ export default function EmployeesWorkspace({ navigationGuard, onOpenLeave,initia
       onOpen={employee => navigationGuard.current(()=>{ rememberOpener();setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) })}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/></div>
-    {workspace.cardId && <EmployeeProfilePage onOpenLeave={onOpenLeave} initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
+    {workspace.cardId && <EmployeeProfilePage initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
       onLoaded={updateFromCard}
       onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}

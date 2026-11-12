@@ -40,3 +40,8 @@ export function recordCountLabel(found: number, total: number, filtered: boolean
   const form=new Intl.PluralRules('uk-UA').select(found)
   return found+' '+(form==='one'?'запис':form==='few'?'записи':'записів')
 }
+
+/** Scope independently of user-editable journal filters, including after clearing them. */
+export function leaveRecordBelongsToEmployee(record: Pick<LeaveRecord, 'employeeId'>, employeeId?: string) {
+  return employeeId === undefined || record.employeeId === employeeId
+}

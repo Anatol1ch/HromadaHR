@@ -248,7 +248,9 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         </div>
       </div>}>
     <form id={formId} ref={owner} className="leave-layout leave-registration" onSubmit={prepare} onInvalidCapture={()=>setAttempted(true)}>
-      <InfoSection title="Відомості про відпустку" icon={<CalendarDays size={17}/>}>
+      <InfoSection title="Відомості про відпустку" icon={<CalendarDays size={17}/>} action={periodic && employeeId &&
+        <button type="button" className="secondary-button" disabled={busy || !!uncertain}
+          onClick={() => history.open({ employeeId, type, year: '' })}>Переглянути історію</button>}>
       {start && start < '2027-01-01' && <Alert variant="error">Дата початку має бути від 01.01.2027. Перехідні відпустки потребують окремої перевірки залишків.</Alert>}
       <div className={employeePicker ? "info-grid info-grid-two" : undefined}>{employeePicker}
       <div className="recipient-field"><span>Вид відпустки</span><Select label="Вид відпустки" value={group} options={leaveGroupOptions} disabled={busy || !!uncertain}

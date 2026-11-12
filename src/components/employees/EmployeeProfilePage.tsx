@@ -4,8 +4,7 @@ import ProfileIndicatorPanel from '../seniority-ranks/ProfileIndicatorPanel'
 import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
-import LeaveOverview from '../leave/LeaveOverview'
-import type { LeaveNavigationIntent } from '../leave/navigation'
+import ProfileLeaveWorkbench from '../leave/ProfileLeaveWorkbench'
 import { ArrowLeft, BriefcaseBusiness, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
@@ -14,9 +13,9 @@ import InfoItem from '../InfoItem'
 import Alert from '../Alert'
 import DataState from '../DataState'
 
-export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onDelete, revision, onOpenLeave, navigationGuard,initialTab='general',tabRequestId=0 }: {
+export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onDelete, revision, navigationGuard,initialTab='general',tabRequestId=0 }: {
   initialTab?:EmployeeCardTab;tabRequestId?:number
-  onOpenLeave: (intent: LeaveNavigationIntent) => void; id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
+  id: string; revision: number; onClose: () => void; onDelete: (id: string) => void
   navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
@@ -112,7 +111,7 @@ export default function EmployeeProfilePage({ id, onClose, onEdit, onLoaded, onD
             <ProfileIndicatorPanel employee={employee} kind="allowance" navigationGuard={navigationGuard} disabled={baselineEditing||baselineBusy||loading} refreshKey={revision} onRefresh={()=>setAllowanceRefresh(v=>v+1)}/>
           </>
             :section==='rank'?<ProfileIndicatorPanel employee={employee} kind="rank" navigationGuard={navigationGuard} disabled={loading} refreshKey={revision}/>
-            :<LeaveOverview onOpen={destination=>onOpenLeave({...destination,employeeId:id})} employeeId={id} revision={revision}/>}
+            :<ProfileLeaveWorkbench key={id} employee={employee} navigationGuard={navigationGuard} revision={revision}/>}
         </section>
       </div>
     </>}

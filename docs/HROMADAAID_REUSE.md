@@ -216,3 +216,7 @@ Read-only звірено src/SettingsPage.tsx (settings-section-nav/current, у�
 ## 6.2 – Сфокусовані показникові редактори профілю
 
 Read-only звірено src/RecipientRegistry.tsx (RecipientFormModal, початкові значення, active cleanup читання, recipient-field) HromadaAID за SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. У HR збережено вже адаптовані Modal/ConfirmDialog/поля/guard і єдиний IndicatorEditor. Нові ProfileIndicatorPanel/FocusedIndicatorEditor лише компонують read-only реквізити й цільове завантаження навколо нього; другої форми/предметної логіки не створено. Використані чинні InfoSection/InfoItem, documentLabel, кольори й геометрія без глобального редизайну або нового CSS. Серверні/предметні механізми AID не переносилися. Windows GUI прийматиме замовник.
+
+## 6.3 – Відпустки у профілі
+
+Read-only перевірено src/RecipientRegistry.tsx (RecipientDetails із персональною history-table без повторення особи в рядках; RecipientFormModal із draft refs та active cleanup) HromadaAID, HEAD/SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Рішення: адаптовано персональне компонування історії та вже перенесені Modal/поля/кнопки/токени. Відпускного предметного аналога цей перевірений фрагмент не містить; чинні LeaveService, редактори, RegistrationHistory й guard HR придатні та збережені. Фактично додано тонкий ProfileLeaveWorkbench і optional персональний режим спільного LeaveJournal; не копіювали Workspace або серверні механізми AID. Локальні стилі в employee-profile.css, сиренева ідентичність на чинних токенах. Windows GUI залишено замовнику.

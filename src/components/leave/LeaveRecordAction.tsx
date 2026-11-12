@@ -20,10 +20,10 @@ import { notifySystemToast } from '../SystemToastHost'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import { leaveLabels } from './presentation'
-import type { RegistrationHistory } from './registry'
+import { leaveRecordBelongsToEmployee, type RegistrationHistory } from './registry'
 
-export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, history }: {
-  id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
+export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, onChanged, history, expectedEmployeeId }: {
+  expectedEmployeeId?: string; id: string; kind: 'view' | 'edit' | 'cancel'; navigationGuard: RefObject<NavigationGuard>
   onClose: () => void; onChanged: () => void; history: RegistrationHistory
 }) {
   const [data, setData] = useState<{ record: LeaveRecord; employee: EmployeeCard; balances: PeriodBalance[] }>()
@@ -42,6 +42,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
         const record = await window.hromadaHR.leave.getRecord(id)
         if (!active) return
         if (!record.ok) { setError(personnelMessage(record.error.code)); return }
+        if (!leaveRecordBelongsToEmployee(record.data, expectedEmployeeId)) { setError('Відпустка не належить цьому працівнику. Оновіть історію.'); return }
         const [employee, balances] = await Promise.all([
           window.hromadaHR.personnel.getEmployee(record.data.employeeId), window.hromadaHR.leave.getBalances(record.data.employeeId),
         ])
@@ -53,7 +54,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     }
     void load()
     return () => { active = false }
-  }, [id, retry])
+  }, [id, retry, expectedEmployeeId])
   function refreshAndClose() {
     onChanged()
     onClose()
@@ -62,7 +63,7 @@ export default function LeaveRecordAction({ id, kind, navigationGuard, onClose, 
     refreshAndClose()
     notifySystemToast('success', kind === 'edit' ? 'Відпустку виправлено' : 'Реєстрацію скасовано', data?.record.allocations.length ? (kind === 'edit' ? 'Залишки перераховано.' : 'Списані дні знову доступні.') : 'Журнал оновлено.')
   }
-  if (!data || error) return <Modal title="Зареєстрована відпустка" onClose={onClose}>
+  if (!data || error) return <Modal title="Зареєстрована відпустка" onClose={onClose} returnFocus={opener.current}>
     {error ? <Alert variant="error" action={<button type="button" onClick={reload}>Повторити</button>}>{error}</Alert> :
       <DataState kind="loading" message="Завантаження актуальних відомостей…" />}
   </Modal>

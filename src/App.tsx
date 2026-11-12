@@ -10,7 +10,6 @@ import type { NavigationGuard } from './components/employees/useUnsavedChanges'
 import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
 import LeaveWorkspace from './components/leave/LeaveWorkspace'
-import type { LeaveNavigationIntent } from './components/leave/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Activity, Award, BookOpen, CalendarDays, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
 import Alert from './components/Alert'
@@ -128,20 +127,19 @@ function StorageNotice() {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
-  const [leaveIntent, setLeaveIntent] = useState<LeaveNavigationIntent>()
   const [employeeIntent,setEmployeeIntent]=useState<EmployeeNavigationIntent>()
   const intentSequence=useRef(0)
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setLeaveIntent(undefined); setActive(id) })
+    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setActive(id) })
   }
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   const control=usePersonnelControl(startupReady&&storage.state==='ready')
   useEffect(()=>{if(active==='overview')void control.refresh()},[active,control.refresh])
-  const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeIntent(intent);setLeaveIntent(undefined);setActive('employees')},done)
+  const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeIntent(intent);setActive('employees')},done)
   useEffect(() => {
     let alive = true, pending = false, settled = false
     const accept = (status: StorageStatus) => {
@@ -212,8 +210,8 @@ export default function App() {
       <main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} onOpenLeave={intent => navigationGuard.current(() => { setLeaveIntent(intent); setActive('leave') })} navigationGuard={navigationGuard} /> : active === 'leave' ?
-          <LeaveWorkspace initialIntent={leaveIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
+          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard} /> : active === 'leave' ?
+          <LeaveWorkspace navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
           active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
           active === 'service' ? <SeniorityRanksWorkspace navigationGuard={navigationGuard}/> :
           active === 'dictionaries' ? <DictionariesWorkspace navigationGuard={navigationGuard}/> :

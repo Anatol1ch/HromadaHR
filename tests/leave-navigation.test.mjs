@@ -20,10 +20,10 @@ test('five visible groups preserve all six actual types and explicit special sel
   assert.equal(matchesLeaveGroup('chernobyl_special_leave','other'),true)
   assert.notEqual(leaveLabels.veteran_special_leave,leaveLabels.chernobyl_special_leave)
 })
-test('employee-card leave boundary mounts the read-only module without mutation imports', () => {
+test('profile delegates leave work to the workbench; overview remains read-only', () => {
   const card=readFileSync(new URL('../src/components/employees/EmployeeProfilePage.tsx',import.meta.url),'utf8')
   const overview=readFileSync(new URL('../src/components/leave/LeaveOverview.tsx',import.meta.url),'utf8')
-  assert.match(card,/<LeaveOverview /)
+  assert.match(card,/<ProfileLeaveWorkbench /)
   assert.doesNotMatch(card,/LeaveBalances|LeaveRegistrationForm|LeaveRecordAction|BalanceEditor/)
   assert.doesNotMatch(overview,/LeaveBalances|LeaveRegistrationForm|LeaveRecordAction|BalanceEditor|savePeriods|deletePeriod|registerLeave|updateLeave|cancelLeave/)
   assert.match(overview,/balanceSummary/)
@@ -33,7 +33,7 @@ test('employee-card leave boundary mounts the read-only module without mutation 
 })
 
 
-test('three sections share employee context; general registration starts empty and read-only card remains separate',()=>{
+test('three sections share employee context; global registration starts empty and personal workbench remains separate',()=>{
   const source=readFileSync(new URL('../src/components/leave/LeaveWorkspace.tsx',import.meta.url),'utf8').replace(/\s/g,'')
   assert.ok(source.includes("['journal','balances','rights']"))
   assert.ok(source.includes("setCreateEmployee('');setCreating(true)"))
@@ -62,10 +62,10 @@ test('card destinations initialize the exact worker, top tab and all six account
   }
 })
 
-test('the card forwards the intent to the single App guard and sidebar navigation clears it', () => {
+test('profile leave navigation stays local while global sidebar remains guarded', () => {
   const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
   const workspace = readFileSync(new URL('../src/components/employees/EmployeesWorkspace.tsx', import.meta.url), 'utf8')
-  assert.match(workspace, /<EmployeeProfilePage onOpenLeave=\{onOpenLeave\}/)
-  assert.match(app, /onOpenLeave=\{intent => navigationGuard.current\(\(\) => \{ setLeaveIntent\(intent\); setActive\('leave'\)/)
-  assert.match(app, /setLeaveIntent\(undefined\); setActive\(id\)/)
+  assert.match(workspace, /<EmployeeProfilePage initialTab=/)
+  assert.doesNotMatch(app, /onOpenLeave=/)
+  assert.match(app, /navigationGuard.current\(\(\) => \{ setEmployeeIntent\(undefined\);setActive\(id\)/)
 })
