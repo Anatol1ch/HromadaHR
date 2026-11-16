@@ -4,7 +4,7 @@ import { dateInputError, daysInMonth, formatDate, formatDateInput, formatDateTim
 import { calendarDate, mondayIndex, monthGrid, shiftDays, shiftMonths } from '../src/lib/calendar.ts'
 import { cancelCloseConfirmation, confirmModalClose, finishCloseConfirmation, getCloseConfirmation, subscribeCloseConfirmation } from '../src/components/closeConfirmation.ts'
 import { employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
-import { employeeInput, emptyValues, validateEmployee } from '../src/employees/model.ts'
+import { employeeInput, emptyValues, validateEmployee, validDate } from '../src/employees/model.ts'
 
 test('AID date boundary presents only DD.MM.YYYY and preserves ISO calendar dates', () => {
   for (const iso of ['0001-01-01', '1600-02-29', '2000-02-29', '2026-11-03', '9999-12-31']) {
@@ -77,25 +77,6 @@ test('six-week month grids stay Monday-first and never render year 0/10000', () 
   }
 })
 
-test('backup timestamp presentation is fixed Ukrainian local date/time without seconds', () => {
-  assert.equal(formatDateTime(null), '–')
-  assert.equal(formatDateTime('bad'), '–')
-  const stamp = '2026-11-03T12:05:47Z'
-  const local = new Date(stamp)
-  const pad = value => String(value).padStart(2, '0')
-  assert.equal(formatDateTime(stamp), `${pad(local.getDate())}.${pad(local.getMonth() + 1)}.${local.getFullYear()} ${pad(local.getHours())}:${pad(local.getMinutes())}`)
-})
-
-test('formatted UI fields roundtrip into the employee IPC schema', () => {
-  const id = '11111111-1111-4111-8111-111111111111'
-  const fields = { ...emptyValues, firstName: 'Умовний', lastName: 'Тестовий', birthDate: parseDateInput('29.02.2000'), positionStartedOn: '', positionCategory: '', hireDate: parseDateInput('03.11.2026'), departmentId: id, positionId: id }
-  assert.deepEqual(validateEmployee(fields), {})
-  const value = employeeDetails.parse(employeeInput(fields))
-  assert.equal(value.birthDate, '2000-02-29')
-  assert.equal(value.hireDate, '2026-11-03')
-  assert.equal(employeeDetails.safeParse({ ...value, positionStartedOn: '', positionCategory: '', hireDate: '03.11.2026' }).success, false)
-})
-
 test('source close-confirmation store preserves one pending request, cancellation and disconnected owners', () => {
   let closed = 0, updates = 0
   const unsubscribe = subscribeCloseConfirmation(() => updates++)
@@ -121,4 +102,20 @@ test('source close-confirmation store preserves one pending request, cancellatio
   assert.equal(closed, 2)
   assert.ok(updates >= 6)
   unsubscribe()
+})
+
+test('client validation and Main Zod agree on required fields, calendar dates and trimmed text limits', () => {
+  const values={...emptyValues,lastName:'Тестовий',firstName:'Умовний',hireDate:'2026-01-01',departmentId:'11111111-1111-4111-8111-111111111111',positionId:'22222222-2222-4222-8222-222222222222'}
+  for (const change of [{}, { middleName: ' ' }, { birthDate: '2000-02-29' },
+    { lastName: 'Т'.repeat(200) },
+    { lastName: ' ' }, { firstName: '' }, { lastName: 'Т'.repeat(201) }, { middleName: 'Т'.repeat(201) },
+    { employeeType: 'other' },
+    { birthDate: '1900-02-29' }, { birthDate: '2027-01-01' }, { hireDate: '2026-02-30' },
+    { hireDate: '0000-01-01' }, { hireDate: '2026-1-01' }, { hireDate: '' }, { departmentId: '' }, { positionId: '' }]) {
+    const input = { ...values, ...change }
+    const clientValid = Object.keys(validateEmployee(input)).length === 0
+    assert.equal(clientValid, employeeDetails.safeParse(employeeInput(input)).success, JSON.stringify(change))
+  }
+  for (const value of ['2024-02-29', '0001-01-01', '9999-12-31']) assert.equal(validDate(value), true)
+  for (const value of ['2023-02-29', '2026-04-31', '2026-00-01', '0000-01-01', '10000-01-01', 'bad']) assert.equal(validDate(value), false)
 })

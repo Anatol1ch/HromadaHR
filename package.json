@@ -16,7 +16,7 @@
     "build": "pnpm typecheck && pnpm build:electron && vite build",
     "start:built": "electron .",
     "build:electron": "tsc -p tsconfig.electron.json && vite build --config vite.preload.config.ts && node electron/copy-assets.mjs",
-    "test": "pnpm build:electron && node --test tests/*.test.mjs && node tests/run-electron-storage.mjs"
+    "test": "pnpm build:electron && node tests/run-tests.mjs"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",

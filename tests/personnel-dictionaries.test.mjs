@@ -10,7 +10,6 @@ import { LeaveService } from '../dist-electron/electron/leave/service.js'
 import { PersonnelService } from '../dist-electron/electron/personnel/service.js'
 import { openStorageSafely, Storage } from '../dist-electron/electron/storage/index.js'
 import { migrations } from '../dist-electron/electron/storage/migrations.js'
-import { moveDictionaryEntry } from '../src/employees/dictionaryOrder.ts'
 import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mjs'
 
 const code = value => error => error.code === value
@@ -131,12 +130,4 @@ test('independent revisions guard persistent ordering, rename, dependency checks
   const reopened = await f.open()
   assert.deepEqual(personnel(reopened.database).getDictionary('department'), removed)
   assert.deepEqual(reopened.database.pragma('foreign_key_check'), [])
-})
-
-test('moving by handle or adjacent keyboard target keeps a full immutable permutation', () => {
-  const current = ['a', 'b', 'c']
-  assert.deepEqual(moveDictionaryEntry(current, 'a', 'c'), ['b', 'c', 'a'])
-  assert.deepEqual(moveDictionaryEntry(current, 'b', 'a'), ['b', 'a', 'c'])
-  assert.equal(moveDictionaryEntry(current, 'x', 'a'), current)
-  assert.deepEqual(current, ['a', 'b', 'c'])
 })

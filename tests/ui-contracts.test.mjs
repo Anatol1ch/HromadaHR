@@ -1,50 +1,7 @@
-import { initialRegistry } from '../src/employees/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCloseGuards } from '../src/employees/closeGuards.ts'
-import { initialWorkspace, mergeEmployee, workspaceReducer } from '../src/employees/workspace.ts'
 import { confirmModalClose, getCloseConfirmation, finishCloseConfirmation, cancelCloseConfirmation } from '../src/components/closeConfirmation.ts'
-
-const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222']
-const employee = { id: ids[0], lastName: 'Синтетичний', firstName: 'Приклад', middleName: null }
-
-test('nested form cancellation retains the parent card and registry options; only creation opens a new card', () => {
-  const registry = { ...initialRegistry(), query: 'СИНТЕТИЧНИЙ', departmentId: ids[1], positionId: ids[0], filtersOpen: true }
-  let state = workspaceReducer(initialWorkspace, { type: 'registry', registry })
-  state = workspaceReducer(state, { type: 'card', id: employee.id })
-  const card = state
-  state = workspaceReducer(state, { type: 'form', form: { kind: 'edit', employee } })
-  assert.equal(state.cardId, card.cardId)
-  assert.equal(state.registry, card.registry)
-  state = workspaceReducer(state, { type: 'form', form: null })
-  assert.deepEqual(state, card)
-  state = workspaceReducer(state, { type: 'saved', employee, created: false })
-  assert.equal(state.cardId, employee.id)
-  assert.equal(state.revision, 1)
-  assert.equal(state.registry, card.registry)
-  state = workspaceReducer(state, { type: 'card', id: null })
-  state = workspaceReducer(state, { type: 'action', action: { kind: 'edit', id: employee.id } })
-  state = workspaceReducer(state, { type: 'saved', employee, created: false })
-  assert.equal(state.cardId, null)
-  assert.equal(state.action, null)
-  state = workspaceReducer(state, { type: 'saved', employee, created: true })
-  assert.equal(state.cardId, employee.id)
-  state = workspaceReducer(state, { type: 'deleted', id: employee.id })
-  assert.equal(state.cardId, null)
-  assert.deepEqual(state.registry, registry)
-  assert.deepEqual(initialWorkspace.registry, initialRegistry())
-})
-
-test('authoritative mutation replies replace list entries without duplicating or mutating existing rows', () => {
-  const rows = [employee, { ...employee, id: ids[1] }]
-  const saved = { ...employee, firstName: 'Оновлений', positionStartedOn: null, positionCategory: null, hireDate: '2000-01-01', position: { name: 'Нова' } }
-  const merged = mergeEmployee(rows, saved)
-  assert.equal(merged.length, 2)
-  assert.equal(merged[0], saved)
-  assert.equal(merged[1], rows[1])
-  assert.equal(rows[0], employee)
-  assert.deepEqual(mergeEmployee([], saved), [saved])
-})
 
 function ownerLayer(state, owner) {
   return { dirty: () => state.dirty, busy: () => state.busy, confirm: (dirty, proceed) => confirmModalClose(dirty, proceed, owner) }

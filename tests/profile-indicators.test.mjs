@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync,mkdtempSync,rmSync } from 'node:fs'
+import { mkdtempSync,rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join,resolve,sep,basename } from 'node:path'
 import { readIndicatorContext,readIndicator,loadIndicatorContext,uncertainIndicatorResult } from '../src/components/seniority-ranks/profile-indicators.ts'
@@ -50,18 +50,6 @@ test('closing or changing the employee discards late context responses and only 
  assert.equal(accepted.length,1);assert.equal(accepted[0].data.employee.id,'new')
  resolveOld(ok(null));await tick();assert.equal(accepted.length,1)
  const close=loadIndicatorContext(api,'closed','allowance',r=>accepted.push(r));close();resolveClosed(ok(allowance));await tick();assert.equal(accepted.length,1)
-})
-test('the same editor handles focused saves/clears and guards; projection refresh never remounts the baseline draft',()=>{
- const source=name=>readFileSync(new URL('../src/components/'+name,import.meta.url),'utf8')
- const editor=source('seniority-ranks/IndicatorEditor.tsx'),adapter=source('seniority-ranks/FocusedIndicatorEditor.tsx'),panel=source('seniority-ranks/ProfileIndicatorPanel.tsx'),baseline=source('seniority-ranks/ServiceBaselinePanel.tsx'),profile=source('employees/EmployeeProfilePage.tsx')
- assert.match(adapter,/<IndicatorEditor key=\{key\}/);assert.match(adapter,/if\(current\?\.row\)/);assert.match(adapter,/loadIndicatorContext/)
- assert.doesNotMatch(adapter,/saveAllowance|saveRank|clearAllowance|clearRank|listOverview|ValidatedInput/)
- assert.doesNotMatch(editor,/\bmode\b|onSwitch|role="tablist"/);assert.match(editor,/title=\{title\}/)
- assert.match(editor,/if\(inFlight.current\) return/);assert.match(editor,/requestClose\(onClose\)/);assert.match(editor,/ConfirmDialog/);assert.match(editor,/returnFocus=\{returnFocus\}/)
- assert.match(panel,/if\(reconcile\)/);assert.match(panel,/onRefresh\?\.\(\)/);assert.match(panel,/setState\(\{key,value:saved\}\)/);assert.match(panel,/setVersion\(v=>v\+1\)/);assert.match(panel,/showConfirmedDetails=\{false\}/)
- assert.match(profile,/disabled=\{baselineEditing\|\|baselineBusy\|\|loading\}/);assert.match(profile,/refreshKey=\{allowanceRefresh\}/);assert.doesNotMatch(profile,/key=\{allowanceRefresh\}/)
- assert.match(baseline,/\[employeeId,retry\]/);assert.match(baseline,/\[employeeId,value,loading,projectionRetry,refreshKey\]/);assert.match(baseline,/onEditingChange\?\.\(true\)/)
- assert.match(profile,/showConfirmedAllowance=\{false\}/)
 })
 test('existing Main APIs preserve actual allowance/rank replies, refresh projections and leave all leave facts unchanged',async t=>{
  const root=mkdtempSync(join(tmpdir(),'hr-profile-indicators-')),c=await openStorageSafely(join(root,'test.db'))

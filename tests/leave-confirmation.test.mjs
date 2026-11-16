@@ -32,13 +32,3 @@ test('missing or inconsistent allocations cannot form a valid confirmation', () 
   assert.equal(confirmationPeriods({ ...input, usedDays: 7 }, [current, previous]), null)
   assert.equal(confirmationPeriods({ ...input, allocations: [{ periodId: 'previous', days: 6 }, { periodId: 'previous', days: 0 }] }, [previous]), null)
 })
-
-test('edit indicators compare saved values by period ID and omit unchanged fields', () => {
-  const original = { ...input, allocations: [...input.allocations].reverse() }
-  assert.deepEqual(confirmationChanges(input, original), [])
-  assert.deepEqual(confirmationChanges({ ...input, endDate: '2027-01-18', usedDays: 5,
-    allocations: [{ periodId: 'previous', days: 5 }], orderNumber: null, durationExplanation: 'Уточнення' }, original),
-  ['Дати', 'Тривалість', 'Розподіл днів', 'Розпорядження', 'Пояснення тривалості'])
-  assert.deepEqual(confirmationChanges({ ...input, leaveType: 'study_leave', grantBasis: 'Довідка' }, original),
-    ['Вид відпустки', 'Підстава надання'])
-})

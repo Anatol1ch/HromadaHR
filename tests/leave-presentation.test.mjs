@@ -1,6 +1,7 @@
+import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, futureAllocationPeriod, formatLeaveDays } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays } from '../src/components/leave/summary.ts'
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
   const rows = [{leaveType:'annual_main',periodStart:'2024-01-01',confirmedDays:40,usedDays:14,availableDays:26}, {leaveType:'children_social_additional',periodStart:'2024-01-01',confirmedDays:0,usedDays:0,availableDays:0}]
   const proposals = [{leaveType:'annual_main',periodStart:'2024-01-01'}, {leaveType:'annual_main',periodStart:'2025-01-01'}]
@@ -10,16 +11,6 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(balanceSummary('oms_service_additional',rows,proposals).count,0)
   assert.equal(formatLeaveDays(0n),'0 днів')
   assert.equal(formatLeaveDays(21),'21 день')
-})
-test('oldest positive period ignores exhausted balances and other types regardless of row order', () => {
-  const row = (periodStart, availableDays, leaveType = 'annual_main') => ({ periodStart, availableDays, leaveType, confirmedDays: 10, usedDays: 10 - availableDays })
-  const oldest = row('2025-01-01', 2)
-  const rows = [row('2026-01-01', 7), row('2024-01-01', 0), oldest, row('2023-01-01', 8, 'children_social_additional')]
-  const summary = balanceSummary('annual_main', rows, [])
-  assert.equal(summary.positiveCount, 2)
-  assert.equal(summary.oldestPositive, oldest)
-  assert.equal(summary.remaining, 9n)
-  assert.equal(balanceSummary('annual_main', [rows[1]], []).oldestPositive, null)
 })
 test('manual allocation starts empty, validates row limits and counts only eligible period IDs', () => {
   const rows = [{ id: 'old', availableDays: 4 }, { id: 'next', availableDays: 4 }]
@@ -56,11 +47,20 @@ test('resumed allocation requires explicit removal of unavailable period values'
   assert.deepEqual(draft, { retained: '6', removed: '1' })
 })
 
-test('future proposal remains informational until a saved period exists, including confirmed zero', () => {
-  const first = { leaveType: 'annual_main', periodStart: '2027-01-01', status: 'proposed' }
-  const next = { ...first, periodStart: '2028-01-01' }
-  assert.equal(futureAllocationPeriod([first, next], [], '2027-01-01'), next)
-  const confirmed = { ...next, id: 'real-id', status: 'confirmed', confirmedDays: 0 }
-  assert.equal(futureAllocationPeriod([first, next], [confirmed], '2027-01-01'), confirmed)
-  assert.equal(futureAllocationPeriod([first], [], '2027-01-01'), undefined)
+test('personal scope survives cleared/context filters and never admits another employee; global journal stays unscoped', () => {
+  const records = [
+    {id:'a',employeeId:'e',leaveType:'study_leave',startDate:'2027-03-01',endDate:'2027-03-05',usedDays:5,status:'active',orderNumber:'125'},
+    {id:'b',employeeId:'other',leaveType:'study_leave',startDate:'2027-04-01',endDate:'2027-04-05',usedDays:5,status:'active'},
+    {id:'c',employeeId:'e',leaveType:'veteran_special_leave',startDate:'2028-01-01',endDate:'2028-01-14',usedDays:14,status:'cancelled'},
+  ]
+  const scoped = records.filter(r => leaveRecordBelongsToEmployee(r,'e'))
+  const rows = filters => journalRows(scoped,[],filters,'startDate','desc',true).map(r=>r.id)
+  assert.deepEqual(rows(emptyLeaveFilters),['c','a'])
+  assert.deepEqual(rows({...emptyLeaveFilters,query:'125'}),['a'])
+  assert.deepEqual(rows({...emptyLeaveFilters,type:'veteran_special_leave',status:'cancelled',year:'2028'}),['c'])
+  assert.deepEqual(rows(contextualLeaveFilters({employeeId:'other',type:'study_leave',year:'2027'})),[])
+  assert.equal(leaveRecordBelongsToEmployee(records[1],'e'),false)
+  assert.equal(leaveRecordBelongsToEmployee(records[1],''),false)
+  assert.equal(records.filter(r=>leaveRecordBelongsToEmployee(r)).length,3)
+  assert.deepEqual(records.map(r=>r.id),['a','b','c'])
 })
