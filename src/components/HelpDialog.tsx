@@ -26,7 +26,7 @@ export default function HelpDialog({ onClose }: { onClose: () => void }) {
     }
     catch { setError('Не вдалося скопіювати автоматично. Виділіть текст контакту та натисніть Ctrl+C.') }
   }
-  return <Modal title="Допомога та підтримка" size="wide" className="support-modal" description="Зверніться до розробника та адміністратора HromadaHR."
+  return <Modal title="Допомога та підтримка" size="wide" className="support-modal"
     onClose={onClose} headerIcon={<CircleHelp size={19} aria-hidden="true"/>}>
     {error && <Alert variant="error">{error}</Alert>}
     <div className="support-contact-card">
@@ -43,6 +43,5 @@ export default function HelpDialog({ onClose }: { onClose: () => void }) {
         <button type="button" className="icon-button support-contact-copy" title={`Скопіювати: ${label}`} aria-label={`Скопіювати: ${label}`} onClick={() => void copy(id === 'telegram' ? 'https://t.me/antlmrnnk' : value)}><Copy size={18} aria-hidden="true"/></button>
       </div>)}
     </div>
-    <p className="support-contact-note">Під час звернення вкажіть версію HromadaHR.</p>
   </Modal>
 }
