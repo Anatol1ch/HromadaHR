@@ -84,10 +84,6 @@
 .workspace-heading h1 > span { display: inline; white-space: normal; }
 .workspace-system-name { display: inline-block; margin: 18px 0 7px; padding: var(--space-1) 9px; border: 1px solid var(--border-surface); border-radius: 6px; background: var(--surface-panel); color: var(--accent-hover); font-size: 16px; line-height: 1.4; font-weight: 700; }
 .workspace-heading .subtitle { margin: 0; max-width: none; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6; letter-spacing: 0; }
-.workspace-primary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding-bottom: var(--space-5); border-bottom: 1px solid var(--border-surface); }
-.workspace-primary h2 { margin: 0; color: var(--color-text); font-size: 19px; }
-.workspace-primary p { margin: 6px 0 0; color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }
-.workspace-primary .primary-button { gap: var(--space-2); min-height: var(--control-height); }
 .workspace-page .page-footer { padding-top: 22px; }
 @media screen {
   .dashboard-panel { min-width: 0; max-width: 100%; }
@@ -124,9 +120,6 @@
   .content { padding: 18px var(--space-3); }
   .home-content { min-height: calc(100vh - 58px); }
 }
-@media (max-width: 600px) {
-  .workspace-primary .primary-button { width: 100%; justify-content: center; }
-}
 @media (max-width:600px) {
   .workspace-heading { grid-template-columns: minmax(0,1fr); text-align: center; }
   .workspace-identity-copy { padding: var(--space-5); }
@@ -157,21 +150,17 @@
  .workspace-coat-area { padding: 14px; border-right: 0; border-bottom: 1px solid var(--border-accent); }
  .workspace-coat-area .community-coat { width: 86px; height: 112px; }
  .workspace-identity-copy { padding: 18px; }
- .workspace-primary .primary-button { height: auto; min-height: var(--control-height); padding-block: 10px; white-space: normal; }
 }
 
-/* AID workspace-shortcuts, adapted to HR semantic tokens. */
-.workspace-actions { container: workspace-actions / inline-size; }
-.workspace-shortcuts { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; padding-top:var(--space-4); }
-.workspace-shortcuts > button { display:flex; align-items:center; gap:var(--space-3); min-width:0; padding:15px var(--space-3); background:var(--surface-card); border:1px solid var(--border-surface); border-radius:9px; text-align:left; color:var(--accent); transition:background-color var(--motion-duration-fast),border-color var(--motion-duration-fast); }
+/* Primary workspace shortcuts reuse the AID pattern with HromadaHR tokens. */
+.workspace-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px; min-width:0; }
+.workspace-shortcuts > button { box-sizing:border-box; display:flex; align-items:center; gap:var(--space-4); min-width:0; min-height:116px; padding:20px 22px; background:var(--surface-card); border:1px solid var(--border-surface); border-radius:var(--radius-card); text-align:left; color:var(--accent); }
 .workspace-shortcuts > button:hover:not([aria-disabled="true"]) { background:var(--accent-soft); border-color:var(--border-accent); }
-.workspace-shortcuts > button.workspace-shortcut-locked { color:var(--color-text-secondary); cursor:not-allowed; background:var(--surface-panel); }
-.workspace-action-icon { display:inline-flex; flex:0 0 32px; align-items:center; justify-content:center; height:34px; background:var(--accent-soft); border-radius:7px; }
+.workspace-action-icon { display:inline-flex; flex:0 0 46px; align-items:center; justify-content:center; height:46px; color:var(--accent); background:var(--accent-soft); border-radius:var(--radius-control); }
 .workspace-shortcuts > button > span:nth-child(2) { flex:1; min-width:0; }
-.workspace-shortcuts strong { display:block; color:var(--color-text); font-size:13px; line-height:1.5; }
-.workspace-shortcuts small { display:block; color:var(--color-text-secondary); font-size:11px; line-height:1.6; margin-top:3px; }
+.workspace-shortcuts strong { display:block; color:var(--color-text); font-size:17px; line-height:1.4; overflow-wrap:anywhere; }
+.workspace-shortcuts small { display:block; color:var(--color-text-secondary); font-size:13px; line-height:1.5; margin-top:4px; overflow-wrap:anywhere; }
 .workspace-shortcuts > button > svg { flex-shrink:0; }
-@container workspace-actions (min-width: 520px) { .workspace-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@container workspace-actions (min-width: 1040px) { .workspace-shortcuts { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media (max-width:700px) { .workspace-shortcuts { grid-template-columns:minmax(0,1fr); gap:var(--space-3); } }
 
 .workspace-planned-label { display:block; font-weight:600; color:var(--accent-hover); margin-top:3px; }

@@ -59,16 +59,15 @@ function HomePage({ onNavigate }: { onNavigate: (id: SectionId) => void }) {
         <p className="subtitle">Автоматизована система кадрового обліку</p>
       </div>
     </section>
-    <section className="dashboard-panel workspace-actions" aria-labelledby="workspace-title">
-      <div className="workspace-primary"><div><h2 id="workspace-title">Щоденна робота</h2><p>Оберіть розділ для роботи.</p></div></div>
-      <div className="workspace-shortcuts">{([
+    <nav className="workspace-shortcuts" aria-label="Основні розділи">
+      {([
         { id: 'employees', title: 'Працівники', text: 'Реєстр та особові картки', icon: UsersRound },
         { id: 'documents', title: 'Документи', text: 'Кадрові документи та журнал відпусток', icon: FileText },
       ] as const).map(({ id, title, text, icon: Icon }) => <button type="button" key={id}
         aria-label={title} onClick={() => onNavigate(id)}>
-        <span className="workspace-action-icon"><Icon size={20} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}</small></span><ArrowUpRight size={18} aria-hidden="true"/>
-      </button>)}</div>
-    </section>
+        <span className="workspace-action-icon"><Icon size={23} aria-hidden="true"/></span><span><strong>{title}</strong><small>{text}</small></span><ArrowUpRight size={19} aria-hidden="true"/>
+      </button>)}
+    </nav>
     <footer className="page-footer"><p>© {new Date().getFullYear()} Вишнівська селищна рада. Внутрішня інформаційна система.</p><hr aria-hidden="true"/>
       <p className="home-footer-credit"><Code2 size={17} strokeWidth={1.7} aria-hidden="true"/><span>Developed by <strong>Anatolii Myronenko</strong></span></p>
     </footer>

@@ -595,3 +595,7 @@ Read-only перевірено HromadaAID electron/decision-store.ts (expected r
 ## 7.4 – Серії документів
 
 Референс read-only: HromadaAID src/DecisionRegistry.tsx, SHA 33eca10733caaf73b1a99e75a24ff35e706a0afb. Повторно використані вже перенесені до HR DictionaryTable, Select, ValidatedInput, Modal/ConfirmDialog, InfoItem/Alert та guard/focus-поведінка. Новий довідник серій і поля документа адаптовано до сиреневих семантичних токенів HR; приклад формату прямо позначений незарезервованим. Окремої бібліотеки чи сервісного транспорту AID не додавали. Ручне Windows GUI/масштаби залишені етапу 8.
+
+## 9.1 – Головна сторінка
+
+Використано раніше перевірений HromadaAID `src/App.tsx` shortcut pattern, SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`; повторний checkout не потрібен. У HromadaHR прибрано dashboard-panel та його заголовок, збережено дві наявні кнопки/навігаційні дії, а сітку змінено на дві рівні колонки з одноколонковим breakpoint. Іконки збільшено, кольори й focus беруть чинні токени HR. Немає нових компонентів або залежностей. Код перевірено typecheck/build; Windows GUI-приймання очікується.
