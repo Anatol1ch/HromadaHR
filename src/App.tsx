@@ -117,19 +117,26 @@ export default function App() {
   const [active, setActive] = useState<SectionId>('home')
   const [documentIntent,setDocumentIntent]=useState<DocumentNavigationIntent>()
   const [employeeIntent,setEmployeeIntent]=useState<EmployeeNavigationIntent>()
+  const [employeeProfileLabel,setEmployeeProfileLabel]=useState<string>()
+  const [returnToEmployeeRegistry,setReturnToEmployeeRegistry]=useState(0)
   const intentSequence=useRef(0)
   const [helpOpen, setHelpOpen] = useState(false)
   const navigationGuard = useRef<NavigationGuard>(proceed => proceed())
   function navigate(id: SectionId) {
-    if (id !== active) navigationGuard.current(() => { setEmployeeIntent(undefined);setActive(id);setDocumentIntent(undefined) })
+    if (id === active) {
+      if(id==='employees'&&employeeProfileLabel) navigationGuard.current(()=>setReturnToEmployeeRegistry(value=>value+1))
+      return
+    }
+    navigationGuard.current(() => { setEmployeeIntent(undefined);setEmployeeProfileLabel(undefined);setActive(id);setDocumentIntent(undefined) })
   }
-  const openDocument=(id:string,done:()=>void=()=>{})=>requestDocumentNavigation(id,++intentSequence.current,navigationGuard.current,intent=>{setDocumentIntent(intent);setEmployeeIntent(undefined);setActive('documents')},done)
+  const returnToRegistry=()=>navigationGuard.current(()=>setReturnToEmployeeRegistry(value=>value+1))
+  const openDocument=(id:string,done:()=>void=()=>{})=>requestDocumentNavigation(id,++intentSequence.current,navigationGuard.current,intent=>{setDocumentIntent(intent);setEmployeeIntent(undefined);setEmployeeProfileLabel(undefined);setActive('documents')},done)
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
   const control=usePersonnelControl(startupReady&&storage.state==='ready')
   useEffect(()=>{if(active==='overview')void control.refresh()},[active,control.refresh])
-  const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeIntent(intent);setActive('employees')},done)
+  const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeProfileLabel(undefined);setEmployeeIntent(intent);setActive('employees')},done)
   useEffect(() => {
     let alive = true, pending = false, settled = false
     const accept = (status: StorageStatus) => {
@@ -190,16 +197,20 @@ export default function App() {
             <ol>
               <li>{active === 'home' ? <span>Робочий простір</span> :
                 <button type="button" onClick={() => navigate('home')}>Робочий простір</button>}</li>
-              <li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>
+              {active==='employees'&&employeeProfileLabel?<>
+                <li><ChevronRight size={15} aria-hidden="true"/><button type="button" onClick={returnToRegistry}>Працівники</button></li>
+                <li className="crumb-profile-current"><ChevronRight size={15} aria-hidden="true"/><span aria-current="page" title={employeeProfileLabel}>Особова картка ({employeeProfileLabel})</span></li>
+              </>:<li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>}
             </ol>
           </nav>
-          <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setActive('overview');void control.refresh()})}/>
+          <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setEmployeeProfileLabel(undefined);setActive('overview');void control.refresh()})}/>
         </div>
       </header>
       <DocumentNavigationContext.Provider value={openDocument}><main id="workspace-content" tabIndex={-1} className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
-          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard} /> : active === 'documents' ?
+          <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard}
+            profileReturnRequest={returnToEmployeeRegistry} onProfileContextChange={setEmployeeProfileLabel}/> : active === 'documents' ?
           <DocumentsWorkspace initialIntent={documentIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
           active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
           <DictionariesWorkspace navigationGuard={navigationGuard}/>}

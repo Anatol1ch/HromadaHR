@@ -611,3 +611,7 @@ Read-only повторно перевірено HromadaAID `src/RecipientRegistr
 ## 9.6.1 – Поля довідників і перемикач дат
 
 Read-only звірено HromadaAID `src/RecipientRegistry.tsx` і відповідний `.recipient-bank-picker` у `src/styles.css` на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано сусіднє компонування Select та окремої дії додавання, але в HR обидві незалежні кнопки локально зведені в спільну рамку з роздільником і окремим focus. HR `syncPositionDate` лишився native checkbox із власною компактною switch-візуалізацією, семантикою й reduced-motion стилем. Нових компонентів/залежностей немає; предметна поведінка не змінюється.
+
+## 9.8 – Вкладки особової картки
+
+Read-only звірено HromadaAID `src/SettingsPage.tsx` і `.settings-section-nav` / `.settings-section-current` у `src/styles.css` на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. У HR повторно використано рівношироку горизонтальну навігацію, чинні tab tokens і Lucide, додавши ARIA tab semantics та `navigateTabs`; на вузькій ширині профільна панель має локальне горизонтальне прокручування. Breadcrumb-повернення інтегроване з наявним HR guard і збереженим mounted registry state, без нового router або історії переходів.

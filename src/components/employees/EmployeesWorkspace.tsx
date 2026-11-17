@@ -12,7 +12,13 @@ import EmployeeForm from './EmployeeForm'
 import EmployeeActionDialog from './EmployeeActionDialog'
 import type { NavigationGuard } from './useUnsavedChanges'
 
-export default function EmployeesWorkspace({ navigationGuard,initialIntent,onIntentHandled }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; navigationGuard: RefObject<NavigationGuard> }) {
+function profileBreadcrumbName(employee:EmployeeData) {
+  const first=Array.from(employee.firstName.trim())[0]??''
+  const middle=employee.middleName?.trim()?` ${Array.from(employee.middleName.trim())[0]}.`:''
+  return `${employee.lastName} ${first}.${middle}`
+}
+
+export default function EmployeesWorkspace({ navigationGuard,initialIntent,onIntentHandled,profileReturnRequest=0,onProfileContextChange }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; navigationGuard: RefObject<NavigationGuard>; profileReturnRequest?:number; onProfileContextChange?:(label:string|undefined)=>void }) {
   const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,9 +31,10 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
   const [cardTab,setCardTab]=useState<EmployeeCardTab>('general'),[cardRequest,setCardRequest]=useState(0)
   useEffect(()=>{
     if(!initialIntent)return
+    onProfileContextChange?.('Особова картка')
     setCardTab(initialIntent.tab);setCardRequest(value=>value+1)
     dispatch({type:'card',id:initialIntent.employeeId});onIntentHandled?.()
-  },[initialIntent,onIntentHandled])
+  },[initialIntent,onIntentHandled,onProfileContextChange])
   const opener = useRef<HTMLElement | null>(null)
   const registryScroll=useRef(0)
   const rememberOpener = () => { registryScroll.current=window.scrollY;opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }
@@ -40,6 +47,12 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
     }
     window.scrollTo({top:registryScroll.current})
   })
+  const handledReturn = useRef(profileReturnRequest)
+  useEffect(()=>{
+    if(handledReturn.current===profileReturnRequest)return
+    handledReturn.current=profileReturnRequest
+    if(workspace.cardId){onProfileContextChange?.(undefined);dispatch({type:'card',id:null});dispatch({type:'form',form:null});dispatch({type:'action',action:null});restoreOpener()}
+  },[profileReturnRequest,workspace.cardId])
   useEffect(() => {
     let alive = true
     setLoading(true); setError('')
@@ -69,6 +82,10 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
   const updateFromCard = useCallback((employee: EmployeeData) => {
     setEmployees(current => mergeEmployee(current, employee))
   }, [])
+  const profileLoaded=useCallback((employee:EmployeeData)=>{
+    updateFromCard(employee)
+    onProfileContextChange?.(profileBreadcrumbName(employee))
+  },[onProfileContextChange,updateFromCard])
   function saved(employee: EmployeeData) {
     const created = workspace.form?.kind === 'create'
     setEmployees(current => mergeEmployee(current, employee))
@@ -80,6 +97,7 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
   function deleted(id: string) {
     setEmployees(current => current.filter(employee => employee.id !== id))
     dispatch({ type: 'deleted', id })
+    onProfileContextChange?.(undefined)
     notifySystemToast('success', 'Працівника видалено', 'Особову картку видалено.')
     restoreOpener()
   }
@@ -90,12 +108,11 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
       state={workspace.registry} onState={registry => dispatch({ type: 'registry', registry })}
       onClear={() => dispatch({ type: 'clearFilters' })} onRetry={() => setRetry(value => value + 1)}
       onCreate={() => { rememberOpener();setCardTab('general'); dispatch({ type: 'form', form: { kind: 'create' } }) }}
-      onOpen={employee => navigationGuard.current(()=>{ rememberOpener();setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) })}
+      onOpen={employee => navigationGuard.current(()=>{ rememberOpener();onProfileContextChange?.('Особова картка');setCardTab('general');setCardRequest(v=>v+1); dispatch({ type: 'card', id: employee.id }) })}
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/></div>
     {workspace.cardId && <EmployeeProfilePage initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
-      onLoaded={updateFromCard}
-      onClose={() => { dispatch({ type: 'card', id: null }); restoreOpener() }}
+      onLoaded={profileLoaded}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}
       onDelete={id => dispatch({ type: 'action', action: { kind: 'delete', id } })}/>}
     {workspace.form && <EmployeeForm employee={workspace.form.kind === 'edit' ? workspace.form.employee : undefined}
