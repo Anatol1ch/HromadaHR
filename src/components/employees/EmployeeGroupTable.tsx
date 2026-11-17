@@ -11,7 +11,7 @@ export interface EmployeeActions {
 }
 
 const columns = [
-  { label: 'ПІБ', width: '32%' }, { label: 'Посада', width: '28%' }, { label: 'Тип', width: '15%' },
+  { label: 'ПІБ', width: '36%' }, { label: 'Посада', width: '24%' }, { label: 'Тип', width: '15%' },
   { label: 'Дата прийняття', width: '128px' }, { label: 'Дії', width: '116px', className: 'employee-actions-heading' },
 ]
 

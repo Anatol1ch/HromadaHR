@@ -125,6 +125,7 @@
 .employee-registry .personnel-registry-table tbody td:nth-child(3),
 .employee-registry .personnel-registry-table tbody td.employee-date,
 .employee-registry .personnel-registry-table tbody td.dictionary-actions-cell { text-align:center; }
+.employee-registry .personnel-registry-table tbody td:nth-child(2) { text-align:center; overflow-wrap:anywhere; }
 .employee-type { display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2); white-space:nowrap; }
 .employee-type svg { flex:none; }
 .employee-type-official svg { color:var(--accent); }
