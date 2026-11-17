@@ -122,6 +122,12 @@
 
 .hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }
 .employee-registry .personnel-registry-table thead th { text-align:center; }
+.employee-registry .personnel-registry-table tbody td:not(:last-child) {
+  background-image:linear-gradient(var(--border-surface),var(--border-surface));
+  background-size:1px 60%;
+  background-position:right center;
+  background-repeat:no-repeat;
+}
 .employee-registry .personnel-registry-table tbody td:nth-child(3),
 .employee-registry .personnel-registry-table tbody td.employee-date,
 .employee-registry .personnel-registry-table tbody td.dictionary-actions-cell { text-align:center; }
