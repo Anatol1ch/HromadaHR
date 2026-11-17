@@ -607,3 +607,7 @@ Read-only повторно перевірено HromadaAID `src/RecipientRegistr
 ## 9.6 – Форма працівника
 
 За SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` read-only перевірено `src/RecipientRegistry.tsx` HromadaAID; аналог синхронізації HR дат прийняття/поточного призначення у цільовому фрагменті відсутній. Збережено чинні HR `DateField`/DatePicker, `Select`, `InfoSection`, кадрові guards і форматування; синхронізація є лише локальною чернеткою форми створення, edit не змінює автоматично. Компонування довідників використовує чинну форму HR та спільні токени.
+
+## 9.6.1 – Поля довідників і перемикач дат
+
+Read-only звірено HromadaAID `src/RecipientRegistry.tsx` і відповідний `.recipient-bank-picker` у `src/styles.css` на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано сусіднє компонування Select та окремої дії додавання, але в HR обидві незалежні кнопки локально зведені в спільну рамку з роздільником і окремим focus. HR `syncPositionDate` лишився native checkbox із власною компактною switch-візуалізацією, семантикою й reduced-motion стилем. Нових компонентів/залежностей немає; предметна поведінка не змінюється.

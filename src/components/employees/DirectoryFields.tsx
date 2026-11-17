@@ -72,7 +72,7 @@ export default function DirectoryFields({ departmentId, positionId, onDepartment
         const key = kind === 'department' ? 'departmentId' : 'positionId'
         return <div className="recipient-field employee-field" key={kind} data-directory={kind}>
           <span>{kind === 'department' ? 'Підрозділ' : 'Посада'} *</span>
-          <div className="employee-select-action">
+          <div className={`employee-select-action${errors[key] ? ' is-invalid' : ''}`}>
             <Select label={kind === 'department' ? 'Підрозділ' : 'Посада'} required searchable value={kind === 'department' ? departmentId : positionId}
               disabled={disabled || loading || !!error || pending} error={errors[key]}
               options={(kind === 'department' ? departments : positions).map(entry => ({ value: entry.id, label: entry.name }))}

@@ -1,5 +1,5 @@
 import Modal from '../Modal'
-import { BriefcaseBusiness, Check, UserRound, X } from 'lucide-react'
+import { BriefcaseBusiness, Check, Link2, UserRound, X } from 'lucide-react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput from '../ValidatedInput'
@@ -124,7 +124,6 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
         }} /> :
         <ValidatedInput id={`employee-${key}`} name={key} required={required} maxLength={200} value={values[key]} onChange={event => change(key, event.target.value)}
           aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} />}
-      {key === 'positionStartedOn' && !employee && <label className="employee-date-sync"><input type="checkbox" checked={syncPositionDate} disabled={busy} onChange={event => togglePositionDateSync(event.target.checked)}/>Збігається з датою прийняття</label>}
       {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
@@ -151,14 +150,17 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
       </InfoSection>
       <InfoSection title="Кадрові відомості" icon={<BriefcaseBusiness size={17}/>}>
         <fieldset className="recipient-fieldset" disabled={busy}>
-          <div className="employee-form-grid">
+          <div className={`employee-form-grid employee-personnel-grid${values.employeeType === 'official' ? ' has-position-category' : ''}`}>
             <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
               onDepartment={id => changeDirectory('departmentId', id)} onPosition={id => changeDirectory('positionId', id)} />
-            {textField('hireDate', 'Дата прийняття', true)}
-            {textField('positionStartedOn','На поточній посаді з')}
             {values.employeeType==='official'&&<div className="recipient-field employee-field"><span>Категорія посади</span><Select label="Категорія посади" value={values.positionCategory} disabled={busy} error={errors.positionCategory} options={[{value:'',label:'Не зазначено'},...positionCategories.map(value=>({value,label:`${value} категорія`}))]} onChange={value=>change('positionCategory',value as FormValues['positionCategory'])}/></div>}
-
+            {textField('hireDate', 'Дата прийняття', true)}
+            {textField('positionStartedOn', 'На поточній посаді з')}
           </div>
+          {!employee && <label className="employee-date-sync-panel">
+            <span className="employee-date-sync-copy"><Link2 size={17} aria-hidden="true"/><span>Дата призначення на поточну посаду збігається з датою прийняття</span></span>
+            <input className="employee-date-sync-toggle" type="checkbox" checked={syncPositionDate} disabled={busy} onChange={event => togglePositionDateSync(event.target.checked)}/>
+          </label>}
         </fieldset>
         {contextChanged&&<Alert variant="warning">Посаду або підрозділ змінено. Попередні відомості призначення скинуто. Внесіть перевірені дату й категорію або залиште їх невідомими.</Alert>}
         {contextChanged&&<label className="employee-hint"><input type="checkbox" checked={appointmentReviewed} disabled={busy} onChange={event=>setAppointmentReviewed(event.target.checked)}/> Підтверджую перевірку відомостей поточного призначення</label>}
