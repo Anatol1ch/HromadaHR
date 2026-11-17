@@ -603,3 +603,7 @@ Read-only перевірено HromadaAID electron/decision-store.ts (expected r
 ## 9.5 – Реєстр працівників
 
 Read-only повторно перевірено HromadaAID `src/RecipientRegistry.tsx`, `src/AidRegistry.tsx` і `src/styles.css` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. Адаптовано його локальний toolbar/filter pattern; збережено чинні HR `EmployeeRegistry`, `EmployeeGroupTable`, `GroupedEmployeeTable`, `DictionaryTable`, `InfoSection` та `InfoItem`. Зміни локальні: прибрано підзаголовок реєстру, збалансовано його toolbar, налаштовано ширини/центрування стовпців та текстові типи з декоративними іконками, summary у три responsive картки з динамічною назвою загальної кількості. Фільтрація, дії, grouping і Main/IPC не змінюються; фінальні перевірки й GUI-статус — у HANDOFF.
+
+## 9.6 – Форма працівника
+
+За SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` read-only перевірено `src/RecipientRegistry.tsx` HromadaAID; аналог синхронізації HR дат прийняття/поточного призначення у цільовому фрагменті відсутній. Збережено чинні HR `DateField`/DatePicker, `Select`, `InfoSection`, кадрові guards і форматування; синхронізація є лише локальною чернеткою форми створення, edit не змінює автоматично. Компонування довідників використовує чинну форму HR та спільні токени.

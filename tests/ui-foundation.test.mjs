@@ -4,7 +4,7 @@ import { dateInputError, daysInMonth, formatDate, formatDateInput, formatDateTim
 import { calendarDate, mondayIndex, monthGrid, shiftDays, shiftMonths } from '../src/lib/calendar.ts'
 import { cancelCloseConfirmation, confirmModalClose, finishCloseConfirmation, getCloseConfirmation, subscribeCloseConfirmation } from '../src/components/closeConfirmation.ts'
 import { employeeDetails } from '../dist-electron/electron/personnel/schemas.js'
-import { employeeInput, emptyValues, validateEmployee, validDate } from '../src/employees/model.ts'
+import { employeeInput, emptyValues, syncedPositionStartedOn, validateEmployee, validDate } from '../src/employees/model.ts'
 
 test('AID date boundary presents only DD.MM.YYYY and preserves ISO calendar dates', () => {
   for (const iso of ['0001-01-01', '1600-02-29', '2000-02-29', '2026-11-03', '9999-12-31']) {
@@ -118,4 +118,14 @@ test('client validation and Main Zod agree on required fields, calendar dates an
   }
   for (const value of ['2024-02-29', '0001-01-01', '9999-12-31']) assert.equal(validDate(value), true)
   for (const value of ['2023-02-29', '2026-04-31', '2026-00-01', '0000-01-01', '10000-01-01', 'bad']) assert.equal(validDate(value), false)
+})
+
+test('employee create date sync copies only valid hire dates allowed for the current appointment', () => {
+  const today = '2026-11-17'
+  assert.equal(syncedPositionStartedOn('2024-02-29', today), '2024-02-29')
+  assert.equal(syncedPositionStartedOn(today, today), today)
+  for (const hireDate of ['', '2026-02-30', '2026-1-01', '2026-11-18']) {
+    assert.equal(syncedPositionStartedOn(hireDate, today), '')
+  }
+  assert.equal(syncedPositionStartedOn('2024-01-01', 'not-a-date'), '')
 })

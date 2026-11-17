@@ -35,6 +35,9 @@ export function employeeInput(values: FormValues): EmployeeDetails {
     positionStartedOn: optional(values.positionStartedOn), positionCategory: values.positionCategory || null, hireDate: values.hireDate, departmentId: values.departmentId, positionId: values.positionId }
 }
 export const validDate = isIsoCalendarDate
+export function syncedPositionStartedOn(hireDate: string, today = todayIsoDate()): string {
+  return validDate(hireDate) && validDate(today) && hireDate <= today ? hireDate : ''
+}
 export type FormErrors = Partial<Record<keyof FormValues, string>>
 export function validateEmployee(values: FormValues): FormErrors {
   const errors: FormErrors = {}

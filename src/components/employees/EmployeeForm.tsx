@@ -4,7 +4,7 @@ import type { NavigationGuard } from './useUnsavedChanges'
 import DateField from '../DateField'
 import ValidatedInput from '../ValidatedInput'
 import Select from '../Select'
-import { formatDateInput, todayIsoDate } from '../../lib/dates'
+import { formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, RefObject } from 'react'
@@ -15,7 +15,7 @@ import InfoSection from '../InfoSection'
 import DirectoryFields, { initialDirectoryState } from './DirectoryFields'
 import useUnsavedChanges from './useUnsavedChanges'
 import { employeeInput, employeeTypeLabels, emptyValues,
-  changeAppointment, personnelMessage, validateEmployee, valuesForEmployee } from '../../employees/model'
+  changeAppointment, personnelMessage, syncedPositionStartedOn, validateEmployee, valuesForEmployee } from '../../employees/model'
 import type { FormErrors, FormValues } from '../../employees/model'
 
 type Props = {
@@ -37,9 +37,11 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const form = useRef<HTMLFormElement>(null)
   const [appointmentRevision,setAppointmentRevision]=useState(0)
   const [appointmentReviewed,setAppointmentReviewed]=useState(false)
+  const [syncPositionDate, setSyncPositionDate] = useState(false)
   const [categoryCleared,setCategoryCleared]=useState(false)
   const contextChanged=!!employee&&(values.positionId!==initial.positionId||values.departmentId!==initial.departmentId)
   const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({})
+  const [hireDateDraft, setHireDateDraft] = useState(() => formatDateInput(initial.hireDate))
   const dirty = Object.values(dateDrafts).some(Boolean) || JSON.stringify(values) !== JSON.stringify(initial)
   const busy = saving || directory.pending
 
@@ -51,14 +53,35 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
   const close = () => requestClose(onCancel)
 
   function change<K extends keyof FormValues>(key: K, value: FormValues[K]) {
-    setValues(current => ({ ...current, [key]: value, ...(key==='employeeType'&&value==='staff'?{positionCategory:'' as const}:{}) }))
+    const syncPositionStartedOn = key === 'hireDate' && !employee && syncPositionDate
+    setValues(current => {
+      const next = { ...current, [key]: value, ...(key==='employeeType'&&value==='staff'?{positionCategory:'' as const}:{}) }
+      if (syncPositionStartedOn) next.positionStartedOn = syncedPositionStartedOn(value as string)
+      return next
+    })
+    if (syncPositionStartedOn) {
+      setAppointmentRevision(revision => revision + 1)
+      setDateDrafts(current => ({ ...current, positionStartedOn: false }))
+    }
     if(key==='employeeType'&&value==='staff'&&values.positionCategory)setCategoryCleared(true)
-    setErrors(current => ({ ...current, [key]: undefined }))
+    setErrors(current => syncPositionStartedOn ? ({ ...current, hireDate: undefined, positionStartedOn: undefined }) : ({ ...current, [key]: undefined }))
   }
   function changeDirectory(key:'positionId'|'departmentId',value:string) {
     if(values[key]===value)return
-    setValues(current=>changeAppointment(current,key,value));setAppointmentRevision(v=>v+1);setAppointmentReviewed(false)
+    setValues(current=>{
+      const next=changeAppointment(current,key,value)
+      if(!employee&&syncPositionDate)next.positionStartedOn=syncedPositionStartedOn(parseDateInput(hireDateDraft)??'')
+      return next
+    });setAppointmentRevision(v=>v+1);setAppointmentReviewed(false)
     setDateDrafts(current=>({...current,positionStartedOn:false}));setErrors(current=>({...current,positionStartedOn:undefined,positionCategory:undefined}))
+  }
+  function togglePositionDateSync(enabled: boolean) {
+    setSyncPositionDate(enabled)
+    if (!enabled) return
+    setValues(current => ({ ...current, positionStartedOn: syncedPositionStartedOn(parseDateInput(hireDateDraft) ?? '') }))
+    setAppointmentRevision(revision => revision + 1)
+    setDateDrafts(current => ({ ...current, positionStartedOn: false }))
+    setErrors(current => ({ ...current, positionStartedOn: undefined }))
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -94,10 +117,14 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
     const isDate = key === 'birthDate' || key === 'hireDate' || key === 'positionStartedOn'
     return <div className="recipient-field employee-field">
       <label htmlFor={`employee-${key}`}>{label}{required && <span aria-hidden="true"> *</span>}</label>
-      {isDate ? <DateField key={key==='positionStartedOn'?appointmentRevision:key} max={key==='positionStartedOn'?todayIsoDate():undefined} id={`employee-${key}`} required={required} disabled={busy} value={values[key]} error={errors[key]}
-        onChange={value => change(key, value)} onDraftChange={display => setDateDrafts(current => ({ ...current, [key]: display !== formatDateInput(initial[key]) }))} /> :
+      {isDate ? <DateField key={key==='positionStartedOn'?appointmentRevision:key} max={key==='positionStartedOn'?todayIsoDate():undefined} id={`employee-${key}`} required={required} disabled={busy || (key === 'positionStartedOn' && !employee && syncPositionDate)} value={values[key]} error={errors[key]}
+        onChange={value => change(key, value)} onDraftChange={display => {
+          setDateDrafts(current => ({ ...current, [key]: display !== formatDateInput(initial[key]) }))
+          if (key === 'hireDate') setHireDateDraft(display)
+        }} /> :
         <ValidatedInput id={`employee-${key}`} name={key} required={required} maxLength={200} value={values[key]} onChange={event => change(key, event.target.value)}
           aria-invalid={!!errors[key]} aria-describedby={errors[key] ? `error-${key}` : undefined} />}
+      {key === 'positionStartedOn' && !employee && <label className="employee-date-sync"><input type="checkbox" checked={syncPositionDate} disabled={busy} onChange={event => togglePositionDateSync(event.target.checked)}/>Збігається з датою прийняття</label>}
       {!isDate && errors[key] && <span className="field-error" id={`error-${key}`}>{errors[key]}</span>}
     </div>
   }
@@ -128,7 +155,7 @@ export default function EmployeeForm({ employee, navigationGuard, onCancel, onSa
             <DirectoryFields departmentId={values.departmentId} positionId={values.positionId} errors={errors} disabled={busy} inFlight={inFlight} navigationGuard={navigationGuard} onState={setDirectory}
               onDepartment={id => changeDirectory('departmentId', id)} onPosition={id => changeDirectory('positionId', id)} />
             {textField('hireDate', 'Дата прийняття', true)}
-            {textField('positionStartedOn','Дата призначення на поточну посаду')}
+            {textField('positionStartedOn','На поточній посаді з')}
             {values.employeeType==='official'&&<div className="recipient-field employee-field"><span>Категорія посади</span><Select label="Категорія посади" value={values.positionCategory} disabled={busy} error={errors.positionCategory} options={[{value:'',label:'Не зазначено'},...positionCategories.map(value=>({value,label:`${value} категорія`}))]} onChange={value=>change('positionCategory',value as FormValues['positionCategory'])}/></div>}
 
           </div>
