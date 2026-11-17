@@ -1,11 +1,9 @@
 import { useId } from 'react'
-import { FilterX, Plus, SlidersHorizontal } from 'lucide-react'
+import { FilterX, Landmark, Plus, SlidersHorizontal, UserRound, UsersRound } from 'lucide-react'
 import type { EmployeeCard, EmployeeType } from '../../../shared/personnel'
 import { employeeStructure, employeeSummary, filterEmployees, registryOptions, withDirectoryNames } from '../../employees/registry.ts'
 import type { RegistryDirectories, RegistryState } from '../../employees/registry.ts'
 import Alert from '../Alert'
-import InfoItem from '../InfoItem'
-import InfoSection from '../InfoSection'
 import SearchField from '../SearchField'
 import Select from '../Select'
 import EmployeeGroupTable from './EmployeeGroupTable'
@@ -56,12 +54,21 @@ export default function EmployeeRegistry({ employees, loading, error, state, dir
     {orderError && <Alert variant="error" action={<button type="button" onClick={missingOrder ? onRetry : onRetryDirectories}>Повторити завантаження довідників</button>}>{orderError}</Alert>}
     <EmployeeGroupTable groups={tableError ? [] : groups ?? []} loading={tableLoading}
       error={tableError} filtered={filtered} {...actions}/>
-    {!tableLoading && !tableError && <InfoSection title="Підсумок реєстру">
-      <dl className="info-grid employee-registry-summary" aria-live="polite">
-        <InfoItem label={filtered ? 'У вибірці' : 'Усього працівників'} value={summary.total} emphasis/>
-        <InfoItem label="Посадових осіб ОМС" value={summary.officials}/>
-        <InfoItem label="Інших працівників" value={summary.staff}/>
+    {!tableLoading && !tableError && <section className="employee-registry-summary" aria-label="Підсумок реєстру">
+      <dl aria-live="polite">
+        <div className="employee-summary-card employee-summary-total">
+          <dt><UsersRound size={20} aria-hidden="true"/><span>{filtered ? 'У вибірці' : 'Усього працівників'}</span></dt>
+          <dd>{summary.total}</dd>
+        </div>
+        <div className="employee-summary-card">
+          <dt><Landmark size={20} aria-hidden="true"/><span>Посадових осіб ОМС</span></dt>
+          <dd>{summary.officials}</dd>
+        </div>
+        <div className="employee-summary-card">
+          <dt><UserRound size={20} aria-hidden="true"/><span>Інших працівників</span></dt>
+          <dd>{summary.staff}</dd>
+        </div>
       </dl>
-    </InfoSection>}
+    </section>}
   </section>
 }
