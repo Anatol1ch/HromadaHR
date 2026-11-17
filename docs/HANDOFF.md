@@ -80,3 +80,7 @@ Dev: LOCALAPPDATA/HromadaHR-dev; built: LOCALAPPDATA/HromadaHR. Для руйн�
 ## Етап 9.5.2 – Рамки підсумкових карток
 
 У гілці `codex/9.5.2-summary-border-polish` від `3d7a78b598d4f9b405f29005524ee5f3681b0575` для `.employee-summary-card` рамку пом’якшено токеном `--border-surface`. Інші стилі та поведінка не змінювалися. `pnpm typecheck`, `pnpm build` і `git diff --check` успішні; ручне GUI-підтвердження делікатності рамки залишається замовнику.
+
+## Етап 9.5.3 – Іконка загальної кількості в підрозділах
+
+У гілці `codex/9.5.3-department-total-icon` від `e4ae5ee5fc01c3307a2a2255ed588db4910111f5` перед загальною кількістю працівників у заголовку підрозділу додано `UsersRound` 14 px з `aria-hidden`. Підрахунки, роздільники й компонування не змінені. `pnpm typecheck`, `pnpm build` і `git diff --check` успішні; ручний GUI-перегляд піктограми очікується.

@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import { Landmark, UserRound } from 'lucide-react'
+import { Landmark, UserRound, UsersRound } from 'lucide-react'
 import type { EmployeeDepartmentGroup } from '../../employees/registry'
 import DictionaryTable from '../DictionaryTable'
 import { TableSkeleton } from '../Skeleton'
@@ -34,7 +34,7 @@ export default function GroupedEmployeeTable({ groups, columns, renderRow, loadi
             <tr><th className="employee-department-heading" colSpan={columns.length} scope="rowgroup">
               <div className="employee-department-content">
                 <strong>{group.name}</strong>
-                <span className="employee-department-stat">{total} {pluralForm(total, 'працівник', 'працівники', 'працівників')}</span>
+                <span className="employee-department-stat"><UsersRound size={14} aria-hidden="true"/>{total} {pluralForm(total, 'працівник', 'працівники', 'працівників')}</span>
                 {officials > 0 && <span className="employee-department-stat"><Landmark size={14} aria-hidden="true"/>{officials} {pluralForm(officials, 'посадова особа', 'посадові особи', 'посадових осіб')}</span>}
                 {staff > 0 && <span className="employee-department-stat"><UserRound size={14} aria-hidden="true"/>{staff} {pluralForm(staff, 'інший працівник', 'інші працівники', 'інших працівників')}</span>}
               </div>
