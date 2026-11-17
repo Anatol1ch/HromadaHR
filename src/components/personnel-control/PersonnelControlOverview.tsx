@@ -34,7 +34,7 @@ export default function PersonnelControlOverview({model,onOpen,navigationGuard}:
    </>}
   </div></li>}
  return <div ref={owner} className="employees-workspace page-transition">
-  <header className="page-heading"><div><div className="eyebrow">РОБОЧИЙ ПРОСТІР</div><h1>Огляд</h1><p className="subtitle">Кадрові питання, що потребують уваги</p></div></header>
+  <header className="page-heading"><div><h1>Огляд</h1><p className="subtitle">Кадрові питання, що потребують уваги</p></div></header>
   {model.error&&<Alert variant="error" action={<button type="button" onClick={()=>void model.refresh()}>Повторити</button>}>{model.error}</Alert>}
   {!model.data?!model.error&&<DataState kind="loading" message="Формування кадрового огляду…"/>:<>
    <p className="employee-hint">Актуальні питання: {model.data.activeCount}. Горизонт: {model.data.settings.horizonDays} днів. Перегляд не означає прийняття кадрового рішення.</p>

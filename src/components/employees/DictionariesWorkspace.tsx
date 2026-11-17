@@ -19,7 +19,7 @@ export default function DictionariesWorkspace({ navigationGuard }: { navigationG
   const [kind, setKind] = useState<DictionaryKind|'series'>('department')
   const tabId = useId()
   return <div className="page-transition personnel-dictionaries">
-    <header className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1>Довідники</h1></div></header>
+    <header className="page-heading"><div><h1>Довідники</h1></div></header>
     <nav className="settings-section-nav" role="tablist" aria-label="Довідники" onKeyDown={navigateTabs}>
       {(['department', 'position', 'series'] as const).map(value => <button key={value} type="button" role="tab" id={tabId + value}
         aria-controls={tabId + value + '-panel'} aria-selected={kind === value} tabIndex={kind === value ? 0 : -1}

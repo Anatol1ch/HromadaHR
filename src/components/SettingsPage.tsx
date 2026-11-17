@@ -19,7 +19,7 @@ export default function SettingsPage({navigationGuard}:{navigationGuard:RefObjec
     return () => { active = false }
   }, [])
   return <div className="settings-page">
-    <header className="page-heading settings-heading"><div><div className="eyebrow">СИСТЕМА</div><h1>Налаштування</h1><p className="subtitle">Параметри застосунку та інформація про програму.</p></div>
+    <header className="page-heading settings-heading"><div><h1>Налаштування</h1><p className="subtitle">Параметри застосунку та інформація про програму.</p></div>
     </header>
     <nav className="settings-section-nav" aria-label="Розділи налаштувань">
       <button type="button" className={`settings-section-current${activeSection === 'backup' ? ' is-selected' : ''}`} aria-current={activeSection === 'backup' ? 'page' : undefined} onClick={() => selectSection('backup')}><HardDrive size={17} aria-hidden="true"/>Резервне копіювання</button>

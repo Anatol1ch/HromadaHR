@@ -11,7 +11,7 @@ export default function DocumentsWorkspace({navigationGuard,initialIntent}:{navi
   const id=useId()
   useEffect(()=>{if(initialIntent)setView('documents')},[initialIntent])
   return <div className="page-transition documents-workspace">
-    <header className="page-heading"><div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 tabIndex={-1}>Документи</h1></div></header>
+    <header className="page-heading"><div><h1 tabIndex={-1}>Документи</h1></div></header>
     <nav className="settings-section-nav" role="tablist" aria-label="Представлення документів" onKeyDown={navigateTabs}>
       {([{value:'documents',label:'Кадрові документи'},{value:'leave',label:'Журнал відпусток'}] as const).map(tab=><button type="button" key={tab.value} role="tab" id={id+tab.value}
         aria-selected={view===tab.value} tabIndex={view===tab.value?0:-1} aria-controls={id+tab.value+'-panel'} className={'settings-section-current'+(view===tab.value?' is-selected':'')}

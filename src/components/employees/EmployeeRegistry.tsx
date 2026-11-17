@@ -32,7 +32,7 @@ export default function EmployeeRegistry({ employees, loading, error, state, dir
   const summary = employeeSummary(matches)
   return <section className="employee-registry" aria-labelledby="employees-title">
     <div className="page-heading employee-heading">
-      <div><div className="eyebrow">КАДРОВИЙ ОБЛІК</div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
+      <div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
         <p className="subtitle">Реєстр працівників та особові картки громади</p></div>
     </div>
     <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри працівників">
