@@ -1,4 +1,4 @@
-import { Eye, Pencil, Trash2 } from 'lucide-react'
+import { Eye, Landmark, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import { displayDate, fullName } from '../../employees/model'
 import type { EmployeeDepartmentGroup } from '../../employees/registry.ts'
@@ -11,8 +11,8 @@ export interface EmployeeActions {
 }
 
 const columns = [
-  { label: 'ПІБ' }, { label: 'Посада', width: '25%' }, { label: 'Тип', width: '126px' },
-  { label: 'Дата прийняття', width: '116px' }, { label: 'Дії', width: '104px', className: 'employee-actions-heading' },
+  { label: 'ПІБ', width: '32%' }, { label: 'Посада', width: '28%' }, { label: 'Тип', width: '15%' },
+  { label: 'Дата прийняття', width: '128px' }, { label: 'Дії', width: '116px', className: 'employee-actions-heading' },
 ]
 
 export default function EmployeeGroupTable({ groups, loading, error, filtered, ...actions }: EmployeeActions & {
@@ -22,10 +22,11 @@ export default function EmployeeGroupTable({ groups, loading, error, filtered, .
   const renderRow = (employee: EmployeeCard) => {
     const name = fullName(employee)
     const editId = 'employee-edit-' + employee.id
+    const TypeIcon = employee.employeeType === 'official' ? Landmark : UserRound
     return <tr key={employee.id}>
       <td><strong className="employee-name">{name}</strong></td>
       <td>{employee.position.name}</td>
-      <td>{employee.employeeType === 'official' ? 'Посадова особа' : 'Інший працівник'}</td>
+      <td className="employee-type-cell"><span className={`employee-type employee-type-${employee.employeeType}`}><TypeIcon size={16} aria-hidden="true"/>{employee.employeeType === 'official' ? 'Посадова особа' : 'Інший працівник'}</span></td>
       <td className="employee-date">{displayDate(employee.hireDate)}</td>
       <td className="dictionary-actions-cell"><div className="registry-row-actions">
         <button type="button" className="table-action" title="Переглянути" aria-label={`Переглянути: ${name}`} onClick={() => actions.onOpen(employee)}><Eye size={17} aria-hidden="true"/></button>

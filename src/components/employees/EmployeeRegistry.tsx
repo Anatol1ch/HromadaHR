@@ -31,10 +31,7 @@ export default function EmployeeRegistry({ employees, loading, error, state, dir
   const filtered = !!state.query.trim() || activeFilters > 0
   const summary = employeeSummary(matches)
   return <section className="employee-registry" aria-labelledby="employees-title">
-    <div className="page-heading employee-heading">
-      <div><h1 id="employees-title" tabIndex={-1}>Працівники</h1>
-        <p className="subtitle">Реєстр працівників та особові картки громади</p></div>
-    </div>
+    <div className="page-heading employee-heading"><h1 id="employees-title" tabIndex={-1}>Працівники</h1></div>
     <section className="dashboard-panel aid-registry-panel employee-registry-tools" aria-label="Пошук і фільтри працівників">
       <div className="aid-toolbar">
         <SearchField value={state.query} onChange={query => onState({ query })} label="Пошук за ПІБ" placeholder="Прізвище, ім’я або по батькові"/>
@@ -61,7 +58,7 @@ export default function EmployeeRegistry({ employees, loading, error, state, dir
       error={tableError} filtered={filtered} {...actions}/>
     {!tableLoading && !tableError && <InfoSection title="Підсумок реєстру">
       <dl className="info-grid employee-registry-summary" aria-live="polite">
-        <InfoItem label="Усього працівників" value={summary.total} emphasis/>
+        <InfoItem label={filtered ? 'У вибірці' : 'Усього працівників'} value={summary.total} emphasis/>
         <InfoItem label="Посадових осіб ОМС" value={summary.officials}/>
         <InfoItem label="Інших працівників" value={summary.staff}/>
       </dl>

@@ -19,11 +19,12 @@
 .aid-filter-count { min-width: 21px; height: 21px; display: inline-grid; place-items: center; padding: 0 5px; border-radius: 20px; background: var(--accent); color: var(--surface-card); font-size: 11px; line-height: 1; font-variant-numeric: tabular-nums; }
 .aid-filter-panel { margin: 0 0 17px; border: 1px solid var(--border-surface); border-radius: var(--radius-table); background: var(--surface-panel); padding: 15px; }
 .aid-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px var(--space-4); align-items: start; }
-.employee-registry { display: grid; gap: 16px; min-width: 0; }
+.employee-registry { display: grid; gap: var(--space-3); min-width: 0; }
 .employee-registry .employee-heading { margin: 0; }
-.employee-registry .aid-toolbar { flex-wrap: wrap; justify-content: flex-start; gap: 10px; }
+.employee-registry .aid-toolbar { flex-wrap: wrap; justify-content: flex-start; gap: 10px; margin-bottom: 0; }
 .employee-registry .aid-toolbar .registry-search { flex: 1 1 240px; }
 .employee-registry .aid-toolbar button { max-width: 100%; }
+.employee-registry .aid-filter-panel { margin: var(--space-3) 0 0; }
 .employee-group-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
 .employee-group-heading h2 { margin: 0; min-width: 0; color: var(--color-text); font-size: 18px; line-height: 1.45; }
 .employee-group-heading > span { color: var(--color-text-secondary); font-size: 12px; }
@@ -91,6 +92,14 @@
 .hr-employee-table .registry-row-actions { justify-content:center; }
 
 .hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }
+.employee-registry .personnel-registry-table thead th { text-align:center; }
+.employee-registry .personnel-registry-table tbody td:nth-child(3),
+.employee-registry .personnel-registry-table tbody td.employee-date,
+.employee-registry .personnel-registry-table tbody td.dictionary-actions-cell { text-align:center; }
+.employee-type { display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2); white-space:nowrap; }
+.employee-type svg { flex:none; }
+.employee-type-official svg { color:var(--accent); }
+.employee-type-staff svg { color:var(--color-text-secondary); }
 
 .employee-select-action > .employee-directory-add { width:var(--control-height); height:var(--control-height); padding:0; justify-content:center; }
 
@@ -228,19 +237,16 @@
 .employee-registry .personnel-registry-table { min-width: 46rem; }
 .personnel-registry-table .dictionary-actions-cell { padding-inline: 6px; }
 .employee-registry .employee-registry-summary {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
 }
-.employee-registry-summary .info-item-emphasis {
-  grid-row: span 2;
-  display: grid;
-  align-content: center;
-  padding-block: var(--space-3);
-}
+.employee-registry-summary .info-item { display:flex; flex-direction:column; justify-content:center; padding-block:var(--space-2); }
 .employee-registry-summary .info-item-emphasis dd { font-size: 24px; }
+@container info-section (max-width: 650px) {
+  .employee-registry .employee-registry-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @container info-section (max-width: 440px) {
   .employee-registry .employee-registry-summary { grid-template-columns: minmax(0, 1fr); }
-  .employee-registry-summary .info-item-emphasis { grid-row: auto; }
 }
 .personnel-registry-table tbody th.employee-department-heading {
   padding: var(--space-2) var(--space-3);
