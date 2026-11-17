@@ -251,7 +251,7 @@
   min-width:0;
   min-height:72px;
   padding:12px 16px;
-  border:1px solid var(--border-standard);
+  border:1px solid var(--border-surface);
   border-radius:var(--radius-table);
   background:var(--surface-card);
 }
