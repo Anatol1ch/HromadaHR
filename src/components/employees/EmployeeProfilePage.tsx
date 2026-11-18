@@ -109,7 +109,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
         </nav>
         <section key={id+':'+tabRequestId+':'+section} id={tabId+'-content'} className={`employee-profile-content${section === 'general' ? ' employee-profile-general-content' : ''}`} role="tabpanel" tabIndex={0} aria-labelledby={tabId+'-'+section}>
           {section==='general'?<>
-            <div className="employee-information-panels">
+            <div className={`employee-information-panels${employee.employeeType === 'official' ? ' employee-information-panels-synchronized' : ''}`}>
               <EmployeeInformationPanel title="Персональні відомості" icon={UserRound} fields={personalFields}/>
               <EmployeeInformationPanel title="Кадрові відомості" icon={BriefcaseBusiness} fields={employmentFields}/>
             </div>

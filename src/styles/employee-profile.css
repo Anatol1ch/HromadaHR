@@ -19,11 +19,15 @@
 .employee-profile-nav button > span { overflow-wrap:anywhere; }
 .employee-profile-content { display:grid; align-content:start; gap:var(--space-3); min-width:0; container:employee-profile-content / inline-size; }
 .employee-profile-general-content .employee-information-panels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:var(--space-3); min-width:0; }
+.employee-profile-general-content .employee-information-panels-synchronized { grid-template-rows:repeat(6,auto); row-gap:0; }
 .employee-profile-general-content .employee-information-panels > .info-section,
 .employee-profile-general-content > .info-section { min-width:0; gap:var(--space-2); padding:var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
+.employee-profile-general-content .employee-information-panels-synchronized > .info-section { display:grid; grid-row:span 6; grid-template-rows:subgrid; row-gap:0; }
 .employee-profile-general-content .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 .employee-information-list { display:grid; gap:0; min-width:0; margin:0; }
-.employee-information-row { display:grid; grid-template-columns:32px minmax(0,32fr) minmax(0,68fr); align-items:center; gap:var(--space-2); min-width:0; min-height:48px; padding:var(--space-2) 0; }
+.employee-profile-general-content .employee-information-panels-synchronized .info-section-heading { grid-row:1; }
+.employee-profile-general-content .employee-information-panels-synchronized .employee-information-list { grid-row:2 / span 5; grid-template-rows:subgrid; }
+.employee-information-row { display:grid; grid-template-columns:32px minmax(140px,26fr) minmax(0,74fr); align-items:center; gap:var(--space-2); min-width:0; min-height:48px; padding:var(--space-2) 0; }
 .employee-information-row + .employee-information-row { border-top:1px solid var(--border-surface); }
 .employee-information-row-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:var(--radius-control); background:var(--accent-soft); color:var(--accent); }
 .employee-information-row dt { position:relative; display:grid; align-content:center; align-self:stretch; min-width:0; padding-inline-end:var(--space-3); color:var(--color-text); font-size:13px; font-weight:600; line-height:1.45; overflow-wrap:anywhere; }
@@ -33,6 +37,10 @@
 .employee-profile-page :is(h1,h2):focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
 @container employee-profile-content (max-width:950px) {
  .employee-profile-general-content .employee-information-panels { grid-template-columns:minmax(0,1fr); }
+ .employee-profile-general-content .employee-information-panels-synchronized { grid-template-rows:none; row-gap:var(--space-3); }
+ .employee-profile-general-content .employee-information-panels-synchronized > .info-section { grid-row:auto; grid-template-rows:none; row-gap:var(--space-2); }
+ .employee-profile-general-content .employee-information-panels-synchronized .info-section-heading,
+ .employee-profile-general-content .employee-information-panels-synchronized .employee-information-list { grid-row:auto; grid-template-rows:none; }
 }
 @container employee-profile-content (max-width:520px) {
  .employee-information-row { grid-template-columns:32px minmax(0,1fr); gap:var(--space-1) var(--space-2); }

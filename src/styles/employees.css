@@ -25,6 +25,7 @@
 .employee-registry .aid-toolbar .registry-search { flex: 1 1 240px; }
 .employee-registry .aid-toolbar button { max-width: 100%; }
 .employee-registry .aid-filter-panel { margin: var(--space-3) 0 0; }
+.employee-registry .employee-group-heading h2 { font-size:20px; font-weight:700; }
 .employee-group-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
 .employee-group-heading h2 { margin: 0; min-width: 0; color: var(--color-text); font-size: 18px; line-height: 1.45; }
 .employee-group-heading > span { color: var(--color-text-secondary); font-size: 12px; }
@@ -120,7 +121,7 @@
 .hr-employee-table .employee-actions-heading { text-align:center; }
 .hr-employee-table .registry-row-actions { justify-content:center; }
 
-.hr-employee-table .employee-name { color:var(--color-text); font-weight:650; }
+.employee-registry .hr-employee-table .employee-name { color:var(--color-text); font-size:13px; font-weight:600; }
 .employee-registry .personnel-registry-table thead th { text-align:center; }
 .employee-registry .personnel-registry-table tbody td:not(:last-child) {
   background-image:linear-gradient(var(--border-surface),var(--border-surface));
@@ -285,15 +286,15 @@
   align-items:center;
   gap:12px;
   min-width:0;
-  min-height:52px;
+  min-height:48px;
   padding:8px 12px;
   border:1px solid var(--border-surface);
   border-radius:var(--radius-table);
   background:var(--surface-card);
 }
-.employee-summary-card dt { display:flex; align-items:center; gap:10px; min-width:0; color:var(--color-text-control); font-size:14px; font-weight:600; line-height:1.4; }
+.employee-summary-card dt { display:flex; align-items:center; gap:10px; min-width:0; color:var(--color-text-secondary); font-size:13px; font-weight:500; line-height:1.4; }
 .employee-summary-card dt svg { width:18px; height:18px; flex:none; color:var(--color-text-secondary); }
-.employee-summary-card dd { display:grid; place-items:center; min-width:28px; min-height:28px; margin:0; padding:0 8px; border-radius:var(--radius-control); background:var(--surface-panel); color:var(--color-text-control); font-size:14px; font-weight:600; line-height:1.15; font-variant-numeric:tabular-nums; text-align:center; }
+.employee-summary-card dd { display:grid; place-items:center; min-width:26px; min-height:26px; margin:0; padding:0 8px; border-radius:var(--radius-control); background:var(--surface-panel); color:var(--color-text-control); font-size:13px; font-weight:600; line-height:1.15; font-variant-numeric:tabular-nums; text-align:center; }
 .employee-summary-total dt svg,
 .employee-summary-total dd { color:var(--accent); }
 .employee-summary-total dd { background:var(--accent-soft); }
@@ -306,7 +307,8 @@
   border-block: 1px solid var(--border-surface);
 }
 .employee-department-content { display:flex; align-items:center; flex-wrap:wrap; gap:4px 0; min-width:0; }
-.employee-registry .employee-department-content > strong { min-width:0; margin-right:10px; color:var(--tab-active-text); font-size:14px; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.employee-registry .employee-department-content > strong { min-width:0; margin-right:10px; color:var(--tab-active-text); font-size:14px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; }
+.employee-registry .employee-department-stat { font-size:12px; }
 .employee-department-stat { display:inline-flex; align-items:center; gap:5px; min-width:0; margin-right:10px; color:var(--color-text-secondary); font-weight:400; white-space:nowrap; }
 .employee-department-stat + .employee-department-stat::before { content:'•'; margin-right:5px; color:var(--color-text-secondary); font-weight:600; }
 .employee-department-stat svg { flex:none; }
