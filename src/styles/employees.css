@@ -307,8 +307,8 @@
   border-block: 1px solid var(--border-surface);
 }
 .employee-department-content { display:flex; align-items:center; flex-wrap:wrap; gap:4px 0; min-width:0; }
-.employee-registry .employee-department-content > strong { min-width:0; margin-right:10px; color:var(--tab-active-text); font-size:14px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; }
-.employee-registry .employee-department-stat { font-size:12px; }
+.employee-registry .employee-department-content > strong { min-width:0; margin-right:10px; color:var(--tab-active-text); font-size:14px; font-weight:650; line-height:1.4; overflow-wrap:anywhere; }
+.employee-registry .employee-department-stat { font-size:14px; line-height:1.4; white-space:normal; overflow-wrap:anywhere; }
 .employee-department-stat { display:inline-flex; align-items:center; gap:5px; min-width:0; margin-right:10px; color:var(--color-text-secondary); font-weight:400; white-space:nowrap; }
 .employee-department-stat + .employee-department-stat::before { content:'•'; margin-right:5px; color:var(--color-text-secondary); font-weight:600; }
 .employee-department-stat svg { flex:none; }
