@@ -57,15 +57,15 @@ export default function EmployeeRegistry({ employees, loading, error, state, dir
     {!tableLoading && !tableError && <section className="employee-registry-summary" aria-label="Підсумок реєстру">
       <dl aria-live="polite">
         <div className="employee-summary-card employee-summary-total">
-          <dt><UsersRound size={20} aria-hidden="true"/><span>{filtered ? 'У вибірці' : 'Усього працівників'}</span></dt>
+          <dt><UsersRound size={18} aria-hidden="true"/><span>{filtered ? 'У вибірці' : 'Усього працівників'}</span></dt>
           <dd>{summary.total}</dd>
         </div>
         <div className="employee-summary-card">
-          <dt><Landmark size={20} aria-hidden="true"/><span>Посадових осіб ОМС</span></dt>
+          <dt><Landmark size={18} aria-hidden="true"/><span>Посадових осіб ОМС</span></dt>
           <dd>{summary.officials}</dd>
         </div>
         <div className="employee-summary-card">
-          <dt><UserRound size={20} aria-hidden="true"/><span>Інших працівників</span></dt>
+          <dt><UserRound size={18} aria-hidden="true"/><span>Інших працівників</span></dt>
           <dd>{summary.staff}</dd>
         </div>
       </dl>
