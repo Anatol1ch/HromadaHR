@@ -33,7 +33,8 @@
 
 .employee-documents-table td { overflow-wrap:anywhere; max-width:26rem; }
 .employee-profile-general-content .employee-documents-table { min-width:620px; }
-.employee-profile-general-content .employee-documents-table thead th { text-align:center; }
+.employee-profile-general-content .employee-documents-table thead th { font-size:13px; font-weight:650; text-align:center; }
+.employee-profile-general-content .employee-documents-table tbody td { font-size:13px; font-weight:400; }
 .employee-profile-general-content .employee-documents-table tbody td:nth-child(-n+3) { text-align:center; font-weight:400; }
 .employee-profile-general-content .employee-documents-table tbody td:not(:last-child):not([colspan]) {
   background-image:linear-gradient(var(--border-surface),var(--border-surface));
@@ -52,6 +53,7 @@
   background:transparent;
   color:var(--accent-hover);
   font:inherit;
+  font-size:13px;
   font-weight:400;
   text-align:left;
 }

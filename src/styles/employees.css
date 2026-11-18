@@ -122,7 +122,8 @@
 .hr-employee-table .registry-row-actions { justify-content:center; }
 
 .employee-registry .hr-employee-table .employee-name { color:var(--color-text); font-size:13px; font-weight:600; }
-.employee-registry .personnel-registry-table thead th { text-align:center; }
+.employee-registry .personnel-registry-table thead th { font-size:13px; font-weight:650; text-align:center; }
+.employee-registry .personnel-registry-table thead th > * { font-size:inherit; }
 .employee-registry .personnel-registry-table tbody td:not(:last-child) {
   background-image:linear-gradient(var(--border-surface),var(--border-surface));
   background-size:1px 60%;
