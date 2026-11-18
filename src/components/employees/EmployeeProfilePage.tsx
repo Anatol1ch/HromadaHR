@@ -6,7 +6,7 @@ import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import ProfileLeaveWorkbench from '../leave/ProfileLeaveWorkbench'
-import { Award, BriefcaseBusiness, Building2, CalendarCheck, CalendarClock, CalendarDays, Clock3, ContactRound, Landmark, Layers, Pencil, Trash2, UserRound } from 'lucide-react'
+import { ArrowLeft, Award, BriefcaseBusiness, Building2, CalendarCheck, CalendarClock, CalendarDays, Clock3, ContactRound, Landmark, Layers, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
@@ -29,9 +29,9 @@ function EmployeeInformationPanel({ title, icon: SectionIcon, fields }: { title:
   </InfoSection>
 }
 
-export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, revision, navigationGuard,initialTab='general',tabRequestId=0 }: {
+export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, onReturnToRegistry, revision, navigationGuard,initialTab='general',tabRequestId=0 }: {
   initialTab?:EmployeeCardTab;tabRequestId?:number
-  id: string; revision: number; onDelete: (id: string) => void
+  id: string; revision: number; onDelete: (id: string) => void;onReturnToRegistry:()=>void
   navigationGuard: RefObject<NavigationGuard>
   onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
 }) {
@@ -83,6 +83,8 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
   ] : []
   return <article className="employee-profile-page page-transition" aria-labelledby="employee-profile-title">
     <header className="employee-profile-header">
+      <button className="employee-profile-return" type="button" aria-label="До списку працівників" title="До списку працівників" onClick={onReturnToRegistry}><ArrowLeft size={19} aria-hidden="true"/></button>
+      <span className="employee-profile-return-separator" aria-hidden="true"/>
       <div className="employee-profile-avatar" aria-hidden="true"><UserRound size={23}/></div>
       <div className="employee-profile-identity">
         <h1 id="employee-profile-title" tabIndex={-1} ref={heading}>{employee&&!error?fullName(employee):'Особова картка'}</h1>

@@ -615,3 +615,7 @@ Read-only звірено HromadaAID `src/RecipientRegistry.tsx` і відпов�
 ## 9.8 – Вкладки особової картки
 
 Read-only звірено HromadaAID `src/SettingsPage.tsx` і `.settings-section-nav` / `.settings-section-current` у `src/styles.css` на SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`. У HR повторно використано рівношироку горизонтальну навігацію, чинні tab tokens і Lucide, додавши ARIA tab semantics та `navigateTabs`; на вузькій ширині профільна панель має локальне горизонтальне прокручування. Breadcrumb-повернення інтегроване з наявним HR guard і збереженим mounted registry state, без нового router або історії переходів.
+
+## 9.9.2 – Локальна типографіка панелей і повернення з профілю
+
+Read-only перевірено HromadaAID `src/RecipientRegistry.tsx` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`; відповідного employee-profile header/back-control у цьому кадровому фрагменті немає. Нову кнопку не оформлювали як окрему навігаційну систему: вона викликає чинний HR `returnToRegistry`, який уже маршрутизує через один `navigationGuard` та `profileReturnRequest`/`EmployeesWorkspace`. Для структурованих фактів вкладки «Загальні відомості» локально закріплено патерн «іконка, контрастна назва поля, нейтральне значення»; він не поширюється на інші модулі. Використано наявні Lucide, семантичні токени, компактний control-height і reduced-motion підхід.

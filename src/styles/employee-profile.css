@@ -1,5 +1,12 @@
 .employee-profile-page { display:grid; gap:var(--space-4); min-width:0; container:employee-profile / inline-size; }
-.employee-profile-header { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:var(--space-3); padding:var(--space-4); background:var(--surface-card); border:1px solid var(--border-surface); border-radius:var(--radius-card); }
+.employee-profile-header { display:grid; grid-template-columns:auto 1px auto minmax(0,1fr) auto; align-items:center; gap:var(--space-3); padding:var(--space-4); background:var(--surface-card); border:1px solid var(--border-surface); border-radius:var(--radius-card); }
+.employee-profile-return { display:grid; place-items:center; width:var(--control-height-compact); height:var(--control-height-compact); min-height:var(--control-height-compact); padding:0; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:transparent; color:var(--accent); }
+.employee-profile-return:hover { border-color:var(--border-accent); background:var(--accent-soft); color:var(--accent-hover); }
+.employee-profile-return:active { background:var(--surface-selected); }
+.employee-profile-return:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+.employee-profile-return svg { transition:transform var(--motion-duration-fast) ease; }
+.employee-profile-return:hover svg { transform:translateX(-2px); }
+.employee-profile-return-separator { width:1px; height:24px; background:var(--border-surface); }
 .employee-profile-avatar { display:grid; place-items:center; width:var(--control-height); aspect-ratio:1; border-radius:var(--radius-card); background:var(--surface-panel); color:var(--accent); }
 .employee-profile-identity { min-width:0; overflow-wrap:anywhere; }
 .employee-profile-identity h1 { margin:0; font-size:26px; line-height:1.3; }
@@ -13,14 +20,14 @@
 .employee-profile-content { display:grid; align-content:start; gap:var(--space-3); min-width:0; container:employee-profile-content / inline-size; }
 .employee-profile-general-content .employee-information-panels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:var(--space-3); min-width:0; }
 .employee-profile-general-content .employee-information-panels > .info-section,
-.employee-profile-general-content > .info-section { min-width:0; padding:var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
-.employee-profile-general-content .info-section-heading { padding-bottom:var(--space-3); border-bottom:1px solid var(--border-surface); }
+.employee-profile-general-content > .info-section { min-width:0; gap:var(--space-2); padding:var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
+.employee-profile-general-content .info-section-heading { padding-bottom:var(--space-2); border-bottom:1px solid var(--border-surface); }
 .employee-information-list { display:grid; gap:0; min-width:0; margin:0; }
-.employee-information-row { display:grid; grid-template-columns:32px minmax(0,35fr) minmax(0,65fr); align-items:start; gap:var(--space-2); min-width:0; min-height:48px; padding:var(--space-2) 0; }
+.employee-information-row { display:grid; grid-template-columns:32px minmax(0,35fr) minmax(0,65fr); align-items:center; gap:var(--space-2); min-width:0; min-height:48px; padding:var(--space-2) 0; }
 .employee-information-row + .employee-information-row { border-top:1px solid var(--border-surface); }
 .employee-information-row-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:var(--radius-control); background:var(--accent-soft); color:var(--accent); }
-.employee-information-row dt { min-width:0; color:var(--color-text-secondary); font-size:13px; font-weight:550; line-height:1.4; overflow-wrap:anywhere; }
-.employee-information-row dd { min-width:0; margin:0; color:var(--color-text); font-size:15px; font-weight:650; line-height:1.4; overflow-wrap:anywhere; }
+.employee-information-row dt { min-width:0; color:var(--color-text); font-size:13px; font-weight:600; line-height:1.45; overflow-wrap:anywhere; }
+.employee-information-row dd { min-width:0; margin:0; color:var(--color-text-secondary); font-size:14px; font-weight:400; line-height:1.45; overflow-wrap:anywhere; }
 .employee-information-row-date dd { font-variant-numeric:tabular-nums; }
 .employee-profile-page :is(h1,h2):focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
 @container employee-profile-content (max-width:950px) {
@@ -36,9 +43,13 @@
  .employee-profile-nav button { flex:1 0 150px; }
 }
 @container employee-profile (max-width:520px) {
- .employee-profile-header { grid-template-columns:auto minmax(0,1fr); }
+ .employee-profile-header { grid-template-columns:auto 1px auto minmax(0,1fr); }
  .employee-profile-actions { grid-column:1 / -1; justify-content:flex-start; }
  .employee-profile-identity h1 { font-size:22px; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .employee-profile-return svg { transition:none; }
+ .employee-profile-return:hover svg { transform:none; }
 }
 
 .profile-leave-workbench { display:grid; gap:var(--space-3); min-width:0; container:leave-workspace / inline-size; }

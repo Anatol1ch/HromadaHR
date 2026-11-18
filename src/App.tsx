@@ -210,7 +210,7 @@ export default function App() {
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard}
-            profileReturnRequest={returnToEmployeeRegistry} onProfileContextChange={setEmployeeProfileLabel}/> : active === 'documents' ?
+            profileReturnRequest={returnToEmployeeRegistry} onProfileContextChange={setEmployeeProfileLabel} onReturnToRegistry={returnToRegistry}/> : active === 'documents' ?
           <DocumentsWorkspace initialIntent={documentIntent} navigationGuard={navigationGuard} /> : active === 'settings' ? <SettingsPage navigationGuard={navigationGuard}/> :
           active==='overview'?<PersonnelControlOverview model={control} onOpen={openControlEmployee} navigationGuard={navigationGuard}/>:
           <DictionariesWorkspace navigationGuard={navigationGuard}/>}

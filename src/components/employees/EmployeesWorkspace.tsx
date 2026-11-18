@@ -18,7 +18,7 @@ function profileBreadcrumbName(employee:EmployeeData) {
   return `${employee.lastName} ${first}.${middle}`
 }
 
-export default function EmployeesWorkspace({ navigationGuard,initialIntent,onIntentHandled,profileReturnRequest=0,onProfileContextChange }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; navigationGuard: RefObject<NavigationGuard>; profileReturnRequest?:number; onProfileContextChange?:(label:string|undefined)=>void }) {
+export default function EmployeesWorkspace({ navigationGuard,initialIntent,onIntentHandled,profileReturnRequest=0,onProfileContextChange,onReturnToRegistry }: { initialIntent?:EmployeeNavigationIntent;onIntentHandled?:()=>void; navigationGuard: RefObject<NavigationGuard>; profileReturnRequest?:number; onProfileContextChange?:(label:string|undefined)=>void;onReturnToRegistry:()=>void }) {
   const [workspace, dispatch] = useReducer(workspaceReducer, initialWorkspace)
   const [employees, setEmployees] = useState<EmployeeData[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,6 +112,7 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
       onEdit={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'edit', id: employee.id } }) }}
       onDelete={employee => { rememberOpener(); dispatch({ type: 'action', action: { kind: 'delete', id: employee.id } }) }}/></div>
     {workspace.cardId && <EmployeeProfilePage initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
+      onReturnToRegistry={onReturnToRegistry}
       onLoaded={profileLoaded}
       onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}
       onDelete={id => dispatch({ type: 'action', action: { kind: 'delete', id } })}/>}
