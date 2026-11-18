@@ -11,23 +11,25 @@
 .employee-profile-nav button { flex:1 1 0; width:auto; min-width:0; justify-content:center; text-align:center; }
 .employee-profile-nav button > span { overflow-wrap:anywhere; }
 .employee-profile-content { display:grid; align-content:start; gap:var(--space-3); min-width:0; container:employee-profile-content / inline-size; }
-.employee-profile-content .employee-profile-info-grid { grid-template-columns:repeat(6,minmax(0,1fr)); }
-.employee-profile-personal-grid > :nth-child(-n+3) { grid-column:span 2; }
-.employee-profile-personal-grid > :nth-child(n+4) { grid-column:span 3; }
-.employee-profile-official-grid > :nth-child(-n+2),
-.employee-profile-staff-grid > :nth-child(-n+2) { grid-column:span 3; }
-.employee-profile-official-grid > :nth-child(n+3) { grid-column:span 2; }
-.employee-profile-staff-grid > :nth-child(n+3) { grid-column:span 3; }
-.employee-profile-content .employee-profile-info-grid .info-item { padding:8px 12px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); }
-.employee-profile-content .employee-profile-info-grid .info-item dt { color:var(--color-text-secondary); }
-.employee-profile-content .employee-profile-info-grid .info-item dd { font-size:15px; }
+.employee-profile-general-content .employee-information-panels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:var(--space-3); min-width:0; }
+.employee-profile-general-content .employee-information-panels > .info-section,
+.employee-profile-general-content > .info-section { min-width:0; padding:var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-card); background:var(--surface-card); }
+.employee-profile-general-content .info-section-heading { padding-bottom:var(--space-3); border-bottom:1px solid var(--border-surface); }
+.employee-information-list { display:grid; gap:0; min-width:0; margin:0; }
+.employee-information-row { display:grid; grid-template-columns:32px minmax(0,35fr) minmax(0,65fr); align-items:start; gap:var(--space-2); min-width:0; min-height:48px; padding:var(--space-2) 0; }
+.employee-information-row + .employee-information-row { border-top:1px solid var(--border-surface); }
+.employee-information-row-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:var(--radius-control); background:var(--accent-soft); color:var(--accent); }
+.employee-information-row dt { min-width:0; color:var(--color-text-secondary); font-size:13px; font-weight:550; line-height:1.4; overflow-wrap:anywhere; }
+.employee-information-row dd { min-width:0; margin:0; color:var(--color-text); font-size:15px; font-weight:650; line-height:1.4; overflow-wrap:anywhere; }
+.employee-information-row-date dd { font-variant-numeric:tabular-nums; }
 .employee-profile-page :is(h1,h2):focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
-@container info-section (max-width:650px) {
- .employee-profile-content .employee-profile-info-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
- .employee-profile-content .employee-profile-info-grid > * { grid-column:span 1; }
+@container employee-profile-content (max-width:950px) {
+ .employee-profile-general-content .employee-information-panels { grid-template-columns:minmax(0,1fr); }
 }
-@container info-section (max-width:420px) {
- .employee-profile-content .employee-profile-info-grid { grid-template-columns:minmax(0,1fr); }
+@container employee-profile-content (max-width:520px) {
+ .employee-information-row { grid-template-columns:32px minmax(0,1fr); gap:var(--space-1) var(--space-2); }
+ .employee-information-row-icon { grid-column:1; grid-row:1 / span 2; }
+ .employee-information-row dt, .employee-information-row dd { grid-column:2; }
 }
 @container employee-profile (max-width:850px) {
  .employee-profile-nav { overflow-x:auto; }

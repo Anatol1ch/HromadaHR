@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
+import { FileText } from 'lucide-react'
 import type { DocumentNumberingSeries, PersonnelDocumentSummary } from '../../../shared/documents'
 import InfoSection from '../InfoSection'
 import DictionaryTable from '../DictionaryTable'
@@ -23,9 +24,9 @@ export default function EmployeeDocuments({employeeId}:{employeeId:string}) {
     return()=>{active=false}
   },[employeeId,key])
   const current=state?.key===key?state:undefined
-  return <InfoSection title="Кадрові документи">
+  return <InfoSection title="Кадрові документи" icon={<FileText size={17}/>}>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?.rows?<DataState kind="loading" compact message="Завантаження документів…"/>:
-      <DictionaryTable label="Документи працівника" className="employee-documents-table" empty={!current.rows.length?'Пов’язаних кадрових документів немає.':undefined} columns={[{label:'Дата',width:'12%'},{label:'Номер',width:'12%'},{label:'Вид',width:'26%'},{label:'Назва',width:'50%'}]}>
+      <DictionaryTable label="Документи працівника" className="employee-documents-table" empty={!current.rows.length?'Пов’язаних кадрових документів немає.':undefined} columns={[{label:'Дата',width:'14%'},{label:'Номер',width:'14%'},{label:'Вид',width:'32%'},{label:'Назва',width:'40%'}]}>
         {current.rows.map(row=><tr key={row.id}><td>{formatDate(row.issuedOn)}</td><td>{row.number}{row.seriesId&&<small className="document-series-caption">{documentSeriesLabel(current.series?.find(s=>s.id===row.seriesId))}</small>}</td><td>{kindLabel(row)}</td><td>{open?<button type="button" className="registry-sort-button" onClick={()=>open(row.id)}>{row.title}</button>:row.title}</td></tr>)}
       </DictionaryTable>}
   </InfoSection>

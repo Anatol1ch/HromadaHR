@@ -3,17 +3,31 @@ import type { EmployeeCardTab } from '../../../shared/personnel-control'
 import { profileSections,profileSection,requestProfileSection } from '../../employees/profile'
 import ProfileIndicatorPanel from '../seniority-ranks/ProfileIndicatorPanel'
 import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
-import { useEffect, useId, useRef, useState, type RefObject } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import ProfileLeaveWorkbench from '../leave/ProfileLeaveWorkbench'
-import { Award, BriefcaseBusiness, CalendarDays, Clock3, Pencil, Trash2, UserRound } from 'lucide-react'
+import { Award, BriefcaseBusiness, Building2, CalendarCheck, CalendarClock, CalendarDays, Clock3, ContactRound, Landmark, Layers, Pencil, Trash2, UserRound } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
 import InfoSection from '../InfoSection'
-import InfoItem from '../InfoItem'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import { navigateTabs } from '../../lib/tabNavigation'
+
+type EmployeeInformationField = { label: string; value: ReactNode; icon: LucideIcon; date?: boolean }
+
+function EmployeeInformationPanel({ title, icon: SectionIcon, fields }: { title: string; icon: LucideIcon; fields: EmployeeInformationField[] }) {
+  return <InfoSection title={title} icon={<SectionIcon size={17}/>}>
+    <dl className="employee-information-list">
+      {fields.map(({ label, value, icon: FieldIcon, date }) => <div key={label} className={`employee-information-row${date ? ' employee-information-row-date' : ''}`}>
+        <span className="employee-information-row-icon" aria-hidden="true"><FieldIcon size={17}/></span>
+        <dt>{label}</dt>
+        <dd>{value}</dd>
+      </div>)}
+    </dl>
+  </InfoSection>
+}
 
 export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, revision, navigationGuard,initialTab='general',tabRequestId=0 }: {
   initialTab?:EmployeeCardTab;tabRequestId?:number
@@ -53,31 +67,19 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
 
   const employee = data
   const section=employee?profileSection(tab,employee.employeeType):initialTab
-  const sections = employee ? [
-    {
-      title: 'Персональні відомості',
-      icon: UserRound,
-      gridClass: 'employee-profile-personal-grid',
-      fields: [
-        ['Прізвище', employee.lastName],
-        ['Ім’я', employee.firstName],
-        ['По батькові', employee.middleName ?? 'Не зазначено'],
-        ['Дата народження', displayDate(employee.birthDate)],
-        ['Тип працівника', employeeTypeLabels[employee.employeeType]],
-      ],
-    },
-    {
-      title: 'Кадрові відомості',
-      icon: BriefcaseBusiness,
-      gridClass: employee.employeeType === 'official' ? 'employee-profile-official-grid' : 'employee-profile-staff-grid',
-      fields: [
-        ['Підрозділ', employee.department.name],
-        ['Посада', employee.position.name],
-        ...(employee.employeeType==='official' ? [['Категорія посади', employee.positionCategory ? `${employee.positionCategory} категорія` : 'Не зазначено']] : []),
-        ['Дата прийняття', displayDate(employee.hireDate)],
-        ['На поточній посаді з', employee.positionStartedOn ? displayDate(employee.positionStartedOn) : 'Не внесено'],
-      ],
-    },
+  const personalFields: EmployeeInformationField[] = employee ? [
+    { label: 'Прізвище', value: employee.lastName, icon: ContactRound },
+    { label: 'Ім’я', value: employee.firstName, icon: UserRound },
+    { label: 'По батькові', value: employee.middleName ?? 'Не зазначено', icon: UserRound },
+    { label: 'Дата народження', value: displayDate(employee.birthDate), icon: CalendarDays, date: true },
+    { label: 'Тип працівника', value: employeeTypeLabels[employee.employeeType], icon: employee.employeeType === 'official' ? Landmark : UserRound },
+  ] : []
+  const employmentFields: EmployeeInformationField[] = employee ? [
+    { label: 'Підрозділ', value: employee.department.name, icon: Building2 },
+    { label: 'Посада', value: employee.position.name, icon: BriefcaseBusiness },
+    ...(employee.employeeType === 'official' ? [{ label: 'Категорія посади', value: employee.positionCategory ? `${employee.positionCategory} категорія` : 'Не зазначено', icon: Layers }] : []),
+    { label: 'Дата прийняття', value: displayDate(employee.hireDate), icon: CalendarCheck, date: true },
+    { label: 'На поточній посаді з', value: employee.positionStartedOn ? displayDate(employee.positionStartedOn) : 'Не внесено', icon: CalendarClock, date: true },
   ] : []
   return <article className="employee-profile-page page-transition" aria-labelledby="employee-profile-title">
     <header className="employee-profile-header">
@@ -103,11 +105,12 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
               disabled={baselineBusy} onClick={()=>requestProfileSection(section,item.id,employee.employeeType,navigationGuard.current,setTab)}><Icon size={17} aria-hidden="true"/><span>{item.label}</span></button>
           })}
         </nav>
-        <section key={id+':'+tabRequestId+':'+section} id={tabId+'-content'} className="employee-profile-content" role="tabpanel" tabIndex={0} aria-labelledby={tabId+'-'+section}>
+        <section key={id+':'+tabRequestId+':'+section} id={tabId+'-content'} className={`employee-profile-content${section === 'general' ? ' employee-profile-general-content' : ''}`} role="tabpanel" tabIndex={0} aria-labelledby={tabId+'-'+section}>
           {section==='general'?<>
-            {sections.map(({title,icon:Icon,gridClass,fields})=><InfoSection key={title} title={title} icon={<Icon size={17}/>}>
-              <dl className={`info-grid employee-profile-info-grid ${gridClass}`}>{fields.map(([field,value])=><InfoItem key={field} label={field} value={value}/>)}</dl>
-            </InfoSection>)}
+            <div className="employee-information-panels">
+              <EmployeeInformationPanel title="Персональні відомості" icon={UserRound} fields={personalFields}/>
+              <EmployeeInformationPanel title="Кадрові відомості" icon={BriefcaseBusiness} fields={employmentFields}/>
+            </div>
             <EmployeeDocuments employeeId={id}/>
           </>:section==='service'?<>
             <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
