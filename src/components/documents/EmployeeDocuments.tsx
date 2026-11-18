@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { ArrowRight, FileText } from 'lucide-react'
 import type { DocumentNumberingSeries, PersonnelDocumentSummary } from '../../../shared/documents'
 import InfoSection from '../InfoSection'
 import DictionaryTable from '../DictionaryTable'
@@ -26,8 +26,8 @@ export default function EmployeeDocuments({employeeId}:{employeeId:string}) {
   const current=state?.key===key?state:undefined
   return <InfoSection title="Кадрові документи" icon={<FileText size={17}/>}>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?.rows?<DataState kind="loading" compact message="Завантаження документів…"/>:
-      <DictionaryTable label="Документи працівника" className="employee-documents-table" empty={!current.rows.length?'Пов’язаних кадрових документів немає.':undefined} columns={[{label:'Дата',width:'14%'},{label:'Номер',width:'14%'},{label:'Вид',width:'32%'},{label:'Назва',width:'40%'}]}>
-        {current.rows.map(row=><tr key={row.id}><td>{formatDate(row.issuedOn)}</td><td>{row.number}{row.seriesId&&<small className="document-series-caption">{documentSeriesLabel(current.series?.find(s=>s.id===row.seriesId))}</small>}</td><td>{kindLabel(row)}</td><td>{open?<button type="button" className="registry-sort-button" onClick={()=>open(row.id)}>{row.title}</button>:row.title}</td></tr>)}
+      <DictionaryTable label="Документи працівника" className="employee-documents-table" empty={!current.rows.length?'Пов’язаних кадрових документів немає.':undefined} columns={[{label:'Вид',width:'32%'},{label:'Дата',width:'14%'},{label:'Номер',width:'14%'},{label:'Назва',width:'40%'}]}>
+        {current.rows.map(row=><tr key={row.id}><td>{kindLabel(row)}</td><td>{formatDate(row.issuedOn)}</td><td>{row.number}{row.seriesId&&<small className="document-series-caption">{documentSeriesLabel(current.series?.find(s=>s.id===row.seriesId))}</small>}</td><td>{open?<button type="button" className="employee-document-link" onClick={()=>open(row.id)}><span className="employee-document-link-text">{row.title}</span><ArrowRight size={14} aria-hidden="true"/></button>:row.title}</td></tr>)}
       </DictionaryTable>}
   </InfoSection>
 }

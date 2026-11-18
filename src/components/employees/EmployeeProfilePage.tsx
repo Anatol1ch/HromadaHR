@@ -83,9 +83,9 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
   ] : []
   return <article className="employee-profile-page page-transition" aria-labelledby="employee-profile-title">
     <header className="employee-profile-header">
-      <button className="employee-profile-return" type="button" aria-label="До списку працівників" title="До списку працівників" onClick={onReturnToRegistry}><ArrowLeft size={19} aria-hidden="true"/></button>
+      <button className="employee-profile-return" type="button" aria-label="До списку працівників" title="До списку працівників" onClick={onReturnToRegistry}><ArrowLeft size={22} aria-hidden="true"/></button>
       <span className="employee-profile-return-separator" aria-hidden="true"/>
-      <div className="employee-profile-avatar" aria-hidden="true"><UserRound size={23}/></div>
+      <div className="employee-profile-avatar" aria-hidden="true"><UserRound size={22}/></div>
       <div className="employee-profile-identity">
         <h1 id="employee-profile-title" tabIndex={-1} ref={heading}>{employee&&!error?fullName(employee):'Особова картка'}</h1>
         {employee&&!error&&<p>{employee.position.name} <span aria-hidden="true">·</span> {employee.department.name}</p>}

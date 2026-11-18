@@ -619,3 +619,7 @@ Read-only звірено HromadaAID `src/SettingsPage.tsx` і `.settings-section
 ## 9.9.2 – Локальна типографіка панелей і повернення з профілю
 
 Read-only перевірено HromadaAID `src/RecipientRegistry.tsx` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`; відповідного employee-profile header/back-control у цьому кадровому фрагменті немає. Нову кнопку не оформлювали як окрему навігаційну систему: вона викликає чинний HR `returnToRegistry`, який уже маршрутизує через один `navigationGuard` та `profileReturnRequest`/`EmployeesWorkspace`. Для структурованих фактів вкладки «Загальні відомості» локально закріплено патерн «іконка, контрастна назва поля, нейтральне значення»; він не поширюється на інші модулі. Використано наявні Lucide, семантичні токени, компактний control-height і reduced-motion підхід.
+
+## 9.9.3 – Деталі панелей і внутрішнє посилання на документ
+
+Read-only перевірено `src/DecisionRegistry.tsx` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`; там є окрема дія перегляду запису, але немає сумісного внутрішнього document-context link для HR. У HromadaHR збережено `DocumentNavigationContext` і native button, локально оформлений як текстове посилання зі стрілкою; нової URL-навігації немає. Короткі роздільники таблиці повторюють уже прийнятий CSS-gradient патерн реєстру працівників (етап 9.8.2), а вертикальний роздільник назви/значення та 2 px акцент заголовка обмежені панелями загальних відомостей.
