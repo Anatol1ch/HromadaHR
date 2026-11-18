@@ -57,6 +57,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
     {
       title: 'Персональні відомості',
       icon: UserRound,
+      gridClass: 'employee-profile-personal-grid',
       fields: [
         ['Прізвище', employee.lastName],
         ['Ім’я', employee.firstName],
@@ -68,12 +69,13 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
     {
       title: 'Кадрові відомості',
       icon: BriefcaseBusiness,
+      gridClass: employee.employeeType === 'official' ? 'employee-profile-official-grid' : 'employee-profile-staff-grid',
       fields: [
         ['Підрозділ', employee.department.name],
         ['Посада', employee.position.name],
-        ['Дата прийняття', displayDate(employee.hireDate)],
-        ['Дата призначення на поточну посаду', employee.positionStartedOn ? displayDate(employee.positionStartedOn) : 'Не внесено'],
         ...(employee.employeeType==='official' ? [['Категорія посади', employee.positionCategory ? `${employee.positionCategory} категорія` : 'Не зазначено']] : []),
+        ['Дата прийняття', displayDate(employee.hireDate)],
+        ['На поточній посаді з', employee.positionStartedOn ? displayDate(employee.positionStartedOn) : 'Не внесено'],
       ],
     },
   ] : []
@@ -103,8 +105,8 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, re
         </nav>
         <section key={id+':'+tabRequestId+':'+section} id={tabId+'-content'} className="employee-profile-content" role="tabpanel" tabIndex={0} aria-labelledby={tabId+'-'+section}>
           {section==='general'?<>
-            {sections.map(({title,icon:Icon,fields})=><InfoSection key={title} title={title} icon={<Icon size={17}/>}>
-              <dl className="info-grid">{fields.map(([field,value])=><InfoItem key={field} label={field} value={value}/>)}</dl>
+            {sections.map(({title,icon:Icon,gridClass,fields})=><InfoSection key={title} title={title} icon={<Icon size={17}/>}>
+              <dl className={`info-grid employee-profile-info-grid ${gridClass}`}>{fields.map(([field,value])=><InfoItem key={field} label={field} value={value}/>)}</dl>
             </InfoSection>)}
             <EmployeeDocuments employeeId={id}/>
           </>:section==='service'?<>

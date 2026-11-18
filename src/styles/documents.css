@@ -32,6 +32,23 @@
 :is(.personnel-documents-table,.employee-documents-table) .document-series-caption { display: block; color: var(--color-text-muted); overflow-wrap: anywhere; margin-top: .2rem; }
 
 .employee-documents-table td { overflow-wrap:anywhere; max-width:26rem; }
+.employee-profile-content .employee-documents-table { min-width:620px; }
+.employee-profile-content .employee-documents-table thead th { text-align:center; }
+.employee-profile-content .employee-documents-table tbody td:nth-child(-n+3) { text-align:center; }
+.employee-profile-content .employee-documents-table tbody td:last-child { max-width:none; text-align:left; }
+.employee-profile-content .employee-documents-table tbody td:last-child > .registry-sort-button {
+  display:block;
+  width:100%;
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.employee-profile-content .employee-documents-table tbody td:last-child > .registry-sort-button:hover,
+.employee-profile-content .employee-documents-table tbody td:last-child > .registry-sort-button:focus-visible {
+  color:var(--accent-hover);
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
 .personnel-dictionaries .document-series-workspace { min-width:0; }
 .document-series-workspace td { overflow-wrap:anywhere; max-width:24rem; }
 .document-series-workspace .registry-row-actions { flex-wrap:wrap; }
