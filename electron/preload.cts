@@ -27,9 +27,10 @@ const api: HromadaHRApi = {
   seniorityRanks: {
     getRankProjection:id=>call(ipcChannels.seniorityGetRankProjection,id),
     getServiceProjection: id => call(ipcChannels.seniorityGetServiceProjection, id),
-    getServiceBaseline: id => call(ipcChannels.seniorityGetServiceBaseline, id),
-    saveServiceBaseline: (id, input) => call(ipcChannels.senioritySaveServiceBaseline, id, input),
-    clearServiceBaseline: id => call(ipcChannels.seniorityClearServiceBaseline, id),
+    getServiceAccounting: id => call(ipcChannels.seniorityGetServiceAccounting, id),
+    previewServiceAccounting: (id,input,on) => call(ipcChannels.seniorityPreviewServiceAccounting,id,input,on),
+    saveServiceAccounting: (id, input) => call(ipcChannels.senioritySaveServiceAccounting, id, input),
+    clearServiceAccounting: id => call(ipcChannels.seniorityClearServiceAccounting, id),
     listOverview: () => call(ipcChannels.seniorityListOverview),
     getAllowance: (id) => call(ipcChannels.seniorityGetAllowance, id),
     saveAllowance: (id, input) => call(ipcChannels.senioritySaveAllowance, id, input),

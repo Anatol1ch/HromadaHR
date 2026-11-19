@@ -1,11 +1,13 @@
 import { projectRank } from '../../shared/rank-projection.js'
 import { projectService } from '../../shared/service-calculations.js'
+import { calculateService } from '../../shared/service-calculations.js'
 import { PersonnelService } from '../personnel/service.js'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
-import type { ServiceBaseline, ServiceBaselineInput, Allowance, AllowanceInput, CurrentRank, RankInput, SeniorityRanksErrorCode } from '../../shared/seniority-ranks.js'
+import type { ServiceAccounting, ServiceAccountingInput, Allowance, AllowanceInput, CurrentRank, RankInput, SeniorityRanksErrorCode } from '../../shared/seniority-ranks.js'
 import { todayIsoDate } from '../../src/lib/dates.js'
 import * as schemas from './schemas.js'
+import { readServiceAccounting } from '../storage/service-accounting.js'
 export class SeniorityRanksError extends Error {
   constructor(readonly code: SeniorityRanksErrorCode | 'BUSY' | 'STORAGE_UNAVAILABLE' | 'NOT_FOUND' | 'INVALID_ARGUMENTS' | 'CONFLICT') { super(code) }
 }
@@ -48,30 +50,38 @@ export class SeniorityRanksService {
   private rank(db: Database.Database, id: string) {
     return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
-  private baseline(db: Database.Database, id: string) {
-    const row = db.prepare<[string], Omit<ServiceBaseline, 'autoAccrueAfterBaseline'> & {autoAccrueAfterBaseline:number}>(`SELECT employee_id AS employeeId, years, months, days, auto_accrue_after_baseline AS autoAccrueAfterBaseline,
-      as_of_date AS asOfDate, basis_note AS basisNote, confirmed_at AS confirmedAt
-      FROM employee_service_baselines WHERE employee_id=?`).get(id)
-    return row ? {...row,autoAccrueAfterBaseline:row.autoAccrueAfterBaseline===1} : null
+  private accounting(db: Database.Database, id: string): ServiceAccounting | null {
+    try{return readServiceAccounting(db,id)}catch{throw new SeniorityRanksError('CONFLICT')}
   }
   getRankProjection = (id:string) => this.run(id,db => {
     const employee=new PersonnelService(this.storage,this.isBusy).getEmployee(id)
     return projectRank(employee,this.rank(db,id),todayIsoDate())
   })
-  getServiceProjection = (id:string) => this.run(id,(db,type) => projectService(this.baseline(db,id),todayIsoDate(),type as 'official'|'staff',this.allowance(db,id)))
-  getServiceBaseline = (id: string) => this.run(id, db => this.baseline(db, id))
-  clearServiceBaseline = (id: string) => this.run(id, db => {
-    db.prepare('DELETE FROM employee_service_baselines WHERE employee_id=?').run(id); return null
+  getServiceProjection = (id:string) => this.run(id,(db,type) => projectService(this.accounting(db,id),todayIsoDate(),type as 'official'|'staff',this.allowance(db,id)))
+  getServiceAccounting = (id: string) => this.run(id, db => this.accounting(db, id))
+  previewServiceAccounting = (id:string,input:ServiceAccountingInput,on:string) => {
+    const value=this.parse(schemas.serviceAccountingInput,input),date=this.parse(schemas.calendarDate,on)
+    return this.run(id,(db,type)=>projectService(value,date,type as 'official'|'staff',this.allowance(db,id)))
+  }
+  clearServiceAccounting = (id: string) => this.run(id, db => {
+    db.prepare('DELETE FROM employee_service_records WHERE employee_id=?').run(id); return null
   })
-  saveServiceBaseline = (id: string, input: ServiceBaselineInput): ServiceBaseline => {
-    const v = this.parse(schemas.serviceBaselineInput, input)
-    this.checkDate(v.asOfDate)
+  saveServiceAccounting = (id: string, input: ServiceAccountingInput): ServiceAccounting => {
+    const v = this.parse(schemas.serviceAccountingInput, input)
+    const today=todayIsoDate(),dates=v.mode==='continuous'?[v.startDate]:v.mode==='snapshot'?[v.asOfDate]:v.periods.flatMap(p=>[p.startDate,p.endDate].filter((d):d is string=>d!==null))
+    this.checkDate(...dates)
+    if(calculateService(v,today).status!=='calculated')throw new SeniorityRanksError('INVALID_ARGUMENTS')
     return this.run(id, db => {
-      db.prepare(`INSERT INTO employee_service_baselines(employee_id,years,months,days,as_of_date,basis_note,confirmed_at,auto_accrue_after_baseline)
-        VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET years=excluded.years,months=excluded.months,
-        days=excluded.days,as_of_date=excluded.as_of_date,basis_note=excluded.basis_note,confirmed_at=excluded.confirmed_at,auto_accrue_after_baseline=excluded.auto_accrue_after_baseline`)
-        .run(id,v.years,v.months,v.days,v.asOfDate,v.basisNote,new Date().toISOString(),Number(v.autoAccrueAfterBaseline))
-      return this.baseline(db,id)!
+      db.prepare('DELETE FROM employee_service_records WHERE employee_id=?').run(id)
+      const now=new Date().toISOString()
+      if(v.mode==='continuous')db.prepare(`INSERT INTO employee_service_records(employee_id,mode,start_date,confirmed_at) VALUES (?,'continuous',?,?)`).run(id,v.startDate,now)
+      else if(v.mode==='snapshot')db.prepare(`INSERT INTO employee_service_records(employee_id,mode,years,months,days,as_of_date,confirmed_at) VALUES (?,'snapshot',?,?,?,?,?)`).run(id,v.years,v.months,v.days,v.asOfDate,now)
+      else {
+        db.prepare(`INSERT INTO employee_service_records(employee_id,mode,confirmed_at) VALUES (?,'periods',?)`).run(id,now)
+        const insert=db.prepare('INSERT INTO employee_service_periods(id,employee_id,start_date,end_date) VALUES (?,?,?,?)')
+        for(const period of v.periods)insert.run(period.id,id,period.startDate,period.endDate)
+      }
+      return this.accounting(db,id)!
     })
   }
   listOverview = () => this.run(null, db => {

@@ -2,7 +2,7 @@ import EmployeeDocuments from '../documents/EmployeeDocuments'
 import type { EmployeeCardTab } from '../../../shared/personnel-control'
 import { profileSections,profileSection,requestProfileSection } from '../../employees/profile'
 import ProfileIndicatorPanel from '../seniority-ranks/ProfileIndicatorPanel'
-import ServiceBaselinePanel from '../seniority-ranks/ServiceBaselinePanel'
+import ServiceAccountingPanel from '../seniority-ranks/ServiceAccountingPanel'
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { NavigationGuard } from './useUnsavedChanges'
 import ProfileLeaveWorkbench from '../leave/ProfileLeaveWorkbench'
@@ -115,7 +115,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
             </div>
             <EmployeeDocuments employeeId={id}/>
           </>:section==='service'?<>
-            <ServiceBaselinePanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
+            <ServiceAccountingPanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
             <ProfileIndicatorPanel employee={employee} kind="allowance" navigationGuard={navigationGuard} disabled={baselineEditing||baselineBusy||loading} refreshKey={revision} onRefresh={()=>setAllowanceRefresh(v=>v+1)}/>
           </>
             :section==='rank'?<ProfileIndicatorPanel employee={employee} kind="rank" navigationGuard={navigationGuard} disabled={loading} refreshKey={revision}/>

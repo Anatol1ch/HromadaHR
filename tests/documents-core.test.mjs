@@ -38,7 +38,7 @@ test('v18→v19 protects the original manifest, ledger and facts; STRICT/CHECK/F
   const old=connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();connection.close()
   connection=await openStorageSafely(file);t.after(()=>{connection.close();clean(root)})
   const db=connection.database
-  assert.equal(connection.schemaVersion,21);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
+  assert.equal(connection.schemaVersion,22);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_documents'").get().strict,1)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_document_employees'").get().strict,1)
   const service=new DocumentsService({getDatabase:()=>db},()=>false),doc=service.createDocument(input())
@@ -114,7 +114,7 @@ test('writes roll back the document and all links on failure, including after pa
 
 test('employee RESTRICT and controlled deletion are atomic; documents never mutate leave, rank, allowance or baseline facts',async t=>{
   const f=await fixture(t),s=f.service,leave=new LeaveService(f.storage,()=>false),ranks=new SeniorityRanksService(f.storage,()=>false)
-  ranks.saveServiceBaseline(f.a.id,{years:4,months:0,days:0,asOfDate:'2020-01-01',basisNote:null,autoAccrueAfterBaseline:true})
+  ranks.saveServiceAccounting(f.a.id,{mode:'snapshot',years:4,months:0,days:0,asOfDate:'2020-01-01'})
   ranks.saveAllowance(f.a.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
   ranks.saveRank(f.a.id,{rank:6,assignedOn:'2020-01-01',effectiveOn:null,origin:'unknown',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
   leave.saveRights(f.a.id,[{leaveType:'annual_main',status:'has_right'}])
@@ -122,7 +122,7 @@ test('employee RESTRICT and controlled deletion are atomic; documents never muta
   leave.savePeriods(f.a.id,[{leaveType:'annual_main',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:10,referenceEntitlementDays:null}])
   const period=leave.getBalances(f.a.id).find(value=>value.leaveType==='annual_main')
   leave.registerLeave({requestId:randomUUID(),employeeId:f.a.id,leaveType:'annual_main',startDate:'2027-01-04',endDate:'2027-01-05',usedDays:2,orderNumber:'99-ос',orderDate:'2026-12-31',durationExplanation:null,allocations:[{periodId:period.id,days:2}]})
-  const tables=['employees','employee_current_ranks','employee_seniority_allowances','employee_service_baselines','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations']
+  const tables=['employees','employee_current_ranks','employee_seniority_allowances','employee_service_records','employee_service_periods','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations']
   const snapshot=()=>Object.fromEntries(tables.map(table=>[table,f.db.prepare('SELECT * FROM '+table+' ORDER BY rowid').all()]))
   const before=snapshot(),doc=s.createDocument(input({employeeIds:[f.a.id]}))
   assert.throws(()=>f.personnel.deleteEmployee(f.a.id),error('EMPLOYEE_HAS_DOCUMENTS'))

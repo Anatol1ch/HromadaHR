@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { employeeCard, calendarDate, id } from '../personnel/schemas.js'
 import { allowancePercentages, rankOrigins } from '../../shared/seniority-ranks.js'
-export { id }
+export { id, calendarDate }
 const basis = { documentType: z.string().trim().min(1).max(200).nullable(),
   documentNumber: z.string().trim().min(1).max(100).nullable(), documentDate: calendarDate.nullable(), reviewOn: calendarDate.nullable() }
 export const allowanceInput = z.discriminatedUnion('status', [
@@ -14,17 +14,19 @@ export const rank = rankInput.extend({ employeeId: id, confirmedAt: z.iso.dateti
 
 export const overview = z.strictObject({ employee: employeeCard, allowance: allowance.nullable(), rank: rank.nullable() })
 
-export const serviceBaselineInput = z.strictObject({
- years: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER), months: z.number().int().min(0).max(11), days: z.number().int().min(0).max(30),
- autoAccrueAfterBaseline: z.boolean(), asOfDate: calendarDate, basisNote: z.string().trim().min(1).max(2000).nullable(),
-})
-export const serviceBaseline = serviceBaselineInput.extend({ employeeId: id, confirmedAt: z.iso.datetime() })
+export const servicePeriod = z.strictObject({id:z.uuid(),startDate:calendarDate,endDate:calendarDate.nullable()})
+export const serviceAccountingInput = z.discriminatedUnion('mode',[
+ z.strictObject({mode:z.literal('continuous'),startDate:calendarDate}),
+ z.strictObject({mode:z.literal('periods'),periods:z.array(servicePeriod).min(1).max(500)}),
+ z.strictObject({mode:z.literal('snapshot'),years:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),months:z.number().int().min(0).max(11),days:z.number().int().min(0).max(30),asOfDate:calendarDate}),
+])
+export const serviceAccounting=serviceAccountingInput.and(z.object({employeeId:id,confirmedAt:z.iso.datetime()}))
 
 const duration = z.strictObject({years:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),months:z.number().int().min(0).max(11),days:z.number().int().min(0).max(30)})
-const calculationStatus=z.enum(['calculated','baseline_only','missing_baseline','requires_review'])
+const calculationStatus=z.enum(['calculated','missing_service_data','requires_review'])
 export const serviceProjection=z.strictObject({
- status:z.enum(['calculated','baseline_only','missing_baseline','requires_review','not_applicable']),
- calculation:z.strictObject({status:calculationStatus,current:duration.nullable(),calculatedOn:calendarDate,reason:z.enum(['invalid_input','before_baseline','overflow','date_range']).nullable(),accuracy:z.enum(['confirmed','estimate','unavailable'])}),
+ status:z.enum(['calculated','missing_service_data','requires_review','not_applicable']),
+ calculation:z.strictObject({status:calculationStatus,current:duration.nullable(),calculatedOn:calendarDate,reason:z.enum(['invalid_input','before_baseline','overlap','multiple_open_periods','period_order','overflow','date_range']).nullable(),accuracy:z.enum(['confirmed','estimate','unavailable']),mode:z.enum(['continuous','periods','snapshot']).nullable(),accrues:z.boolean(),creditedDays:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).nullable()}),
  percentage:z.number().int().min(0).max(40).nullable(),nextThreshold:z.strictObject({years:z.number().int(),percentage:z.number().int()}).nullable(),
  reviewOn:calendarDate.nullable(),reviewAccuracy:z.literal('estimate').nullable(),confirmedAllowance:allowance.nullable(),comparison:z.enum(['matches','different','missing','not_applicable','unavailable']),
 })

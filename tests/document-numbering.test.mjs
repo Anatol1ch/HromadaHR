@@ -59,7 +59,7 @@ test('v20→v21 keeps manifest 1–20 and historical linked documents; STRICT, F
  const before=old.prepare('SELECT * FROM personnel_documents').get(),ledger=old.prepare('SELECT * FROM schema_migrations ORDER BY version').all(),allocations=old.prepare('SELECT * FROM leave_allocations').all();c.close()
  c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
  const db=c.database,s=new DocumentsService({getDatabase:()=>db},()=>false)
- assert.equal(c.schemaVersion,21);assert.deepEqual(db.prepare('SELECT * FROM personnel_documents').get(),{...before,series_id:null})
+ assert.equal(c.schemaVersion,22);assert.deepEqual(db.prepare('SELECT * FROM personnel_documents').get(),{...before,series_id:null})
  assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=20 ORDER BY version').all(),ledger)
  assert.deepEqual(db.prepare('SELECT * FROM leave_allocations').all(),allocations)
  assert.equal(s.listLeaveLinks(id).links[0].leaveRecordId,r.id);assert.equal(s.createDocument(input).id,id)
@@ -125,7 +125,7 @@ test('explicit reassignment retains old claims; linked documents block series ch
  assert.throws(()=>s.updateDocument({...docFields(renamed),id:d.id,expectedRevision:2,number:'020-к'}),error('SERIES_NUMBER_TAKEN'))
  assert.deepEqual(s.getDocument(d.id),renamed)
  const r=f.record(),doc=s.createDocument(docInput([f.a.id])),linked=s.linkLeaveRecord(pair(doc,r)).document
- const snapshot=()=>Object.fromEntries(['leave_records','leave_allocations','leave_period_balances','employee_leave_rights','employee_service_baselines','employee_current_ranks','employee_seniority_allowances'].map(table=>[table,f.db.prepare('SELECT * FROM '+table).all()]))
+ const snapshot=()=>Object.fromEntries(['leave_records','leave_allocations','leave_period_balances','employee_leave_rights','employee_service_records','employee_service_periods','employee_current_ranks','employee_seniority_allowances'].map(table=>[table,f.db.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot();assert.throws(()=>s.updateDocument({...docFields(linked),id:doc.id,expectedRevision:linked.revision,seriesId:series.id}),error('DOCUMENT_HAS_LEAVE_LINKS'))
  const auto=s.createAutoNumberedDocument(autoInput(series.id,{employeeIds:[f.a.id]}))
  assert.throws(()=>s.linkLeaveRecord(pair(auto,r)),error('DOCUMENT_LEAVE_CONFLICT'))

@@ -58,10 +58,10 @@ test('existing Main APIs preserve actual allowance/rank replies, refresh project
  const departmentId=p.createDepartment({name:'Синтетичний відділ'}).id,positionId=p.createPosition({name:'Синтетична посада'}).id
  const e=p.createEmployee({lastName:'Синтетичний',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',hireDate:'2020-01-01',positionStartedOn:'2020-01-01',positionCategory:'VII',departmentId,positionId})
  const api={personnel:{getEmployee:async id=>ok(p.getEmployee(id))},seniorityRanks:{getAllowance:async id=>ok(s.getAllowance(id)),getRank:async id=>ok(s.getRank(id))}}
- s.saveServiceBaseline(e.id,{years:5,months:0,days:1,asOfDate:todayIsoDate(),autoAccrueAfterBaseline:true,basisNote:'Тест'})
+ s.saveServiceAccounting(e.id,{mode:'snapshot',years:5,months:0,days:1,asOfDate:todayIsoDate()})
  leave.saveServiceLeaveStart(e.id,'2020-01-01');leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}])
  leave.savePeriods(e.id,[{leaveType:'oms_service_additional',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:3,referenceEntitlementDays:null}])
- const snapshot=()=>Object.fromEntries(['employee_service_baselines','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,c.database.prepare('SELECT * FROM '+table).all()]))
+ const snapshot=()=>Object.fromEntries(['employee_service_records','employee_service_periods','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,c.database.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot()
  const a=s.saveAllowance(e.id,{...allowance,percentage:10});assert.deepEqual((await readIndicatorContext(api,e.id,'allowance')).data.allowance,a);assert.equal(s.getServiceProjection(e.id).comparison,'different')
  const r=s.saveRank(e.id,{...rank,documentType:'Рішення ради',documentNumber:'8',documentDate:'2020-01-03',reviewOn:'2030-01-01'});assert.deepEqual((await readIndicatorContext(api,e.id,'rank')).data.rank,r);assert.equal(s.getRankProjection(e.id).status,'retained_higher_rank')
@@ -69,5 +69,5 @@ test('existing Main APIs preserve actual allowance/rank replies, refresh project
  s.clearAllowance(e.id);assert.equal((await readIndicatorContext(api,e.id,'allowance')).data.allowance,null);assert.deepEqual(s.getRank(e.id),r)
  const final=s.saveAllowance(e.id,{...allowance,percentage:0});assert.equal(final.percentage,0)
  s.clearRank(e.id);assert.equal((await readIndicatorContext(api,e.id,'rank')).data.rank,null);assert.equal(s.getRankProjection(e.id).reason,'missing_rank');assert.deepEqual(s.getAllowance(e.id),final)
- assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,21);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
+ assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
 })

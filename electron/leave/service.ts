@@ -3,7 +3,7 @@ import { calendarDays, fifoAllocation } from '../../shared/leave-calculations.js
 import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance, EmployeeLeaveRight, LeaveRightInput } from '../../shared/leave.js'
 import { randomUUID } from 'node:crypto'
 import { projectOmsServiceLeave } from '../../shared/service-leave-calculations.js'
-import type { ServiceBaselineInput } from '../../shared/seniority-ranks.js'
+import { readServiceAccounting } from '../storage/service-accounting.js'
 import { todayIsoDate } from '../../src/lib/dates.js'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
@@ -100,9 +100,9 @@ export class LeaveService {
     return this.run(db=>db.transaction(()=>{
       this.employee(db,employeeId)
       const type=db.prepare<[string],{employeeType:'official'|'staff'}>('SELECT employee_type AS employeeType FROM employees WHERE id=?').get(employeeId)!.employeeType
-      const row=db.prepare<[string],Omit<ServiceBaselineInput,'autoAccrueAfterBaseline'>&{autoAccrueAfterBaseline:number}>(`SELECT years,months,days,as_of_date AS asOfDate,basis_note AS basisNote,auto_accrue_after_baseline AS autoAccrueAfterBaseline FROM employee_service_baselines WHERE employee_id=?`).get(employeeId)
+      const accounting=readServiceAccounting(db,employeeId)
       const periods=db.prepare<[string],LeaveRow>(`SELECT id,employee_id AS employeeId,leave_type AS leaveType,period_start AS periodStart,period_end AS periodEnd,accounting_basis AS accountingBasis,confirmed_days AS confirmedDays,reference_entitlement_days AS referenceEntitlementDays FROM leave_period_balances WHERE employee_id=? AND leave_type='oms_service_additional' ORDER BY period_start,id`).all(employeeId).map(toPeriod)
-      return projectOmsServiceLeave(row?{...row,autoAccrueAfterBaseline:row.autoAccrueAfterBaseline===1}:null,todayIsoDate(),type,{
+      return projectOmsServiceLeave(accounting,todayIsoDate(),type,{
         acquiredOn:this.serviceLeaveStart(db,employeeId),rightStatus:this.rights(db,employeeId).find(r=>r.leaveType==='oms_service_additional')?.status??'unknown',periods,
       })
     }).deferred())

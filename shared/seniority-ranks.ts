@@ -14,14 +14,19 @@ export type Allowance = AllowanceInput & { employeeId: string; confirmedAt: stri
 export interface CurrentRank extends RankInput { employeeId: string; confirmedAt: string }
 export type SeniorityRanksErrorCode = 'RANK_REQUIRES_OFFICIAL'
 export interface SeniorityOverview { employee: EmployeeCard; allowance: Allowance | null; rank: CurrentRank | null }
-export interface ServiceBaselineInput { years: number; months: number; days: number; asOfDate: string; basisNote: string | null; autoAccrueAfterBaseline: boolean }
-export interface ServiceBaseline extends ServiceBaselineInput { employeeId: string; confirmedAt: string }
+export interface ServicePeriod { id: string; startDate: string; endDate: string | null }
+export type ServiceAccountingInput =
+  | { mode: 'continuous'; startDate: string }
+  | { mode: 'periods'; periods: ServicePeriod[] }
+  | { mode: 'snapshot'; years: number; months: number; days: number; asOfDate: string }
+export type ServiceAccounting = ServiceAccountingInput & { employeeId: string; confirmedAt: string }
 export interface SeniorityRanksApi {
   getRankProjection: (employeeId: string) => Promise<IpcResult<RankProjection>>
   getServiceProjection: (employeeId: string) => Promise<IpcResult<ServiceProjection>>
-  getServiceBaseline: (employeeId: string) => Promise<IpcResult<ServiceBaseline | null>>
-  saveServiceBaseline: (employeeId: string, input: ServiceBaselineInput) => Promise<IpcResult<ServiceBaseline>>
-  clearServiceBaseline: (employeeId: string) => Promise<IpcResult<null>>
+  getServiceAccounting: (employeeId: string) => Promise<IpcResult<ServiceAccounting | null>>
+  previewServiceAccounting: (employeeId: string, input: ServiceAccountingInput, asOfDate: string) => Promise<IpcResult<import('./service-calculations.js').ServiceProjection>>
+  saveServiceAccounting: (employeeId: string, input: ServiceAccountingInput) => Promise<IpcResult<ServiceAccounting>>
+  clearServiceAccounting: (employeeId: string) => Promise<IpcResult<null>>
   listOverview: () => Promise<IpcResult<SeniorityOverview[]>>
   getAllowance: (employeeId: string) => Promise<IpcResult<Allowance | null>>
   saveAllowance: (employeeId: string, input: AllowanceInput) => Promise<IpcResult<Allowance>>

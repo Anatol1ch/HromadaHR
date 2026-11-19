@@ -1,6 +1,6 @@
 import type { DocumentNumberingSeries, DocumentSeriesInput, DocumentSeriesUpdateInput, AutoNumberedDocumentInput } from './documents.js'
 import type { DocumentLeaveLinkInput, DocumentLeaveLinks, LeaveDocumentLink, DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
-import type { ServiceBaseline, ServiceBaselineInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
+import type { ServiceAccounting, ServiceAccountingInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
 import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
@@ -17,9 +17,10 @@ export const ipcChannels = {
   controlOverview:'personnelControl:getOverview',controlSettings:'personnelControl:getSettings',controlSaveSettings:'personnelControl:saveSettings',controlSetState:'personnelControl:setReminderState',
   seniorityGetRankProjection:'seniorityRanks:getRankProjection',
   seniorityGetServiceProjection: 'seniorityRanks:getServiceProjection',
-  seniorityGetServiceBaseline: 'seniorityRanks:getServiceBaseline',
-  senioritySaveServiceBaseline: 'seniorityRanks:saveServiceBaseline',
-  seniorityClearServiceBaseline: 'seniorityRanks:clearServiceBaseline',
+  seniorityGetServiceAccounting: 'seniorityRanks:getServiceAccounting',
+  seniorityPreviewServiceAccounting: 'seniorityRanks:previewServiceAccounting',
+  senioritySaveServiceAccounting: 'seniorityRanks:saveServiceAccounting',
+  seniorityClearServiceAccounting: 'seniorityRanks:clearServiceAccounting',
   seniorityListOverview: 'seniorityRanks:listOverview',
   seniorityGetAllowance: 'seniorityRanks:getAllowance',
   senioritySaveAllowance: 'seniorityRanks:saveAllowance',
@@ -98,9 +99,10 @@ export interface IpcOperations {
   [ipcChannels.controlSetState]:{args:[import('./personnel-control.js').ReminderStateInput];result:import('./personnel-control.js').ControlOverview}
   [ipcChannels.seniorityGetRankProjection]:{args:[string];result:import('./rank-projection.js').RankProjection}
   [ipcChannels.seniorityGetServiceProjection]: { args: [string]; result: import('./service-calculations.js').ServiceProjection }
-  [ipcChannels.seniorityGetServiceBaseline]: { args: [string]; result: ServiceBaseline | null }
-  [ipcChannels.senioritySaveServiceBaseline]: { args: [string, ServiceBaselineInput]; result: ServiceBaseline }
-  [ipcChannels.seniorityClearServiceBaseline]: { args: [string]; result: null }
+  [ipcChannels.seniorityGetServiceAccounting]: { args: [string]; result: ServiceAccounting | null }
+  [ipcChannels.seniorityPreviewServiceAccounting]: { args: [string, ServiceAccountingInput, string]; result: import('./service-calculations.js').ServiceProjection }
+  [ipcChannels.senioritySaveServiceAccounting]: { args: [string, ServiceAccountingInput]; result: ServiceAccounting }
+  [ipcChannels.seniorityClearServiceAccounting]: { args: [string]; result: null }
   [ipcChannels.seniorityListOverview]: { args: []; result: SeniorityOverview[] }
   [ipcChannels.seniorityGetAllowance]: { args: [string]; result: Allowance | null }
   [ipcChannels.senioritySaveAllowance]: { args: [string, AllowanceInput]; result: Allowance }

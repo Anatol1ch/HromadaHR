@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import type { Storage } from '../storage/index.js'
 import { SeniorityRanksService } from '../seniority-ranks/service.js'
-import type { ServiceBaselineInput } from '../../shared/seniority-ranks.js'
+import { readServiceAccounting } from '../storage/service-accounting.js'
 import type { ConfirmedLeavePeriod } from '../../shared/leave.js'
 import type { ControlOverview,ControlSettings,ReminderStateInput,PersonnelIssue } from '../../shared/personnel-control.js'
 import { buildPersonnelIssues,comparePersonnelIssues,controlDay } from '../../shared/personnel-control-calculations.js'
@@ -37,13 +37,13 @@ export class PersonnelControlService {
  private overview(db:Database.Database):ControlOverview {
   const on=this.today(),settings=this.settings(db)
   const people=new SeniorityRanksService(this.storage,this.isBusy).listOverview()
-  const baselineRows=db.prepare<[],Omit<ServiceBaselineInput,'autoAccrueAfterBaseline'>&{employeeId:string;autoAccrueAfterBaseline:number}>('SELECT employee_id AS employeeId,years,months,days,as_of_date AS asOfDate,basis_note AS basisNote,auto_accrue_after_baseline AS autoAccrueAfterBaseline FROM employee_service_baselines').all()
-  const baselines=new Map(baselineRows.map(row=>[row.employeeId,{...row,autoAccrueAfterBaseline:Number(row.autoAccrueAfterBaseline)===1}]))
+  const serviceIds=db.prepare<[],{employeeId:string}>('SELECT employee_id AS employeeId FROM employee_service_records').all().map(row=>row.employeeId)
+  const serviceAccounting=new Map(serviceIds.map(employeeId=>[employeeId,readServiceAccounting(db,employeeId)]))
   const starts=new Map(db.prepare<[],{employeeId:string;date:string}>('SELECT employee_id AS employeeId,acquired_on AS date FROM employee_service_leave_start').all().map(r=>[r.employeeId,r.date]))
   const rights=new Map(db.prepare<[],{employeeId:string;status:'has_right'|'no_right'}>("SELECT employee_id AS employeeId,status FROM employee_leave_rights WHERE leave_type='oms_service_additional'").all().map(r=>[r.employeeId,r.status]))
   const periods=db.prepare<[],Omit<ConfirmedLeavePeriod,'status'>>(`SELECT id,employee_id AS employeeId,leave_type AS leaveType,period_start AS periodStart,period_end AS periodEnd,accounting_basis AS accountingBasis,confirmed_days AS confirmedDays,reference_entitlement_days AS referenceEntitlementDays FROM leave_period_balances WHERE leave_type='oms_service_additional' ORDER BY period_start,id`).all().map(p=>({...p,status:'confirmed' as const}))
   const states=new Map(db.prepare<[],StateRow>('SELECT employee_id AS employeeId,issue_key AS issueKey,fingerprint,state,snoozed_until AS snoozedUntil FROM personnel_reminder_states').all().map(s=>[s.issueKey,s]))
-  const issues:PersonnelIssue[]=people.flatMap(row=>buildPersonnelIssues({employee:row.employee,allowance:row.allowance,rank:row.rank,baseline:baselines.get(row.employee.id)??null,
+  const issues:PersonnelIssue[]=people.flatMap(row=>buildPersonnelIssues({employee:row.employee,allowance:row.allowance,rank:row.rank,serviceAccounting:serviceAccounting.get(row.employee.id)??null,
    leave:{acquiredOn:starts.get(row.employee.id)??null,rightStatus:rights.get(row.employee.id)??'unknown',periods:periods.filter(p=>p.employeeId===row.employee.id)}},on,settings.horizonDays)).map(({fingerprintData,...issue})=>{
     const fingerprint=createHash('sha256').update(fingerprintData).digest('hex'),saved=states.get(issue.id)
     const valid=saved?.employeeId===issue.employeeId&&saved.fingerprint===fingerprint

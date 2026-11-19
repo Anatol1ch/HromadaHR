@@ -22,7 +22,7 @@ async function fixture(t){
  db.prepare('INSERT INTO positions(id,name,name_key) VALUES (?,?,?)').run(positionId,'Тест','Тест')
  db.prepare('INSERT INTO employees(id,last_name,first_name,employee_type,hire_date,position_id,department_id) VALUES (?,?,?,?,?,?,?)').run(id,'Тест','Умовний','official','2020-01-01',positionId,departmentId)
  const ledger=db.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,21);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=15 ORDER BY version').all(),ledger)
+ assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=15 ORDER BY version').all(),ledger)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false)
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-appointment-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
  return {db:c.database,p,storage,id,input:{lastName:'Тест',firstName:'Умовний',middleName:null,birthDate:null,employeeType:'official',hireDate:'2020-01-01',positionId,departmentId,positionStartedOn:null,positionCategory:null}}
@@ -76,10 +76,10 @@ test('appointment facts do not rewrite current rank or any service, allowance or
  const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
  s.saveRank(id,{...basis,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:6,assignedOn:'2020-01-01',effectiveOn:null})
  s.saveAllowance(id,{...basis,status:'confirmed',percentage:10,effectiveOn:'2020-01-01'})
- s.saveServiceBaseline(id,{years:4,months:0,days:0,asOfDate:'2020-01-01',basisNote:null,autoAccrueAfterBaseline:true})
+ s.saveServiceAccounting(id,{mode:'snapshot',years:4,months:0,days:0,asOfDate:'2020-01-01'})
  leave.saveServiceLeaveStart(id,'2020-01-01');leave.saveRights(id,[{leaveType:'oms_service_additional',status:'has_right'}])
  leave.savePeriods(id,[{leaveType:'annual_main',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:5,referenceEntitlementDays:null}])
- const snapshot=()=>Object.fromEntries(['employee_current_ranks','employee_seniority_allowances','employee_service_baselines','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,db.prepare('SELECT * FROM '+table).all()]))
+ const snapshot=()=>Object.fromEntries(['employee_current_ranks','employee_seniority_allowances','employee_service_records','employee_service_periods','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,db.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot(),projection=s.getServiceProjection(id)
  p.updateEmployee(id,{...input,positionCategory:'VII',positionStartedOn:'2024-01-01'})
  assert.equal(s.getRank(id).rank,6);assert.deepEqual(snapshot(),before);assert.deepEqual(s.getServiceProjection(id),projection)

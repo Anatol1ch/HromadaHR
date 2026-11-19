@@ -25,8 +25,8 @@ async function fixture(t){
  const departmentId=p.createDepartment({name:'Тест'}).id,positionId=p.createPosition({name:'Тест'}).id
  const input={lastName:'Синтетичний',firstName:'Приклад',middleName:null,birthDate:null,employeeType:'official',hireDate:'2020-01-01',departmentId,positionId,positionCategory:'VII',positionStartedOn:'2024-01-02'}
  const e=p.createEmployee(input),staff=p.createEmployee({...input,employeeType:'staff',positionCategory:null})
- const base={years:4,months:0,days:0,asOfDate:'2026-01-01',autoAccrueAfterBaseline:true,basisNote:null}
- s.saveServiceBaseline(e.id,base)
+ const base={mode:'snapshot',years:4,months:0,days:0,asOfDate:'2026-01-01'}
+ s.saveServiceAccounting(e.id,base)
  s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
  s.saveRank(e.id,{rank:15,assignedOn:'2024-01-02',effectiveOn:null,origin:'oms_assigned',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:'2026-01-02'})
  leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}]);leave.saveServiceLeaveStart(e.id,'2020-01-01')
@@ -38,7 +38,7 @@ const integrity=db=>{assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.
 test('v17→v18 retains the old ledger and facts, singleton defaults and strict FK/CHECK state structure',async t=>{
  const root=temp(t),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,17))
  const old=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,21);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
+ assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
  assert.deepEqual(c.database.prepare('SELECT * FROM personnel_control_settings').all(),[{id:1,horizon_days:30}])
  for(const sql of ['UPDATE personnel_control_settings SET horizon_days=15','INSERT INTO personnel_control_settings VALUES (2,30)'])assert.throws(()=>c.database.exec(sql))
  const f=await fixture(t),issue=rankIssue(f),insert=f.db.prepare('INSERT INTO personnel_reminder_states VALUES (?,?,?,?,?,?)')
@@ -47,7 +47,7 @@ test('v17→v18 retains the old ledger and facts, singleton defaults and strict 
 })
 test('overview is read-only; states expire, repeat on due, ignore technical stamps and reject stale fact fingerprints',async t=>{
  const f=await fixture(t),{control,clock}=f
- const snapshot=()=>Object.fromEntries(['employees','employee_service_baselines','employee_seniority_allowances','employee_current_ranks','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,f.db.prepare('SELECT * FROM '+table).all()]))
+ const snapshot=()=>Object.fromEntries(['employees','employee_service_records','employee_service_periods','employee_seniority_allowances','employee_current_ranks','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,f.db.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot(),changes=f.db.prepare('SELECT total_changes() AS n').get().n
  f.db.pragma('query_only=ON');const initial=control.getOverview();f.db.pragma('query_only=OFF')
  assert.equal(f.db.prepare('SELECT total_changes() AS n').get().n,changes);assert.equal(initial.activeCount,1);assert.deepEqual(snapshot(),before)

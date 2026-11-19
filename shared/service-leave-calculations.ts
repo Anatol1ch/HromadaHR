@@ -1,5 +1,5 @@
 import { calculateService, serviceThresholdDate, type Duration, type ServiceCalculation } from './service-calculations.js'
-import type { ServiceBaselineInput } from './seniority-ranks.js'
+import type { ServiceAccountingInput } from './seniority-ranks.js'
 import type { ConfirmedLeavePeriod } from './leave.js'
 import { isIsoCalendarDate } from '../src/lib/dates.js'
 
@@ -35,7 +35,7 @@ export interface OmsServiceLeaveProjection {
  historicalBalancePresent:boolean
 }
 /** Recommendation only. Initial balances/available days are never compared with normative duration. */
-export function projectOmsServiceLeave(baseline:ServiceBaselineInput|null,on:string,type:'official'|'staff',facts:OmsServiceLeaveFacts):OmsServiceLeaveProjection {
+export function projectOmsServiceLeave(baseline:ServiceAccountingInput|null,on:string,type:'official'|'staff',facts:OmsServiceLeaveFacts):OmsServiceLeaveProjection {
  const calculation=calculateService(baseline,on)
  const result:OmsServiceLeaveProjection={status:type==='staff'?'not_applicable':calculation.status,calculation,
   recommendedDays:null,nextThreshold:null,reviewOn:null,reviewAccuracy:null,acquiredOn:facts.acquiredOn,rightStatus:facts.rightStatus,
@@ -47,7 +47,7 @@ export function projectOmsServiceLeave(baseline:ServiceBaselineInput|null,on:str
  if(calculation.current) {
   result.recommendedDays=serviceLeaveDays(calculation.current)
   result.nextThreshold=nextServiceLeaveThreshold(calculation.current)
-  if(calculation.status==='calculated'&&baseline&&result.nextThreshold) {
+  if(calculation.status==='calculated'&&calculation.accrues&&baseline&&result.nextThreshold) {
    const years=result.nextThreshold.years
    result.reviewOn=serviceThresholdDate(baseline,on,duration=>above(duration,years))
    if(result.reviewOn)result.reviewAccuracy='estimate'

@@ -83,9 +83,10 @@ export function registerIpcHandlers(
   register(ipcChannels.controlSetState,z.tuple([controlSchemas.stateInput]),controlSchemas.overview,([input])=>control!.setReminderState(input))
   register(ipcChannels.seniorityGetRankProjection,z.tuple([senioritySchemas.id]),senioritySchemas.rankProjection,([id])=>seniority!.getRankProjection(id))
   register(ipcChannels.seniorityGetServiceProjection, z.tuple([senioritySchemas.id]), senioritySchemas.serviceProjection, ([id]) => seniority!.getServiceProjection(id))
-  register(ipcChannels.seniorityGetServiceBaseline, z.tuple([senioritySchemas.id]), senioritySchemas.serviceBaseline.nullable(), ([id]) => seniority!.getServiceBaseline(id))
-  register(ipcChannels.senioritySaveServiceBaseline, z.tuple([senioritySchemas.id, senioritySchemas.serviceBaselineInput]), senioritySchemas.serviceBaseline, ([id, input]) => seniority!.saveServiceBaseline(id, input))
-  register(ipcChannels.seniorityClearServiceBaseline, z.tuple([senioritySchemas.id]), z.null(), ([id]) => seniority!.clearServiceBaseline(id))
+  register(ipcChannels.seniorityGetServiceAccounting,z.tuple([senioritySchemas.id]),senioritySchemas.serviceAccounting.nullable(),([id])=>seniority!.getServiceAccounting(id))
+  register(ipcChannels.seniorityPreviewServiceAccounting,z.tuple([senioritySchemas.id,senioritySchemas.serviceAccountingInput,senioritySchemas.calendarDate]),senioritySchemas.serviceProjection,([id,input,on])=>seniority!.previewServiceAccounting(id,input,on))
+  register(ipcChannels.senioritySaveServiceAccounting,z.tuple([senioritySchemas.id,senioritySchemas.serviceAccountingInput]),senioritySchemas.serviceAccounting,([id,input])=>seniority!.saveServiceAccounting(id,input))
+  register(ipcChannels.seniorityClearServiceAccounting,z.tuple([senioritySchemas.id]),z.null(),([id])=>seniority!.clearServiceAccounting(id))
   register(ipcChannels.seniorityListOverview, z.tuple([]), z.array(senioritySchemas.overview), () => seniority!.listOverview())
   register(ipcChannels.seniorityGetAllowance, z.tuple([senioritySchemas.id]), senioritySchemas.allowance.nullable(),
     ([id]) => seniority!.getAllowance(id))
@@ -211,7 +212,7 @@ export function registerIpcHandlers(
           const channels = new Set<string>([
             ipcChannels.controlSaveSettings,ipcChannels.controlSetState,
             ipcChannels.personnelCreateEmployee,ipcChannels.personnelUpdateEmployee,ipcChannels.personnelDeleteEmployee,
-            ipcChannels.senioritySaveServiceBaseline,ipcChannels.seniorityClearServiceBaseline,ipcChannels.senioritySaveAllowance,ipcChannels.seniorityClearAllowance,ipcChannels.senioritySaveRank,ipcChannels.seniorityClearRank,
+            ipcChannels.senioritySaveServiceAccounting,ipcChannels.seniorityClearServiceAccounting,ipcChannels.senioritySaveAllowance,ipcChannels.seniorityClearAllowance,ipcChannels.senioritySaveRank,ipcChannels.seniorityClearRank,
             ipcChannels.leaveSaveServiceLeaveStart,ipcChannels.leaveSaveRights,ipcChannels.leaveSavePeriods,ipcChannels.leaveDeletePeriod,ipcChannels.backupConfirmRestore,
           ])
           if(channels.has(channel))try{contents.send?.('personnelControl:changed')}catch{/* A refresh failure cannot undo a successful mutation. */}

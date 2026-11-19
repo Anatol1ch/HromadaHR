@@ -4,7 +4,7 @@ import { projectOmsServiceLeave,serviceLeaveDays,nextServiceLeaveThreshold,servi
 import { calculateService } from '../dist-electron/shared/service-calculations.js'
 import { serviceLeaveSuggestion,applyServiceLeaveSuggestion,serviceDraftIdentity } from '../src/components/leave/service-leave-draft.ts'
 import { buildChanges } from '../src/components/leave/draft.ts'
-const baseline={years:12,months:0,days:1,asOfDate:'2028-01-01',basisNote:null,autoAccrueAfterBaseline:true}
+const baseline={mode:'snapshot',years:12,months:0,days:1,asOfDate:'2028-01-01'}
 const facts={acquiredOn:null,rightStatus:'has_right',periods:[]}
 const project=(b=baseline,on=b?.asOfDate??'2028-01-01',type='official',f=facts)=>projectOmsServiceLeave(b,on,type,f)
 const period={id:'p',employeeId:'e',leaveType:'oms_service_additional',periodStart:'2028-01-01',periodEnd:'2028-12-31',accountingBasis:'confirmed_entitlement',confirmedDays:3,referenceEntitlementDays:null,status:'confirmed'}
@@ -25,11 +25,11 @@ test('all strict leave thresholds preserve equality and change only after the bo
  assert.equal(serviceLeaveDays({years:0,months:0,days:0}),0)
  const max=project({...baseline,years:26});assert.equal(max.recommendedDays,15);assert.equal(max.nextThreshold,null);assert.equal(max.reviewOn,null)
 })
-test('missing, zero, frozen historical baseline, staff and invalid facts are distinct',()=>{
- assert.equal(project(null).status,'missing_baseline');assert.equal(project(null).recommendedDays,null)
+test('missing, zero, closed period history, staff and invalid facts are distinct',()=>{
+ assert.equal(project(null).status,'missing_service_data');assert.equal(project(null).recommendedDays,null)
  assert.equal(project({...baseline,years:0,days:0}).recommendedDays,0)
- const frozen=project({...baseline,autoAccrueAfterBaseline:false},'2030-01-01')
- assert.equal(frozen.status,'baseline_only');assert.equal(frozen.recommendedDays,9);assert.equal(frozen.reviewOn,null)
+ const frozen=project({mode:'periods',periods:[{id:'12345678-1234-4123-8123-123456789012',startDate:'2016-01-01',endDate:'2028-01-02'}]},'2030-01-01')
+ assert.equal(frozen.status,'calculated');assert.equal(frozen.recommendedDays,9);assert.equal(frozen.reviewOn,null)
  assert.equal(project(baseline,baseline.asOfDate,'staff').status,'not_applicable');assert.equal(project(baseline,baseline.asOfDate,'staff').recommendedDays,null)
  for(const patch of [{years:-1},{days:31},{months:12},{asOfDate:'2028-02-30'}])assert.equal(project({...baseline,...patch},'2028-03-01').status,'requires_review')
  assert.equal(project(baseline,'2027-12-31').calculation.reason,'before_baseline')
@@ -58,7 +58,7 @@ test('right status is evidence, historical remaining days are not normative dura
  const historical={...period,accountingBasis:'initial_balance'}
  const p=project(baseline,baseline.asOfDate,'official',{...facts,periods:[historical]})
  assert.equal(p.historicalBalancePresent,true);assert.equal(p.currentPeriods[0].comparison,'not_comparable')
- assert.equal(project({...baseline,autoAccrueAfterBaseline:false},baseline.asOfDate,'official',{...facts,periods:[period]}).currentPeriods[0].comparison,'not_comparable')
+ assert.equal(project({mode:'periods',periods:[{id:'12345678-1234-4123-8123-123456789012',startDate:'2016-01-01',endDate:'2028-01-02'}]},baseline.asOfDate,'official',{...facts,periods:[period]}).currentPeriods[0].comparison,'not_comparable')
  assert.equal(project(baseline,baseline.asOfDate,'official',{...facts,periods:[{...period,confirmedDays:9}]}).currentPeriods[0].comparison,'matches')
  assert.deepEqual(project(baseline,baseline.asOfDate,'official',{...facts,periods:[{...period,periodStart:'2029-01-01',periodEnd:'2029-12-31'}]}).currentPeriods,[])
 })
@@ -79,7 +79,7 @@ test('explicit suggestion changes one eligible blank draft and preserves IPC con
   {period:{...proposed,periodStart:'2027-01-01',periodEnd:'2027-12-31'},days:''},
   {...manual,start:'31.02.2028'},
  ])assert.equal(serviceLeaveSuggestion(bad,p,'2028-01-01'),null)
- for(const bad of [null,{...p,status:'baseline_only'},{...p,status:'not_applicable'},{...p,rightStatus:'unknown'},{...p,rightStatus:'no_right'},{...p,currentPeriods:[period]}]) {
+ for(const bad of [null,{...p,status:'not_applicable'},{...p,rightStatus:'unknown'},{...p,rightStatus:'no_right'},{...p,currentPeriods:[period]}]) {
   assert.equal(serviceLeaveSuggestion(row,bad,'2028-01-01'),null)
   assert.equal(applyServiceLeaveSuggestion(rows,serviceDraftIdentity(row),bad,'2028-01-01'),rows)
  }
