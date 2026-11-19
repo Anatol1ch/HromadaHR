@@ -647,3 +647,7 @@ Read-only перевірено `src/DecisionRegistry.tsx` HromadaAID за SHA `3
 ## 9.10.4 – Редактор усіх способів стажу
 
 Перевірений HromadaAID `src/components/Modal.tsx` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` підтвердив той самий уже перенесений патерн portal/focus trap/stack/keyboard/dirty-close; референс використовувався read-only, у HromadaHR залишено спільний `Modal`. Новий локальний `ServiceAccountingModal` використовує три native radio choices, чинні `InfoSection` і `DateField`, нижній sticky footer Modal, індикатори помилки та preview через типізований Main API. Чернетки інших режимів зберігаються при перемиканні; period IDs стабільні; текст дат відділений від перевіреного ISO для preview/save. Попередній розрахунок не записує даних. Для заміни збереженого способу є явне підтвердження; вихід із dirty форми йде через чинний `useUnsavedChanges`/`navigationGuard`. UI обмежений вкладкою стажу; порожні стани та кнопки первинного внесення збережені.
+
+### 9.10.4.1 – Локальне полірування модального редактора
+
+Порожній preview використовує `DataState` із погодженим `service-empty-state` (білий контейнер, рамка, радіус і мінімум 100 px). Для ознаки поточного періоду повторно використано клавіатурний `seniority-switch` з форм показників. DateField не розширено: поточне завершення явно підписане «дотепер», а поле лишається disabled без фіктивної дати. Перевірка кнопки save винесена в малу чисту умову: потрібні dirty draft, валідний input і успішний preview саме актуального draft.

@@ -42,11 +42,13 @@
 .service-accounting-radio-indicator { position: relative; width: 15px; height: 15px; border: 1px solid var(--border-standard); border-radius: 50%; background: var(--surface-card); }
 .service-accounting-mode-option.is-selected .service-accounting-radio-indicator { border: 5px solid var(--accent); }
 .service-accounting-fields { display: grid; gap: var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
-.service-accounting-date-field { max-width: 420px; }
-.service-accounting-copy-date { justify-self: start; min-height: var(--control-height-compact); height: auto; white-space: normal; }
+.service-accounting-continuous-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); align-items: end; gap: var(--space-3); min-width: 0; }
+.service-accounting-copy-date { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; min-width: 0; min-height: var(--control-height); height: auto; white-space: normal; text-align: center; }
+.service-accounting-copy-date svg, .service-period-actions svg { flex: none; }
 .service-accounting-snapshot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.service-accounting-snapshot-grid > .recipient-field:last-child { grid-column: 1 / -1; max-width: 420px; }
+.service-accounting-snapshot-grid > .recipient-field:last-child { grid-column: 1; max-width: 420px; }
 .service-accounting-preview { min-width: 0; }
+.service-accounting-preview > .service-empty-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: var(--space-2); min-height: 100px; text-align: center; }
 .service-accounting-preview-result { display: grid; justify-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-surface); border-radius: var(--radius-panel); background: var(--accent-soft); text-align: center; }
 .service-accounting-preview-result > span { color: var(--color-text-secondary); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
 .service-accounting-preview-result > strong { color: var(--accent-hover); font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.3; }
@@ -55,25 +57,29 @@
 .service-accounting-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .service-accounting-footer .employee-form-actions { margin-inline-start: auto; }
 .service-period-editor { display: grid; gap: var(--space-3); min-width: 0; }
-.service-period-card { position: relative; display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--border-surface); border-radius: var(--radius-card); }
-.service-period-card > legend { padding-inline-end: 40px; color: var(--color-text); font-size: 13px; font-weight: 650; }
-.service-period-remove { position: absolute; inset-block-start: 5px; inset-inline-end: 5px; width: var(--control-height-compact); height: var(--control-height-compact); color: var(--color-text-error); }
+.service-period-card { display: grid; gap: var(--space-2); min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--border-surface); border-radius: var(--radius-card); background: var(--surface-card); }
+.service-period-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; padding-bottom: var(--space-2); border-bottom: 1px solid var(--border-surface); }
+.service-period-header > strong { min-width: 0; color: var(--color-text); font-size: 13px; font-weight: 650; }
+.service-period-remove { flex: none; width: var(--control-height-compact); height: var(--control-height-compact); color: var(--color-text-error); }
 .service-period-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.service-accounting-current { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; color: var(--color-text-label); font-size: 13px; cursor: pointer; }
-.service-accounting-current input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
-.service-period-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.service-period-actions .secondary-button { height: auto; min-height: var(--control-height-compact); white-space: normal; text-align: left; }
+.service-accounting-current { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; color: var(--color-text-label); font-size: 13px; }
+.service-period-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); min-width: 0; }
+.service-period-actions .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-width: 0; min-height: var(--control-height-compact); height: auto; padding: var(--space-2) var(--space-3); white-space: normal; text-align: center; }
+.service-period-actions .secondary-button span { min-width: 0; }
 .service-period-empty { padding: var(--space-3); border: 1px dashed var(--border-surface); border-radius: var(--radius-card); color: var(--color-text-secondary); font-size: 13px; text-align: center; }
 .service-accounting-fields > .field-error { font-size: 12px; }
 
 @media (max-width: 700px) {
   .service-accounting-mode-options { grid-template-columns: minmax(0, 1fr); }
   .service-accounting-mode-option { min-height: 58px; }
+  .service-accounting-continuous-row { grid-template-columns: minmax(0, 1fr); }
+  .service-accounting-copy-date { justify-self: start; }
 }
 @media (max-width: 520px) {
   .service-period-dates, .service-accounting-snapshot-grid { grid-template-columns: minmax(0, 1fr); }
   .service-accounting-snapshot-grid > .recipient-field:last-child { grid-column: auto; }
-  .service-period-actions, .service-accounting-footer { align-items: stretch; flex-direction: column; }
+  .service-period-actions { grid-template-columns: minmax(0, 1fr); }
+  .service-accounting-footer { align-items: stretch; flex-direction: column; }
   .service-period-actions > button, .service-accounting-footer > button, .service-accounting-footer .employee-form-actions > button { width: 100%; }
   .service-accounting-footer .employee-form-actions { margin-inline-start: 0; }
 }

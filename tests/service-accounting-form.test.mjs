@@ -1,9 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createServiceAccountingDrafts, serviceAccountingDraftInput } from '../src/components/seniority-ranks/service-accounting-form.ts'
+import { canSaveServiceAccounting, createServiceAccountingDrafts, serviceAccountingDraftInput } from '../src/components/seniority-ranks/service-accounting-form.ts'
 
 const id1 = '00000000-0000-4000-8000-000000000001'
 const id2 = '00000000-0000-4000-8000-000000000002'
+
+test('save stays disabled until the active draft is valid and its current preview succeeded', () => {
+  const state = { busy: false, loading: false, dirty: true, input: true, previewReady: true }
+  assert.equal(canSaveServiceAccounting(state), true)
+  assert.equal(canSaveServiceAccounting({ ...state, input: false }), false)
+  assert.equal(canSaveServiceAccounting({ ...state, previewReady: false }), false)
+  assert.equal(canSaveServiceAccounting({ ...state, busy: true }), false)
+  assert.equal(canSaveServiceAccounting({ ...state, loading: true }), false)
+  assert.equal(canSaveServiceAccounting({ ...state, dirty: false }), false)
+})
 
 test('new editor defaults to continuous service and retains distinct per-mode draft data', () => {
   const created = createServiceAccountingDrafts(null, '2026-11-19', () => id1)

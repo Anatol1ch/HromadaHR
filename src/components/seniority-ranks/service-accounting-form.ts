@@ -3,6 +3,16 @@ import { formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.t
 import { snapshotErrors, snapshotInput, type SnapshotDraft } from './service-accounting-model.ts'
 
 export type ServiceAccountingMode = ServiceAccountingInput['mode']
+export function canSaveServiceAccounting({ busy, loading, dirty, input, previewReady }: {
+  busy: boolean
+  loading: boolean
+  dirty: boolean
+  input: boolean
+  previewReady: boolean
+}) {
+  return !busy && !loading && dirty && input && previewReady
+}
+
 export type ServicePeriodDraft = { id: string; startDate: string; startDraft: string; endDate: string; endDraft: string; current: boolean }
 export type ServiceAccountingDrafts = {
   continuous: { startDate: string; startDraft: string }

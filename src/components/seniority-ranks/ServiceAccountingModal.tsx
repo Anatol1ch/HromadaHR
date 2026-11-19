@@ -14,7 +14,7 @@ import ConfirmDialog from '../ConfirmDialog'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate, formatDateInput, isIsoCalendarDate, todayIsoDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { serviceAccountingDraftInput, serviceAccountingReasonMessage, createServiceAccountingDrafts, type ServiceAccountingMode, type ServiceAccountingDrafts } from './service-accounting-form'
+import { canSaveServiceAccounting, serviceAccountingDraftInput, serviceAccountingReasonMessage, createServiceAccountingDrafts, type ServiceAccountingMode, type ServiceAccountingDrafts } from './service-accounting-form'
 import { serviceDurationLabel } from './service-accounting-model'
 import ServicePeriodEditor from './ServicePeriodEditor'
 
@@ -146,7 +146,7 @@ export default function ServiceAccountingModal({ employeeId, hireDate, navigatio
     {loaded?.value && <button type="button" className="secondary-button danger-action" disabled={busy} onClick={() => { setError(''); setConfirmClear(true) }}>Очистити стаж</button>}
     <div className="employee-form-actions">
       <button type="button" className="secondary-button" disabled={busy} onClick={close}>Скасувати</button>
-      <button type="submit" form={id + '-form'} className="primary-button" disabled={busy || loading || !dirty || (!!input && !previewReady)} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy ? 'Збереження…' : 'Зберегти стаж'}</button>
+      <button type="submit" form={id + '-form'} className="primary-button" disabled={!canSaveServiceAccounting({ busy, loading, dirty, input: !!input, previewReady })} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy ? 'Збереження…' : 'Зберегти стаж'}</button>
     </div>
   </div>
 
@@ -169,8 +169,10 @@ export default function ServiceAccountingModal({ employeeId, hireDate, navigatio
           <InfoSection title="Відомості про стаж" icon={<Clock3 size={17} aria-hidden="true"/>}>
             <fieldset className="service-accounting-fields" disabled={busy}>
               {mode === 'continuous' && <>
-                <div className="recipient-field employee-field service-accounting-date-field"><label htmlFor={id + '-continuous'}>Дата початку безперервної служби *</label><DateField id={id + '-continuous'} value={drafts.continuous.startDate} initialDraft={drafts.continuous.startDraft} max={today} required disabled={busy} error={visibleErrors ? activeFields.startDate : undefined} onDraftChange={text => changeDraft('continuous', { ...drafts.continuous, startDraft: text })} onChange={date => changeDraft('continuous', { startDate: date, startDraft: formatDateInput(date) })}/></div>
-                {hasHireDate && <button type="button" className="secondary-button service-accounting-copy-date" disabled={busy} onClick={() => changeDraft('continuous', { startDate: hireDate, startDraft: formatDateInput(hireDate) })}><CalendarCheck size={16} aria-hidden="true"/>Використати дату прийняття</button>}
+                <div className="service-accounting-continuous-row">
+                  <div className="recipient-field employee-field"><label htmlFor={id + '-continuous'}>Дата початку безперервної служби *</label><DateField id={id + '-continuous'} value={drafts.continuous.startDate} initialDraft={drafts.continuous.startDraft} max={today} required disabled={busy} error={visibleErrors ? activeFields.startDate : undefined} onDraftChange={text => changeDraft('continuous', { ...drafts.continuous, startDraft: text })} onChange={date => changeDraft('continuous', { startDate: date, startDraft: formatDateInput(date) })}/></div>
+                  {hasHireDate && <button type="button" className="secondary-button service-accounting-copy-date" disabled={busy} onClick={() => changeDraft('continuous', { startDate: hireDate, startDraft: formatDateInput(hireDate) })}><CalendarCheck size={16} aria-hidden="true"/>Використати дату прийняття</button>}
+                </div>
                 {visibleErrors && activeFields.startDate && <span className="field-error">{activeFields.startDate}</span>}
               </>}
               {mode === 'periods' && <>
@@ -186,12 +188,11 @@ export default function ServiceAccountingModal({ employeeId, hireDate, navigatio
 
           <InfoSection title="Попередній розрахунок" icon={<Calculator size={17} aria-hidden="true"/>}>
             <div className="service-accounting-preview" aria-live="polite" aria-atomic="true">
-              {!input ? <DataState kind="empty" compact message="Заповніть коректні відомості для розрахунку стажу."/> : currentPreview?.loading || !currentPreview ? <DataState kind="loading" compact message="Розрахунок стажу…"/> : currentPreview.error ? <Alert variant="error" action={<button type="button" disabled={busy} onClick={() => setPreviewRetry(value => value + 1)}>Повторити</button>}>{currentPreview.error}</Alert> : currentPreview.value && currentResult?.status !== 'calculated' ? <Alert variant="error">{serviceAccountingReasonMessage(currentResult?.reason ?? null)}</Alert> : currentPreview.value && currentResult?.current ? <div className="service-accounting-preview-result">
+              {!input ? visibleErrors ? <Alert variant="warning">Перевірте введені відомості та виправте позначені поля.</Alert> : <DataState kind="empty" className="service-empty-state" icon={<Calculator size={22} aria-hidden="true"/>} message="Заповніть відомості для розрахунку стажу."/> : currentPreview?.loading || !currentPreview ? <DataState kind="loading" compact message="Розрахунок стажу…"/> : currentPreview.error ? <Alert variant="error" action={<button type="button" disabled={busy} onClick={() => setPreviewRetry(value => value + 1)}>Повторити</button>}>{currentPreview.error}</Alert> : currentPreview.value && currentResult?.status !== 'calculated' ? <Alert variant="error">{serviceAccountingReasonMessage(currentResult?.reason ?? null)}</Alert> : currentPreview.value && currentResult?.current ? <div className="service-accounting-preview-result">
                 <span>Стаж станом на {formatDate(currentResult.calculatedOn)}</span>
                 <strong>{serviceDurationLabel(currentResult.current)}</strong>
-                {mode === 'periods' && currentResult.creditedDays !== null && <span className="service-accounting-credited-days">Точна сума зарахованого часу: {currentResult.creditedDays.toLocaleString('uk-UA')} календарних днів</span>}
-                <span className="service-accounting-accrual-note">{mode === 'periods' ? currentResult.accrues ? 'Стаж продовжує накопичуватися за поточним періодом.' : 'Враховано лише завершені періоди служби.' : 'Подальша служба враховується автоматично.'}</span>
-                {isEstimate && <span className="service-accounting-estimate-note">{mode === 'periods' ? 'Тривалість у роках, місяцях і днях є розрахунковою оцінкою за внесеними періодами.' : 'Результат попередній і стане підтвердженим після збереження вихідних відомостей.'}</span>}
+                {mode === 'periods' && !currentResult.accrues && <span className="service-accounting-accrual-note">Враховано лише завершені періоди служби.</span>}
+                {isEstimate && mode === 'periods' && <span className="service-accounting-estimate-note">Тривалість у роках, місяцях і днях є розрахунковою оцінкою за внесеними періодами.</span>}
               </div> : <DataState kind="empty" compact message="Заповніть коректні відомості для розрахунку стажу."/>}
             </div>
           </InfoSection>
