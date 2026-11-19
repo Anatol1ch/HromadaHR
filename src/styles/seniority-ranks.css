@@ -42,11 +42,15 @@
 .service-accounting-radio-indicator { position: relative; width: 15px; height: 15px; border: 1px solid var(--border-standard); border-radius: 50%; background: var(--surface-card); }
 .service-accounting-mode-option.is-selected .service-accounting-radio-indicator { border: 5px solid var(--accent); }
 .service-accounting-fields { display: grid; gap: var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.service-accounting-form .service-accounting-copy-date, .service-accounting-form .service-period-actions .secondary-button { border-color: var(--border-standard); background: var(--surface-card); }
+.service-accounting-form .service-accounting-copy-date:hover:not(:disabled), .service-accounting-form .service-period-actions .secondary-button:hover:not(:disabled) { background: var(--surface-panel); color: var(--color-text-secondary); }
 .service-accounting-continuous-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); align-items: end; gap: var(--space-3); min-width: 0; }
 .service-accounting-copy-date { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; min-width: 0; min-height: var(--control-height); height: auto; white-space: normal; text-align: center; }
 .service-accounting-copy-date svg, .service-period-actions svg { flex: none; }
-.service-accounting-snapshot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.service-accounting-snapshot-grid > .recipient-field:last-child { grid-column: 1; max-width: 420px; }
+.service-accounting-snapshot-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) 16px; min-width: 0; }
+.employee-form-modal .employee-form-grid.service-accounting-snapshot-grid { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.service-accounting-snapshot-divider { grid-column: 1 / -1; width: 100%; border-top: 1px solid var(--border-surface); }
+.service-accounting-snapshot-date { grid-column: 1; min-width: 0; }
 .service-accounting-preview { min-width: 0; }
 .service-accounting-preview > .service-empty-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: var(--space-2); min-height: 100px; text-align: center; }
 .service-accounting-preview-result { display: grid; justify-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-surface); border-radius: var(--radius-panel); background: var(--accent-soft); text-align: center; }
@@ -75,9 +79,13 @@
   .service-accounting-continuous-row { grid-template-columns: minmax(0, 1fr); }
   .service-accounting-copy-date { justify-self: start; }
 }
+@container (max-width: 680px) {
+  .service-accounting-snapshot-fields { grid-template-columns: minmax(0, 1fr); }
+  .employee-form-modal .employee-form-grid.service-accounting-snapshot-grid { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 520px) {
-  .service-period-dates, .service-accounting-snapshot-grid { grid-template-columns: minmax(0, 1fr); }
-  .service-accounting-snapshot-grid > .recipient-field:last-child { grid-column: auto; }
+  .service-period-dates { grid-template-columns: minmax(0, 1fr); }
+  .service-accounting-snapshot-divider, .service-accounting-snapshot-date { grid-column: 1; }
   .service-period-actions { grid-template-columns: minmax(0, 1fr); }
   .service-accounting-footer { align-items: stretch; flex-direction: column; }
   .service-period-actions > button, .service-accounting-footer > button, .service-accounting-footer .employee-form-actions > button { width: 100%; }

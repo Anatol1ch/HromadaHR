@@ -33,7 +33,7 @@ export function createServiceAccountingDrafts(value: ServiceAccounting | null, t
   const drafts: ServiceAccountingDrafts = {
     continuous: { startDate: '', startDraft: '' },
     periods: [emptyPeriod(createId())],
-    snapshot: { years: '0', months: '0', days: '0', asOfDate: formatDateInput(today), asOfDateIso: today },
+    snapshot: { years: '', months: '', days: '', asOfDate: formatDateInput(today), asOfDateIso: today },
   }
   if (!value) return { mode: 'continuous', drafts }
   if (value.mode === 'continuous') {

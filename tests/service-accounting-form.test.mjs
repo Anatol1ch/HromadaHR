@@ -20,7 +20,8 @@ test('new editor defaults to continuous service and retains distinct per-mode dr
   assert.equal(created.mode, 'continuous')
   assert.deepEqual(created.drafts.continuous, { startDate: '', startDraft: '' })
   assert.deepEqual(created.drafts.periods, [{ id: id1, startDate: '', startDraft: '', endDate: '', endDraft: '', current: false }])
-  assert.deepEqual(created.drafts.snapshot, { years: '0', months: '0', days: '0', asOfDate: '19.11.2026', asOfDateIso: '2026-11-19' })
+  assert.deepEqual(created.drafts.snapshot, { years: '', months: '', days: '', asOfDate: '19.11.2026', asOfDateIso: '2026-11-19' })
+  assert.equal(serviceAccountingDraftInput('snapshot', created.drafts, '2026-11-19').input, undefined)
 })
 
 test('editor initializes each persisted mode from its original source facts and stable period IDs', () => {
@@ -73,8 +74,9 @@ test('period draft preserves stable IDs and sends open periods as null endDate',
 
 test('snapshot permits explicit zero and rejects invalid numeric values or dates', () => {
   const base = createServiceAccountingDrafts(null, '2026-11-19', () => id1).drafts
-  assert.deepEqual(serviceAccountingDraftInput('snapshot', base, '2026-11-19').input, { mode: 'snapshot', years: 0, months: 0, days: 0, asOfDate: '2026-11-19' })
-  const invalid = { ...base, snapshot: { ...base.snapshot, months: '12', asOfDate: '31.02.2020' } }
+  const explicitZero = { ...base, snapshot: { ...base.snapshot, years: '0', months: '0', days: '0' } }
+  assert.deepEqual(serviceAccountingDraftInput('snapshot', explicitZero, '2026-11-19').input, { mode: 'snapshot', years: 0, months: 0, days: 0, asOfDate: '2026-11-19' })
+  const invalid = { ...explicitZero, snapshot: { ...explicitZero.snapshot, months: '12', asOfDate: '31.02.2020' } }
   const result = serviceAccountingDraftInput('snapshot', invalid, '2026-11-19')
   assert.equal(result.input, undefined)
   assert.ok(result.errors.snapshot.months)
