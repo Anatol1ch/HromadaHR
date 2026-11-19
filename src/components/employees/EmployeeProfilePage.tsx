@@ -115,7 +115,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
             </div>
             <EmployeeDocuments employeeId={id}/>
           </>:section==='service'?<>
-            <ServiceAccountingPanel key={id} employeeId={id} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
+            <ServiceAccountingPanel key={id} employeeId={id} hireDate={employee.hireDate} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} onAccountingChanged={()=>setAllowanceRefresh(v=>v+1)} refreshKey={allowanceRefresh} showConfirmedAllowance={false}/>
             <ProfileIndicatorPanel employee={employee} kind="allowance" navigationGuard={navigationGuard} disabled={baselineEditing||baselineBusy||loading} refreshKey={revision} onRefresh={()=>setAllowanceRefresh(v=>v+1)}/>
           </>
             :section==='rank'?<ProfileIndicatorPanel employee={employee} kind="rank" navigationGuard={navigationGuard} disabled={loading} refreshKey={revision}/>

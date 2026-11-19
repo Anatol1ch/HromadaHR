@@ -258,3 +258,7 @@ Read-only перевірено HromadaAID `src/RecipientRegistry.tsx`, `src/AidR
 ## 9.10.3 – Предметна модель обліку стажу
 
 Цільову перевірку виконано: локальний checkout `D:\Projects\HromadaAID` відсутній, GitHub-пошук доступного репозиторію `Anatol1ch/HromadaAID` за термінами `service seniority` не повернув результатів. Отже, сумісний аналог предметної логіки/схеми не підтверджений (неперевірене), SHA джерела для цього рішення немає. Реалізація спирається на погоджену модель HromadaHR, його попередню календарну конвенцію та офіційні нормативні джерела; AID-код не переносився й runtime-залежності немає.
+
+## 9.10.4 – Модальний редактор стажу
+
+Read-only перевірено `src/components/Modal.tsx` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`: portal, focus trap, stack, dirty-close confirmation та keyboard close збігаються з уже перенесеним спільним HR `Modal`; використано локальну HR-реалізацію, її CSS і guard. `src/components/RecipientForm.tsx` за цим ref відсутній (404); предметного редактора стажу/періодів у доступному цільовому фрагменті не підтверджено. Фактичний UI побудовано на чинних HR `Modal`, `InfoSection`, `DateField`, `useUnsavedChanges`, системному confirm і tokens; окрема дизайн-система або dependency не додана.

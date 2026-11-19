@@ -8,7 +8,7 @@ const modules = {
   infrastructure: ['storage', 'remove-notes', 'ipc', 'startup', 'zoom'],
   backup: ['backup', 'backup-catalog', 'backup-history', 'backup-reliability', 'paired-backup', 'open-backup-folder'],
   personnel: ['personnel', 'personnel-dictionaries', 'current-appointment'],
-  seniority: ['seniority-ranks', 'seniority-ranks-model', 'service-baseline', 'service-calculations', 'rank-projection', 'rank-projection-ipc', 'profile-indicators'],
+  seniority: ['seniority-ranks', 'seniority-ranks-model', 'service-baseline', 'service-accounting-form', 'service-calculations', 'rank-projection', 'rank-projection-ipc', 'profile-indicators'],
   leaves: ['leave', 'leave-ipc', 'leave-rights', 'leave-registration', 'leave-corrections', 'special-leaves', 'service-leave-calculations', 'service-leave-projection', 'leave-draft', 'leave-confirmation', 'leave-presentation', 'leave-usage'],
   documents: ['documents-core', 'document-numbering', 'document-leave-links', 'documents-ui', 'document-leave-links-ui'],
   control: ['personnel-control', 'personnel-control-calculations'],
