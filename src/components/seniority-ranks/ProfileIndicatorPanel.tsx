@@ -1,5 +1,5 @@
 import { useEffect,useRef,useState,type RefObject } from 'react'
-import { Percent } from 'lucide-react'
+import { Percent, Plus } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
@@ -37,7 +37,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
   requestAnimationFrame(()=>{if(!opener.current?.isConnected)window.document.getElementById('employee-profile-title')?.focus()})
  }
  return <>
-  <InfoSection title={kind==='allowance'?'Підтверджена надбавка за вислугу':'Підтверджений поточний ранг'} action={current&&!current.error&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{kind==='allowance'?(value?'Редагувати надбавку':'Внести надбавку'):(value?'Редагувати ранг':'Внести ранг')}</button>}>
+  <InfoSection title={kind==='allowance'?'Підтверджена надбавка за вислугу':'Підтверджений поточний ранг'} action={current&&!current.error&&(kind==='rank'||value)&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{kind==='allowance'?'Редагувати надбавку':(value?'Редагувати ранг':'Внести ранг')}</button>}>
    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого показника…"/>:value?<>
     <strong className="seniority-value">{kind==='allowance'?allowanceLabel(allowance??null):`${rank!.rank} ранг`}</strong>
     {(rank||allowance?.status==='confirmed'||value.effectiveOn||value.reviewOn)&&<dl className="info-grid">
@@ -50,7 +50,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
      {rank?.originNote&&<InfoItem label="Пояснення підстави" value={rank.originNote} wide/>}
     </dl>}
     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
-   </>:<DataState kind="empty" compact={kind!=='allowance'} className={kind==='allowance'?'service-empty-state':''} icon={kind==='allowance'?<Percent size={22} aria-hidden="true"/>:undefined} message={kind==='allowance'?'Підтверджену надбавку за вислугу не внесено.':'Поточний ранг не внесено.'}/>}
+   </>:kind==='allowance'?<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Percent size={22} aria-hidden="true"/>} message="Підтверджену надбавку за вислугу не внесено."/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести надбавку</button></div>:<DataState kind="empty" compact message="Поточний ранг не внесено."/>}
    {disabled&&kind==='allowance'&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
   </InfoSection>
   {kind==='rank'&&<RankProjectionPanel employeeId={employee.id} refreshKey={refreshKey+version} showCurrent={false} showConfirmedDetails={false}/>}

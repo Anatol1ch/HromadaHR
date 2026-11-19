@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { Clock } from 'lucide-react'
+import { Clock, Plus } from 'lucide-react'
 import ServiceProjectionView from './ServiceProjectionView'
 import type { ServiceProjection } from '../../../shared/service-calculations'
 import type { ServiceBaseline } from '../../../shared/seniority-ranks'
@@ -51,6 +51,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
   return()=>{current=false}
  },[employeeId,value,loading,projectionRetry,refreshKey])
  function reset(next:ServiceBaseline|null) {const v=baselineDraft(next);setDraft(v);setInitial(v);setIso(next?.asOfDate??'');setEditing(false);onEditingChange?.(false);setErrors({});setError('')}
+ function beginEdit() {reset(value);setEditing(true);onEditingChange?.(true)}
  function change<K extends keyof BaselineDraft>(key:K,text:BaselineDraft[K]) {setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined}))}
  async function save(clear=false) {
   if(inFlight.current)return
@@ -67,7 +68,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
   finally {inFlight.current=false;if(alive.current){setBusy(false);onBusyChange(false)}}
  }
  return <div ref={owner} className="employee-form">
-  <InfoSection title="Підтверджений стаж служби" action={!loading&&!error&&!editing&&<button type="button" className="secondary-button" onClick={()=>{reset(value);setEditing(true);onEditingChange?.(true)}}>{value?'Редагувати стаж':'Внести стаж'}</button>}>
+  <InfoSection title="Підтверджений стаж служби" action={!loading&&!error&&!editing&&value&&<button type="button" className="secondary-button" onClick={beginEdit}>Редагувати стаж</button>}>
    {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:editing?<form className="employee-form service-baseline-form" noValidate onSubmit={e=>{e.preventDefault();void save()}}>
     <fieldset className="recipient-fieldset service-baseline-fields" disabled={busy}>
      <div className="employee-form-grid">
@@ -94,7 +95,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
      <InfoItem label="Подальше зарахування" value={value.autoAccrueAfterBaseline?'Дозволено для прогнозу':'Не дозволено'}/><InfoItem label="Стаж визначено станом на" value={formatDate(value.asOfDate)}/><InfoItem label="Останнє підтвердження" value={formatDateTime(value.confirmedAt)}/>
      {value.basisNote&&<InfoItem label="Підстава" value={value.basisNote} wide/>}
     </dl>
-   </>:<DataState kind="empty" className="service-empty-state" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/>}
+   </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/><button type="button" className="primary-button service-empty-action-button" onClick={beginEdit}><Plus size={17} aria-hidden="true"/>Внести стаж</button></div>}
   </InfoSection>
   {!editing&&!loading&&<ServiceProjectionView showConfirmedAllowance={showConfirmedAllowance} value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>}
   {clearing&&<ConfirmDialog title="Очистити підтверджений стаж?" message="Поточний опорний запис і його чернетку буде вилучено. Попередня версія окремо не зберігається. Надбавка, ранг і відпустки залишаться без змін." confirmLabel="Очистити" error={error} onCancel={()=>{if(!inFlight.current){setClearing(false);setError('')}}} onConfirm={()=>save(true)}/>}
