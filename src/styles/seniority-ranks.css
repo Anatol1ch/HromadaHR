@@ -47,7 +47,7 @@
 .service-accounting-continuous-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); align-items: end; gap: var(--space-3); min-width: 0; }
 .service-accounting-copy-date { display: inline-flex; align-items: center; justify-content: center; justify-self: stretch; min-width: 0; min-height: var(--control-height); height: auto; white-space: normal; text-align: center; }
 .service-accounting-copy-date svg, .service-period-actions svg { flex: none; }
-.service-accounting-snapshot-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3) 16px; min-width: 0; }
+.service-accounting-snapshot-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; column-gap: 16px; min-width: 0; }
 .employee-form-modal .employee-form-grid.service-accounting-snapshot-grid { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .service-accounting-snapshot-divider { grid-column: 1 / -1; width: 100%; border-top: 1px solid var(--border-surface); }
 .service-accounting-snapshot-date { grid-column: 1; min-width: 0; }
