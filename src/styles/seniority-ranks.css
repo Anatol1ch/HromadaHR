@@ -1,4 +1,5 @@
 .seniority-value { color: var(--accent-hover); font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.service-empty-state { box-sizing:border-box; width:100%; min-width:0; min-height:100px; padding:var(--space-3) var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
 .seniority-date-option { display: flex; align-items: center; gap: var(--space-2); padding-block: var(--space-1); font-size: 13px; color: var(--color-text-label); }
 
 .seniority-footer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }

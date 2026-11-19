@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { Clock } from 'lucide-react'
 import ServiceProjectionView from './ServiceProjectionView'
 import type { ServiceProjection } from '../../../shared/service-calculations'
 import type { ServiceBaseline } from '../../../shared/seniority-ranks'
@@ -93,7 +94,7 @@ export default function ServiceBaselinePanel({ employeeId, navigationGuard, onBu
      <InfoItem label="Подальше зарахування" value={value.autoAccrueAfterBaseline?'Дозволено для прогнозу':'Не дозволено'}/><InfoItem label="Стаж визначено станом на" value={formatDate(value.asOfDate)}/><InfoItem label="Останнє підтвердження" value={formatDateTime(value.confirmedAt)}/>
      {value.basisNote&&<InfoItem label="Підстава" value={value.basisNote} wide/>}
     </dl>
-   </>:<DataState kind="empty" compact message="Підтверджений стаж не внесено"/>}
+   </>:<DataState kind="empty" className="service-empty-state" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/>}
   </InfoSection>
   {!editing&&!loading&&<ServiceProjectionView showConfirmedAllowance={showConfirmedAllowance} value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>}
   {clearing&&<ConfirmDialog title="Очистити підтверджений стаж?" message="Поточний опорний запис і його чернетку буде вилучено. Попередня версія окремо не зберігається. Надбавка, ранг і відпустки залишаться без змін." confirmLabel="Очистити" error={error} onCancel={()=>{if(!inFlight.current){setClearing(false);setError('')}}} onConfirm={()=>save(true)}/>}

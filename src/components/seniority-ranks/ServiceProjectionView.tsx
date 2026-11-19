@@ -1,4 +1,5 @@
 import type { ServiceProjection } from '../../../shared/service-calculations'
+import { Calculator } from 'lucide-react'
 import InfoSection from '../InfoSection'
 import InfoItem from '../InfoItem'
 import DataState from '../DataState'
@@ -21,6 +22,6 @@ export default function ServiceProjectionView({value,error,onRetry,showConfirmed
    <p className="employee-hint">{calc.status==='baseline_only'?'Автоматичне зарахування не дозволено. Поточний стаж і майбутня дата переходу не визначаються.':'Прогноз залежить від безперервного зарахування часу та календарної конвенції. Контрольна дата орієнтовна й потребує кадрової перевірки.'} Підтверджені рішення не змінюються.</p>
    {calc.status==='calculated'&&value.nextThreshold&&!value.reviewOn&&<p className="employee-hint">Контрольну дату в підтримуваному діапазоні визначити неможливо.</p>}
    {value.comparison==='different'&&<Alert variant="warning">Розрахунковий показник відрізняється від підтвердженого. Перевірте право на зміну надбавки.</Alert>}
-  </>:<><DataState kind="empty" compact message={value.status==='missing_baseline'?'Для прогнозу внесіть підтверджений стаж.':'Розрахунок потребує перевірки опорної дати, компонентів або допустимого діапазону.'}/>{showConfirmedAllowance&&<p className="employee-hint">Підтверджена надбавка: {allowanceLabel(value.confirmedAllowance)}</p>}</>}
+  </>:<>{value.status==='missing_baseline'?<DataState kind="empty" className="service-empty-state" icon={<Calculator size={22} aria-hidden="true"/>} message="Для перегляду розрахункових показників внесіть підтверджений стаж."/>:<DataState kind="empty" compact message="Розрахунок потребує перевірки опорної дати, компонентів або допустимого діапазону."/>}{showConfirmedAllowance&&<p className="employee-hint">Підтверджена надбавка: {allowanceLabel(value.confirmedAllowance)}</p>}</>}
  </InfoSection>
 }

@@ -1,4 +1,5 @@
 import { useEffect,useRef,useState,type RefObject } from 'react'
+import { Percent } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
@@ -49,7 +50,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
      {rank?.originNote&&<InfoItem label="Пояснення підстави" value={rank.originNote} wide/>}
     </dl>}
     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
-   </>:<DataState kind="empty" compact message={kind==='allowance'?'Підтверджену надбавку не внесено.':'Поточний ранг не внесено.'}/>}
+   </>:<DataState kind="empty" compact={kind!=='allowance'} className={kind==='allowance'?'service-empty-state':''} icon={kind==='allowance'?<Percent size={22} aria-hidden="true"/>:undefined} message={kind==='allowance'?'Підтверджену надбавку за вислугу не внесено.':'Поточний ранг не внесено.'}/>}
    {disabled&&kind==='allowance'&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
   </InfoSection>
   {kind==='rank'&&<RankProjectionPanel employeeId={employee.id} refreshKey={refreshKey+version} showCurrent={false} showConfirmedDetails={false}/>}
