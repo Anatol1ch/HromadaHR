@@ -82,7 +82,7 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
     setValue(null);setProjection(null);setProjectionRetry(v=>v+1);onAccountingChanged?.();closeEditor()
     requestAnimationFrame(()=>trigger.current?.focus())
   }
-  const action=!loading&&!error&&value&&<button ref={trigger} type="button" className="secondary-button" onClick={event=>openEditor(event.currentTarget)}><Pencil size={15} aria-hidden="true"/>Редагувати стаж</button>
+  const action=!loading&&!error&&value&&<button ref={trigger} type="button" className="secondary-button section-header-edit-button" onClick={event=>openEditor(event.currentTarget)}><Pencil size={15} aria-hidden="true"/>Редагувати стаж</button>
   const periods=value?.mode==='periods'?value.periods:[]
   const displayedPeriods=showAllPeriods?periods:periods.slice(0,4)
   const serviceDetailRowCount=!value?0:value.mode==='continuous'?2:value.mode==='snapshot'?3:1+displayedPeriods.length+(periods.length>4?1:0)

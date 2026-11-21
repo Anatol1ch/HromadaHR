@@ -41,7 +41,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
   requestAnimationFrame(()=>{if(!opener.current?.isConnected)window.document.getElementById('employee-profile-title')?.focus()})
  }
  return <>
-  {kind==='allowance'?<InfoSection className={`service-info-panel service-tab-section service-tab-allowance${canSyncAllowance?' service-tab-sync-allowance':''}`} title="Надбавка за вислугу років" icon={<BadgePercent size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати надбавку</button>}>
+  {kind==='allowance'?<InfoSection className={`service-info-panel service-tab-section service-tab-allowance${canSyncAllowance?' service-tab-sync-allowance':''}`} title="Надбавка за вислугу років" icon={<BadgePercent size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button section-header-edit-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати надбавку</button>}>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Завантаження надбавки…"/>:allowance?<>
       <div className="service-allowance-primary">
         <strong>{allowance.status==='confirmed'?`${allowance.percentage}%`:'Не застосовується'}</strong>

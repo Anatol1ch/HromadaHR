@@ -15,6 +15,7 @@
 .secondary-button svg { flex-shrink: 0; }
 .secondary-button:hover:not([aria-busy="true"]):not([aria-disabled="true"]):not(:disabled) { background: var(--surface-panel); color: var(--color-text-secondary); }
 .secondary-button:disabled { opacity: .6; cursor: default; }
+.section-header-edit-button { display:inline-flex; align-items:center; gap:var(--space-1); min-height:var(--control-height-compact); height:auto; padding-inline:var(--space-2); }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: var(--modal-gutter); overflow-y: auto; background: var(--surface-backdrop); }
 .modal-backdrop { z-index: 100; }
