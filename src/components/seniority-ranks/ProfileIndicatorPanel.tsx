@@ -47,7 +47,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
         <strong>{allowance.status==='confirmed'?`${allowance.percentage}%`:'Не застосовується'}</strong>
         <span>{allowance.status==='confirmed'?'Підтверджено':'Не застосовується'}</span>
       </div>
-      <dl className="service-detail-list service-allowance-facts">
+      <dl className="service-detail-list service-detail-list-synchronized service-allowance-facts">
         <ServiceDetailRow icon={CalendarDays} label="Дата початку дії" value={allowance.status==='confirmed'&&allowance.effectiveOn?formatDate(allowance.effectiveOn):'Не застосовується'}/>
         <ServiceDetailRow icon={FileText} label="Документальна підстава" value={document||'Реквізити не зазначено'}/>
       </dl>
