@@ -1,5 +1,9 @@
 # Перенесення UI HromadaAID → HromadaHR (до 4.9.6.4)
 
+## Чинний стандарт HromadaHR UI v1
+
+Практичні правила токенів, типографіки, компонування, доступності та повторного використання зібрані в [UI-DESIGN-SYSTEM.md](UI-DESIGN-SYSTEM.md). Погоджені еталони — вкладки особової картки «Загальні відомості» і «Стаж і надбавка»; їх фактичні реалізації розташовані в `EmployeeProfilePage.tsx`/`employee-profile.css` та `ServiceAccountingPanel.tsx`, `ProfileIndicatorPanel.tsx`, `ServiceProjectionView.tsx`/`seniority-ranks.css`. Пов'язані редактори використовують спільний `Modal`, поля й кнопки. Користуйтеся наявними патернами без глобального дублювання стилів.
+
 Джерело: `Anatol1ch/HromadaAID`, commit **33eca10733caaf73b1a99e75a24ff35e706a0afb**. HEAD перевірено через read-only Git та GitHub connector 03.11.2026; він збігався з погодженим SHA. Файли прочитано за фіксованим ref, не з рухомої гілки. Локального checkout HromadaAID не було: потрібні текстові файли збережено в окремому тимчасовому каталозі без `.git` для аналізу. Джерело, його історія/налаштування та `reference/` не змінювалися.
 
 Цільова база перенесення: HromadaHR c479d23577e1f61cf16f6c732476a64ef487b2e1; робоча гілка codex/3.4.1-aid-ui-foundation. Реалізацію 3.4.1–3.4.3.8 завершено, фінальну інтеграцію в main погоджено; Git-стан фіксує [HANDOFF.md](HANDOFF.md).
