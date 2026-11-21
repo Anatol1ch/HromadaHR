@@ -10,6 +10,7 @@ import { ArrowLeft, Award, BriefcaseBusiness, Building2, CalendarCheck, Calendar
 import type { LucideIcon } from 'lucide-react'
 import type { EmployeeCard as EmployeeData } from '../../../shared/personnel'
 import { displayDate, employeeTypeLabels, fullName, personnelMessage } from '../../employees/model'
+import type { EmployeeFormMode } from '../../employees/model'
 import InfoSection from '../InfoSection'
 import Alert from '../Alert'
 import DataState from '../DataState'
@@ -17,8 +18,8 @@ import { navigateTabs } from '../../lib/tabNavigation'
 
 type EmployeeInformationField = { label: string; value: ReactNode; icon: LucideIcon; date?: boolean }
 
-function EmployeeInformationPanel({ title, icon: SectionIcon, fields }: { title: string; icon: LucideIcon; fields: EmployeeInformationField[] }) {
-  return <InfoSection title={title} icon={<SectionIcon size={17}/>}>
+function EmployeeInformationPanel({ title, icon: SectionIcon, fields, action }: { title: string; icon: LucideIcon; fields: EmployeeInformationField[]; action: ReactNode }) {
+  return <InfoSection title={title} icon={<SectionIcon size={17}/>} action={action}>
     <dl className="employee-information-list">
       {fields.map(({ label, value, icon: FieldIcon, date }) => <div key={label} className={`employee-information-row${date ? ' employee-information-row-date' : ''}`}>
         <span className="employee-information-row-icon" aria-hidden="true"><FieldIcon size={17}/></span>
@@ -33,7 +34,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
   initialTab?:EmployeeCardTab;tabRequestId?:number
   id: string; revision: number; onDelete: (id: string) => void;onReturnToRegistry:()=>void
   navigationGuard: RefObject<NavigationGuard>
-  onEdit: (employee: EmployeeData) => void; onLoaded: (employee: EmployeeData) => void
+  onEdit: (employee: EmployeeData, mode: EmployeeFormMode) => void; onLoaded: (employee: EmployeeData) => void
 }) {
   const [data, setData] = useState<EmployeeData | null>(null)
   const [error, setError] = useState('')
@@ -91,7 +92,7 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
         {employee&&!error&&<p>{employee.position.name} <span aria-hidden="true">·</span> {employee.department.name}</p>}
       </div>
       {employee&&!error&&<div className="employee-profile-actions">
-        <button className="secondary-button" type="button" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>{if(section==='service')setTab('general');onEdit(employee)})}><Pencil size={16} aria-hidden="true"/>Редагувати</button>
+        <button className="secondary-button" type="button" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>{if(section==='service')setTab('general');onEdit(employee,'all')})}><Pencil size={16} aria-hidden="true"/>Редагувати</button>
         <button className="secondary-button danger-action" type="button" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>onDelete(id))}><Trash2 size={16} aria-hidden="true"/>Видалити</button>
       </div>}
     </header>
@@ -110,8 +111,8 @@ export default function EmployeeProfilePage({ id, onEdit, onLoaded, onDelete, on
         <section key={id+':'+tabRequestId+':'+section} id={tabId+'-content'} className={`employee-profile-content${section === 'general' ? ' employee-profile-general-content' : ''}`} role="tabpanel" tabIndex={0} aria-labelledby={tabId+'-'+section}>
           {section==='general'?<>
             <div className={`employee-information-panels${employee.employeeType === 'official' ? ' employee-information-panels-synchronized' : ''}`}>
-              <EmployeeInformationPanel title="Персональні відомості" icon={UserRound} fields={personalFields}/>
-              <EmployeeInformationPanel title="Кадрові відомості" icon={BriefcaseBusiness} fields={employmentFields}/>
+              <EmployeeInformationPanel title="Персональні відомості" icon={UserRound} fields={personalFields} action={<button className="secondary-button" type="button" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>onEdit(employee,'personal'))}><Pencil size={16} aria-hidden="true"/>Редагувати</button>}/>
+              <EmployeeInformationPanel title="Кадрові відомості" icon={BriefcaseBusiness} fields={employmentFields} action={<button className="secondary-button" type="button" disabled={loading||baselineBusy} onClick={()=>navigationGuard.current(()=>onEdit(employee,'employment'))}><Pencil size={16} aria-hidden="true"/>Редагувати</button>}/>
             </div>
             <EmployeeDocuments employeeId={id}/>
           </>:section==='service'?<ServiceAccountingPanel key={id} employeeId={id} hireDate={employee.hireDate} navigationGuard={navigationGuard} onBusyChange={setBaselineBusy} onEditingChange={setBaselineEditing} onAccountingChanged={()=>setAllowanceRefresh(v=>v+1)} refreshKey={allowanceRefresh} allowanceExtraContent={baselineEditing||baselineBusy||loading}

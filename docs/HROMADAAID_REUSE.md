@@ -263,3 +263,7 @@ Read-only перевірено HromadaAID `src/RecipientRegistry.tsx`, `src/AidR
 ## 9.10.4 – Модальний редактор стажу
 
 Read-only перевірено `src/components/Modal.tsx` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`: portal, focus trap, stack, dirty-close confirmation та keyboard close збігаються з уже перенесеним спільним HR `Modal`; використано локальну HR-реалізацію, її CSS і guard. `src/components/RecipientForm.tsx` за цим ref відсутній (404); предметного редактора стажу/періодів у доступному цільовому фрагменті не підтверджено. Фактичний UI побудовано на чинних HR `Modal`, `InfoSection`, `DateField`, `useUnsavedChanges`, системному confirm і tokens; окрема дизайн-система або dependency не додана.
+
+## 9.10.7 – Контекстні дії секцій працівника
+
+Read-only перевірено `src/RecipientRegistry.tsx` HromadaAID за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`: редагування картки запускає спільну `RecipientFormModal` з повним початковим записом; окремих режимів редагування секцій у перевіреній реалізації немає. Тож специфічного AID-патерну partial editing не переносили. HromadaHR повторно використовує наявні `InfoSection`, secondary-кнопки, `EmployeeForm`, `Modal` та `navigationGuard`; режим форми лише визначає видимі поля й whitelist змін у повному payload. Серверна валідація та HR-контракти залишилися чинними. Джерело read-only, runtime-залежностей немає.

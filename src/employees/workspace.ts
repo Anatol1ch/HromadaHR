@@ -1,8 +1,9 @@
 import type { EmployeeCard } from '../../shared/personnel'
+import type { EmployeeFormMode } from './model'
 import { initialRegistry } from './registry.ts'
 import type { RegistryState } from './registry.ts'
 
-export type EmployeeFormTarget = { kind: 'create' } | { kind: 'edit'; employee: EmployeeCard }
+export type EmployeeFormTarget = { kind: 'create' } | { kind: 'edit'; employee: EmployeeCard; mode?: EmployeeFormMode }
 export interface EmployeeWorkspaceState {
   registry: RegistryState
   cardId: string | null

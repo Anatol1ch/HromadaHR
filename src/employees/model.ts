@@ -18,6 +18,23 @@ export interface FormValues {
   positionStartedOn: string; positionCategory: PositionCategory | ''
   departmentId: string; positionId: string
 }
+export type EmployeeFormMode = 'all' | 'personal' | 'employment'
+const personalFormFields = ['lastName', 'firstName', 'middleName', 'birthDate', 'employeeType'] as const
+const employmentFormFields = ['hireDate', 'positionStartedOn', 'positionCategory', 'departmentId', 'positionId'] as const
+
+/** Merge only fields the selected editor exposes, retaining the complete employee payload. */
+export function employeeValuesForMode(initial: FormValues, draft: FormValues, mode: EmployeeFormMode): FormValues {
+  if (mode === 'all') return { ...draft }
+  const fields = mode === 'personal' ? personalFormFields : employmentFormFields
+  return fields.reduce((values, field) => ({ ...values, [field]: draft[field] }), { ...initial })
+}
+
+export function employeeErrorsForMode(errors: FormErrors, mode: EmployeeFormMode): FormErrors {
+  if (mode === 'all') return errors
+  const fields: readonly (keyof FormValues)[] = mode === 'personal' ? personalFormFields : employmentFormFields
+  return Object.fromEntries(Object.entries(errors).filter(([field]) => fields.includes(field as keyof FormValues))) as FormErrors
+}
+
 export const emptyValues: FormValues = {
   lastName: '', firstName: '', middleName: '', birthDate: '', employeeType: 'official',
   positionStartedOn: '', positionCategory: '', hireDate: '', departmentId: '', positionId: '',

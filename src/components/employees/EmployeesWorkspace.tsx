@@ -114,9 +114,9 @@ export default function EmployeesWorkspace({ navigationGuard,initialIntent,onInt
     {workspace.cardId && <EmployeeProfilePage initialTab={cardTab} tabRequestId={cardRequest} key={workspace.cardId} id={workspace.cardId} revision={workspace.revision} navigationGuard={navigationGuard}
       onReturnToRegistry={onReturnToRegistry}
       onLoaded={profileLoaded}
-      onEdit={employee => dispatch({ type: 'form', form: { kind: 'edit', employee } })}
+      onEdit={(employee, mode) => dispatch({ type: 'form', form: { kind: 'edit', employee, mode } })}
       onDelete={id => dispatch({ type: 'action', action: { kind: 'delete', id } })}/>}
-    {workspace.form && <EmployeeForm employee={workspace.form.kind === 'edit' ? workspace.form.employee : undefined}
+    {workspace.form && <EmployeeForm employee={workspace.form.kind === 'edit' ? workspace.form.employee : undefined} mode={workspace.form.kind === 'edit' ? workspace.form.mode : 'all'}
         navigationGuard={navigationGuard} onSaved={saved} onCancel={() => { dispatch({ type: 'form', form: null }); if (!workspace.cardId) restoreOpener() }}/>}
     {workspace.action && <EmployeeActionDialog key={workspace.action.id + workspace.action.kind} {...workspace.action} navigationGuard={navigationGuard}
       onClose={() => { dispatch({ type: 'action', action: null }); if (!workspace.cardId) restoreOpener() }} onSaved={saved} onDeleted={deleted}/>}
