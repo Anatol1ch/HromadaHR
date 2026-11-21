@@ -52,12 +52,10 @@ export function buildPersonnelIssues(f:ControlFacts,on:string,horizon:number):Dr
    fingerprintData:JSON.stringify([withoutStamp(source),relevant,phase])})
  }
  const allowanceEvent=service.status==='calculated'?thresholdEvent(f.serviceAccounting,on,through,date=>projectService(f.serviceAccounting,date,e.employeeType,f.allowance),threshold=>f.allowance?.status==='confirmed'&&f.allowance.percentage>=(threshold as {percentage:number}).percentage):[]
- const allowanceDates:PersonnelIssue['dates']=[]
- if(f.allowance?.reviewOn&&f.allowance.reviewOn<=through)allowanceDates.push({source:'manual',date:f.allowance.reviewOn})
- for(const event of allowanceEvent)allowanceDates.push({source:'projection',date:event.date})
+ const allowanceDates:PersonnelIssue['dates']=allowanceEvent.map(event=>({source:'projection',date:event.date}))
  const different=service.comparison==='different'
  if(different||allowanceDates.length)add('allowance','control','Перевірити надбавку за вислугу',
-  [different?`Розрахунковий показник — ${service.percentage}%, підтверджений — ${f.allowance?.percentage}%. Перевірте підстави для зміни.`:'Перевірте кадрові підстави та умови застосування надбавки.',allowanceEvent.map(event=>`Поріг понад ${(event.threshold as {years:number}).years} років — ${(event.threshold as {percentage:number}).percentage}%. Розрахункова дата ${event.date<=on?'настала':'наближається'} й залишається орієнтовною.`).join(' '),'Ручний строк і прогноз показані окремо; рішення автоматично не змінюється.'].filter(Boolean).join(' '),
+  [different?`Розрахунковий показник — ${service.percentage}%, підтверджений — ${f.allowance?.percentage}%. Перевірте підстави для зміни.`:'Перевірте кадрові підстави та умови застосування надбавки.',allowanceEvent.map(event=>`Поріг понад ${(event.threshold as {years:number}).years} років — ${(event.threshold as {percentage:number}).percentage}%. Розрахункова дата ${event.date<=on?'настала':'наближається'} й залишається орієнтовною.`).join(' '),'Автоматичний прогноз не змінює підтверджене кадрове рішення.'].filter(Boolean).join(' '),
   different?'review_needed':allowanceDates.some(d=>d.date<=on)?'due':'upcoming',allowanceDates,'service',[f.serviceAccounting,f.allowance,allowanceEvent])
  const rankDates:PersonnelIssue['dates']=[]
  if(f.rank?.reviewOn&&f.rank.reviewOn<=through)rankDates.push({source:'manual',date:f.rank.reviewOn})

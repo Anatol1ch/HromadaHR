@@ -59,7 +59,7 @@ test('v20→v21 keeps manifest 1–20 and historical linked documents; STRICT, F
  const before=old.prepare('SELECT * FROM personnel_documents').get(),ledger=old.prepare('SELECT * FROM schema_migrations ORDER BY version').all(),allocations=old.prepare('SELECT * FROM leave_allocations').all();c.close()
  c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
  const db=c.database,s=new DocumentsService({getDatabase:()=>db},()=>false)
- assert.equal(c.schemaVersion,22);assert.deepEqual(db.prepare('SELECT * FROM personnel_documents').get(),{...before,series_id:null})
+ assert.equal(c.schemaVersion,23);assert.deepEqual(db.prepare('SELECT * FROM personnel_documents').get(),{...before,series_id:null})
  assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=20 ORDER BY version').all(),ledger)
  assert.deepEqual(db.prepare('SELECT * FROM leave_allocations').all(),allocations)
  assert.equal(s.listLeaveLinks(id).links[0].leaveRecordId,r.id);assert.equal(s.createDocument(input).id,id)

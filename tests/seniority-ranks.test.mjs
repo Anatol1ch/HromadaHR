@@ -12,9 +12,9 @@ import { LeaveService } from '../dist-electron/electron/leave/service.js'
 import { SeniorityRanksService } from '../dist-electron/electron/seniority-ranks/service.js'
 import { registerIpcHandlers } from '../dist-electron/electron/ipc.js'
 import { ipcChannels } from '../dist-electron/shared/ipc.js'
-const basis = { documentType: null, documentNumber: null, documentDate: null, reviewOn: null }
+const basis = { documentType: null, documentNumber: null, documentDate: null }
 const allowance = { ...basis, status: 'confirmed', percentage: 0, effectiveOn: '2020-01-01' }
-const rank = { ...basis, origin:'unknown', reviewAnchorOn:null, originNote:null, rank:15, assignedOn: '2020-01-01', effectiveOn: null }
+const rank = { ...basis, reviewOn:null, origin:'unknown', reviewAnchorOn:null, originNote:null, rank:15, assignedOn: '2020-01-01', effectiveOn: null }
 const code = expected => error => error.code === expected
 function integrity(db) {
   assert.equal(db.pragma('integrity_check', { simple: true }), 'ok')
@@ -27,7 +27,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,22)
+  assert.equal(connection.schemaVersion,23)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
@@ -53,7 +53,8 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   assert.ok(first.confirmedAt)
   await new Promise(resolve => setTimeout(resolve,5))
   assert.notEqual(s.saveAllowance(e.id,allowance).confirmedAt,first.confirmedAt)
-  assert.equal(s.saveAllowance(e.id,{...allowance,percentage:40,reviewOn:'2099-01-01'}).percentage,40)
+  assert.equal(s.saveAllowance(e.id,{...allowance,percentage:40}).percentage,40)
+  assert.equal(Object.hasOwn(s.getAllowance(e.id),'reviewOn'),false)
   assert.equal(s.saveAllowance(e.id,{...basis,status:'not_applicable',percentage:null,effectiveOn:null}).status,'not_applicable')
   assert.equal(s.getAllowance(e.id).percentage,null)
   s.clearAllowance(e.id); s.clearAllowance(e.id)
@@ -101,10 +102,33 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   p.deleteEmployee(e.id)
   for (const table of ['employee_seniority_allowances','employee_current_ranks']) assert.equal(f.db.prepare(`SELECT count(*) AS n FROM ${table} WHERE employee_id=?`).get(e.id).n,0)
   assert.equal(s.getAllowance(other.id).percentage,0)
+  assert.equal(f.db.pragma('table_info(employee_seniority_allowances)').some(c=>c.name==='review_on'),false)
+  assert.equal(f.db.pragma('table_info(employee_current_ranks)').some(c=>c.name==='review_on'),true)
   integrity(f.db)
+})
+test('v22→v23 removes only allowance review_on and preserves allowance and rank records',async t=>{
+ const root=mkdtempSync(join(tmpdir(),'hr-allowance-v23-')),file=join(root,'test.db')
+ let connection=await openStorageSafely(file,migrations.slice(0,22))
+ const storage={getDatabase:()=>connection.database},personnel=new PersonnelService(storage,()=>false)
+ const departmentId=personnel.createDepartment({name:'Тест'}).id,positionId=personnel.createPosition({name:'Тест'}).id
+ const employee=personnel.createEmployee({firstName:'Тест',lastName:'Міграція',middleName:null,birthDate:null,positionStartedOn:null,positionCategory:null,hireDate:'2020-01-01',employeeType:'official',departmentId,positionId})
+ const service=new SeniorityRanksService(storage,()=>false)
+ service.saveAllowance(employee.id,{...allowance,percentage:15,documentType:'Розпорядження голови',documentNumber:'123',documentDate:'2020-01-02'})
+ connection.database.prepare("UPDATE employee_seniority_allowances SET review_on='2031-02-03' WHERE employee_id=?").run(employee.id)
+ service.saveRank(employee.id,{...rank,reviewOn:'2030-01-01'})
+ connection.close();connection=await openStorageSafely(file)
+ t.after(()=>{connection.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep));rmSync(root,{recursive:true,force:true,maxRetries:5})})
+ const db=connection.database
+ assert.equal(connection.schemaVersion,23)
+ assert.deepEqual(db.prepare('SELECT status,percentage,effective_on AS effectiveOn,document_type AS documentType,document_number AS documentNumber,document_date AS documentDate FROM employee_seniority_allowances WHERE employee_id=?').get(employee.id),{status:'confirmed',percentage:15,effectiveOn:'2020-01-01',documentType:'Розпорядження голови',documentNumber:'123',documentDate:'2020-01-02'})
+ assert.equal(db.prepare('SELECT review_on FROM employee_current_ranks WHERE employee_id=?').get(employee.id).review_on,'2030-01-01')
+ assert.equal(db.pragma('table_info(employee_seniority_allowances)').some(c=>c.name==='review_on'),false)
+ assert.equal(db.pragma('table_info(employee_current_ranks)').some(c=>c.name==='review_on'),true)
+ assert.deepEqual(db.pragma('foreign_key_check'),[])
 })
 test('Zod and SQLite reject invalid indicators and dates', async t => {
   const f=await fixture(t),s=f.service,id=f.employee.id
+  assert.throws(()=>s.saveAllowance(id,{...allowance,reviewOn:null}),code('INVALID_ARGUMENTS'))
   for(const v of [{percentage:5},{percentage:10.5},{percentage:null},{status:'unknown'},{effectiveOn:'2026-02-30'},{effectiveOn:'2099-01-01'},{status:'not_applicable'},{confirmedAt:'2020-01-01T00:00:00.000Z'},{documentDate:'2025-02-29'}]) assert.throws(()=>s.saveAllowance(id,{...allowance,...v}),code('INVALID_ARGUMENTS'))
   for(const v of [{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:0},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:16},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:1.5},{assignedOn:'2099-01-01'},{effectiveOn:'2099-01-01'},{assignedOn:'2025-02-29'}]) assert.throws(()=>s.saveRank(id,{...rank,...v}),code('INVALID_ARGUMENTS'))
   s.saveAllowance(id,allowance);s.saveRank(id,rank)

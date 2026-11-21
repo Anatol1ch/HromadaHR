@@ -2,10 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { allowanceInput, rankInput, draftFor, validateDraft } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
-const basis={documentType:null,documentNumber:null,documentDate:null,reviewOn:null}
+const basis={documentType:null,documentNumber:null,documentDate:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
 const notApplicable={...basis,status:'not_applicable',percentage:null,effectiveOn:null}
-const rank={...basis,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-02-29',effectiveOn:null}
+const rank={...basis,reviewOn:null,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-02-29',effectiveOn:null}
 test('forms require explicit values and keep optional rank effective date null',()=>{
  const empty=draftFor(null)
  assert.equal(empty.percentage,'');assert.equal(empty.rank,'')
@@ -28,7 +28,7 @@ test('calendar drafts, future dates, mandatory fields and text limits are valida
   assert.throws(()=>allowanceInput({...base,effectiveOn}))
  }
  assert.ok(validateDraft('allowance',{...base,documentDate:'некоректно'}).documentDate)
- assert.ok(validateDraft('allowance',{...base,reviewOn:'31.02.2025'}).reviewOn)
+ assert.equal(validateDraft('allowance',{...base,reviewOn:'31.02.2025'}).reviewOn,undefined)
  assert.ok(validateDraft('allowance',{...base,documentType:'x'.repeat(201)}).documentType)
  assert.ok(validateDraft('rank',{...draftFor(rank),documentNumber:'x'.repeat(101)}).documentNumber)
  assert.ok(validateDraft('rank',{...draftFor(rank),assignedOn:'01.01.2099'}).assignedOn)

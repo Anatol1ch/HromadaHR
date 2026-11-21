@@ -1,6 +1,6 @@
 # Автоматичні перевірки після функціонального завершення
 
-SQLite v22 / етап 9.10.3: `service-baseline` suite перевіряє новий CRUD/IPC, міграцію v21→v22 із збереженням несервісних даних і політикою старих записів; `service-calculations`, `service-leave-calculations`, `personnel-control-calculations` перевіряють три способи обліку, календарні межі, accrual та прогнози. `pnpm test` також запускає повний Electron storage smoke.
+SQLite v23 / етап 9.10.5: seniority tests cover migration v22→v23 while preserving confirmed allowance facts and rank review dates; `service-baseline` continues to verify v21→v22 service-data policy and unrelated-data retention. `service-calculations`, `service-leave-calculations`, `personnel-control-calculations` cover the service modes, calendar boundaries, accrual and projections. `pnpm test` also runs the Electron storage smoke.
 
 Користувач підтвердив основні функціональні сценарії 16.11.2026. Етап 8 завершено. Наступна фаза — окреме погоджене вікно UI/UX за раз. Тести захищають ризики, не замінюють узгодження вікна й не створюють нового комплексного приймання.
 
@@ -29,7 +29,7 @@ Manifest у run-tests.mjs має містити кожний наявний *.te
 | seniority | 8 | seniority-ranks/model, service-baseline/accounting-form/calculations, rank-projection/ipc, profile-indicators: пороги/календарі, 0/missing/not_applicable, усі джерела стажу та чернетки редактора, спеціальні ранги, readonly прогнози, focused read failure/stale async, чинні Main save/clear |
 | leaves | 12 | leave/ipc/rights/registration/corrections/special: періоди/нуль/право, тривалість, explicit FIFO/manual allocation, overspend/overlap, транзакції, idempotency, edit/cancel/revision; service-leave: strict thresholds/readonly; draft/confirmation/presentation/usage: partial-write retry, stale allocation, employee isolation, фактичні річні суми |
 | documents | 5 | documents-core: idempotency/references/revisions/rollback; numbering: annual claims, 2 worker connections, rollback/delete no reuse/backup restore; leave-links: same worker/requisites, immutable identity/FK, cancel/unlink/revision; documents-ui/links-ui: transport uncertainty, pending gate, immutable payload, legacy links без truncation, read verification |
-| control | 2 | personnel-control/calculations: horizons/manual vs projection/deduplication, read-only, fingerprint/due phase, snooze/review/persistence/restore, stale responses й duplicate mutation gate |
+| control | 2 | personnel-control/calculations: horizons/projected allowance vs manual rank review/deduplication, read-only, fingerprint/due phase, snooze/review/persistence/restore, stale responses й duplicate mutation gate |
 | ui | 2 | ui-foundation/contracts: валідна дата до IPC, leap/range/stale ISO, узгодження client/Main validation; shared layered close guards, cancellation/owner/busy/unload, одна pending confirmation |
 
 Кожний модуль фізично залишає предметні fixtures поруч із поточними тестами. Зберігаємо окремі SQLite/міграційні файли, бо вони перевіряють різні опубліковані checksum та ризики. Не зливаємо їх у непрозорий мегатест заради цифри.

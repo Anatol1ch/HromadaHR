@@ -6,27 +6,22 @@ import { requestEmployeeNavigation } from '../src/employees/navigation.ts'
 import { createCloseGuards } from '../src/employees/closeGuards.ts'
 import { createControlRequests } from '../src/components/personnel-control/requests.ts'
 const base={mode:'snapshot',years:4,months:0,days:0,asOfDate:'2026-01-01'}
-const allowance={employeeId:'e',status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
+const allowance={employeeId:'e',status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
 const rank={employeeId:'e',rank:15,origin:'oms_assigned',assignedOn:'2025-01-01',effectiveOn:null,reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
 const employee={id:'e',lastName:'Тест',firstName:'Анна',middleName:null,employeeType:'official',positionCategory:'VII',positionStartedOn:'2025-01-01',positionId:'p',departmentId:'d'}
 const facts={employee,serviceAccounting:base,allowance,rank,leave:{acquiredOn:null,rightStatus:'has_right',periods:[]}}
 const items=(f=facts,on='2026-01-01',horizon=30)=>buildPersonnelIssues(f,on,horizon)
 const control=(rows,direction)=>rows.find(i=>i.direction===direction&&i.id.endsWith(':control'))
 
-test('inclusive warning horizons, manual dates, deduplication and phase transitions are stable',()=>{
+test('allowance control ignores legacy manual dates and uses projected thresholds',()=>{
  for(const days of warningHorizons){
   const on='2026-01-01',date=controlDay(on,days)
   const f={...facts,allowance:{...allowance,reviewOn:date}}
-  const issue=control(items(f,on,days),'allowance');assert.equal(issue.category,'upcoming');assert.equal(issue.date,date)
-  assert.equal(control(items({...f,allowance:{...allowance,reviewOn:controlDay(on,days+1)}},on,days),'allowance'),undefined)
-  const tomorrow=control(items(f,'2026-01-02',days),'allowance')
-  assert.equal(tomorrow.id,issue.id);assert.equal(tomorrow.fingerprintData,issue.fingerprintData)
-  const due=control(items(f,date,days),'allowance');assert.equal(due.category,'due');assert.notEqual(due.fingerprintData,issue.fingerprintData)
-  assert.equal(control(items(f,controlDay(date,1),days),'allowance').fingerprintData,due.fingerprintData)
+  assert.equal(control(items(f,on,days),'allowance'),undefined)
  }
  const f={...facts,serviceAccounting:{...base,years:5},allowance:{...allowance,reviewOn:'2026-01-02'}}
  const rows=items(f);assert.equal(rows.filter(i=>i.direction==='allowance'&&i.id.endsWith('control')).length,1)
- assert.deepEqual(control(rows,'allowance').dates,[{source:'manual',date:'2026-01-02'},{source:'projection',date:'2026-01-02'}])
+ assert.deepEqual(control(rows,'allowance').dates,[{source:'projection',date:'2026-01-02'}])
 })
 test('all three projections produce issues without new formulas, and crossed thresholds survive as due',()=>{
  const near={...facts,serviceAccounting:{...base,asOfDate:'2025-02-01'},rank:{...rank,assignedOn:'2024-02-01'},employee:{...employee,positionStartedOn:'2024-02-01'}}

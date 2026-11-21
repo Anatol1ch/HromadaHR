@@ -23,7 +23,7 @@ async function fixture(t){
  c.database.prepare('INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,confirmed_at,review_on) VALUES (?,?,?,?,?)').run(employee.id,15,'2023-01-01','2023-01-01T00:00:00.000Z','2030-01-01')
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file)
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-rank-projection-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
- assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
+ assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
  const s=new SeniorityRanksService(storage,()=>false),leave=new LeaveService(storage,()=>false)
  return {s,p,leave,storage,employee,staff,get db(){return c.database},async reopen(){c.close();c=await openStorageSafely(file)}}
 }
@@ -47,7 +47,7 @@ test('projection leaves confirmed rank, manual date, allowances, service and lea
  const f=await fixture(t),{s,employee:e,leave}=f
  const {employeeId,confirmedAt,...input}=s.getRank(e.id)
  s.saveRank(e.id,{...input,origin:'oms_assigned'})
- s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:'2027-01-01'})
+ s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
  s.saveServiceAccounting(e.id,{mode:'snapshot',years:4,months:0,days:0,asOfDate:'2020-01-01'})
  leave.saveServiceLeaveStart(e.id,'2020-01-01');leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}])
  leave.savePeriods(e.id,[{leaveType:'annual_main',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:5,referenceEntitlementDays:null}])

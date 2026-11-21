@@ -11,8 +11,8 @@ import { readServiceAccounting } from '../storage/service-accounting.js'
 export class SeniorityRanksError extends Error {
   constructor(readonly code: SeniorityRanksErrorCode | 'BUSY' | 'STORAGE_UNAVAILABLE' | 'NOT_FOUND' | 'INVALID_ARGUMENTS' | 'CONFLICT') { super(code) }
 }
-const columns = `employee_id AS employeeId, effective_on AS effectiveOn, document_type AS documentType,
- document_number AS documentNumber, document_date AS documentDate, review_on AS reviewOn, confirmed_at AS confirmedAt`
+const sharedColumns = `employee_id AS employeeId, effective_on AS effectiveOn, document_type AS documentType,
+ document_number AS documentNumber, document_date AS documentDate, confirmed_at AS confirmedAt`
 // Main-only: resolve the live connection for each operation, including after restore.
 export class SeniorityRanksService {
   constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean) {}
@@ -45,10 +45,10 @@ export class SeniorityRanksService {
     if (dates.some(date => date !== null && date > today)) throw new SeniorityRanksError('INVALID_ARGUMENTS')
   }
   private allowance(db: Database.Database, id: string) {
-    return db.prepare<[string], Allowance>(`SELECT ${columns}, status, percentage FROM employee_seniority_allowances WHERE employee_id=?`).get(id) ?? null
+    return db.prepare<[string], Allowance>(`SELECT ${sharedColumns}, status, percentage FROM employee_seniority_allowances WHERE employee_id=?`).get(id) ?? null
   }
   private rank(db: Database.Database, id: string) {
-    return db.prepare<[string], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
+    return db.prepare<[string], CurrentRank>(`SELECT ${sharedColumns}, review_on AS reviewOn, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
   private accounting(db: Database.Database, id: string): ServiceAccounting | null {
     try{return readServiceAccounting(db,id)}catch{throw new SeniorityRanksError('CONFLICT')}
@@ -85,8 +85,8 @@ export class SeniorityRanksService {
     })
   }
   listOverview = () => this.run(null, db => {
-    const allowances = new Map(db.prepare<[], Allowance>(`SELECT ${columns}, status, percentage FROM employee_seniority_allowances`).all().map(row => [row.employeeId, row]))
-    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${columns}, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
+    const allowances = new Map(db.prepare<[], Allowance>(`SELECT ${sharedColumns}, status, percentage FROM employee_seniority_allowances`).all().map(row => [row.employeeId, row]))
+    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${sharedColumns}, review_on AS reviewOn, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
     return new PersonnelService(this.storage, this.isBusy).listEmployees().map(employee => ({
       employee, allowance: allowances.get(employee.id) ?? null, rank: ranks.get(employee.id) ?? null,
     }))
@@ -99,11 +99,11 @@ export class SeniorityRanksService {
     const v = this.parse(schemas.allowanceInput, input)
     this.checkDate(v.effectiveOn)
     return this.run(id, db => {
-      db.prepare(`INSERT INTO employee_seniority_allowances(employee_id,status,percentage,effective_on,document_type,document_number,document_date,review_on,confirmed_at)
-        VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET status=excluded.status,percentage=excluded.percentage,
+      db.prepare(`INSERT INTO employee_seniority_allowances(employee_id,status,percentage,effective_on,document_type,document_number,document_date,confirmed_at)
+        VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET status=excluded.status,percentage=excluded.percentage,
         effective_on=excluded.effective_on,document_type=excluded.document_type,document_number=excluded.document_number,
-        document_date=excluded.document_date,review_on=excluded.review_on,confirmed_at=excluded.confirmed_at`)
-        .run(id,v.status,v.percentage,v.effectiveOn,v.documentType,v.documentNumber,v.documentDate,v.reviewOn,new Date().toISOString())
+        document_date=excluded.document_date,confirmed_at=excluded.confirmed_at`)
+        .run(id,v.status,v.percentage,v.effectiveOn,v.documentType,v.documentNumber,v.documentDate,new Date().toISOString())
       return this.allowance(db,id)!
     })
   }

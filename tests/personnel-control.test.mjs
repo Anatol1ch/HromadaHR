@@ -27,7 +27,7 @@ async function fixture(t){
  const e=p.createEmployee(input),staff=p.createEmployee({...input,employeeType:'staff',positionCategory:null})
  const base={mode:'snapshot',years:4,months:0,days:0,asOfDate:'2026-01-01'}
  s.saveServiceAccounting(e.id,base)
- s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
+ s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
  s.saveRank(e.id,{rank:15,assignedOn:'2024-01-02',effectiveOn:null,origin:'oms_assigned',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:'2026-01-02'})
  leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}]);leave.saveServiceLeaveStart(e.id,'2020-01-01')
  return {root,file,storage,p,s,leave,clock,control,e,staff,base,cleanup,get db(){return storage.getDatabase()}}
@@ -38,7 +38,7 @@ const integrity=db=>{assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.
 test('v17→v18 retains the old ledger and facts, singleton defaults and strict FK/CHECK state structure',async t=>{
  const root=temp(t),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,17))
  const old=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
+ assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
  assert.deepEqual(c.database.prepare('SELECT * FROM personnel_control_settings').all(),[{id:1,horizon_days:30}])
  for(const sql of ['UPDATE personnel_control_settings SET horizon_days=15','INSERT INTO personnel_control_settings VALUES (2,30)'])assert.throws(()=>c.database.exec(sql))
  const f=await fixture(t),issue=rankIssue(f),insert=f.db.prepare('INSERT INTO personnel_reminder_states VALUES (?,?,?,?,?,?)')

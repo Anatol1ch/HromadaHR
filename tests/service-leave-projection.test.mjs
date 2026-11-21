@@ -29,7 +29,7 @@ const integrity=db=>{assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.
 test('LeaveService uses one read-only snapshot without changing dates, rights, periods, FIFO or personnel facts',async t=>{
  const f=await fixture(t),{s,leave,e,base}=f
  s.saveServiceAccounting(e.id,base)
- s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:'2030-01-01'})
+ s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
  s.saveRank(e.id,{rank:15,assignedOn:'2020-01-01',effectiveOn:null,origin:'oms_assigned',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:'2030-02-01'})
  leave.saveServiceLeaveStart(e.id,'2020-01-01')
  leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}])
@@ -50,7 +50,7 @@ test('LeaveService uses one read-only snapshot without changing dates, rights, p
  f.db.pragma('query_only=OFF');integrity(f.db)
  await f.reopen();assert.equal(leave.getOmsServiceLeaveProjection(e.id).recommendedDays,9)
  s.saveServiceAccounting(e.id,{...base,years:15});assert.equal(leave.getOmsServiceLeaveProjection(e.id).recommendedDays,15)
- assert.equal(f.db.pragma('user_version',{simple:true}),22)
+ assert.equal(f.db.pragma('user_version',{simple:true}),23)
 })
 test('rights, zero, missing baseline, opt-out and staff remain explicit; controlled service errors survive',async t=>{
  const f=await fixture(t),{leave,e,s,base}=f

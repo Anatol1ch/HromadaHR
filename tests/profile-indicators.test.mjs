@@ -11,7 +11,7 @@ import { LeaveService } from '../dist-electron/electron/leave/service.js'
 import { todayIsoDate } from '../dist-electron/src/lib/dates.js'
 const ok=data=>({ok:true,data}),failed=code=>({ok:false,error:{code}})
 const employee={id:'e',lastName:'Тест',firstName:'Анна',middleName:null,employeeType:'official'}
-const allowance={status:'confirmed',percentage:0,effectiveOn:'2020-01-01',documentType:'Історична підстава',documentNumber:'7',documentDate:'2020-01-02',reviewOn:'2030-01-01'}
+const allowance={status:'confirmed',percentage:0,effectiveOn:'2020-01-01',documentType:'Історична підстава',documentNumber:'7',documentDate:'2020-01-02'}
 const rank={rank:6,assignedOn:'2020-01-01',origin:'civil_service_equivalence',reviewAnchorOn:'2020-02-01',originNote:'Документально підтверджено',effectiveOn:null}
 const tick=()=>new Promise(resolve=>setImmediate(resolve))
 
@@ -69,5 +69,5 @@ test('existing Main APIs preserve actual allowance/rank replies, refresh project
  s.clearAllowance(e.id);assert.equal((await readIndicatorContext(api,e.id,'allowance')).data.allowance,null);assert.deepEqual(s.getRank(e.id),r)
  const final=s.saveAllowance(e.id,{...allowance,percentage:0});assert.equal(final.percentage,0)
  s.clearRank(e.id);assert.equal((await readIndicatorContext(api,e.id,'rank')).data.rank,null);assert.equal(s.getRankProjection(e.id).reason,'missing_rank');assert.deepEqual(s.getAllowance(e.id),final)
- assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,22);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
+ assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
 })

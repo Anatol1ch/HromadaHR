@@ -41,7 +41,7 @@ test('v19→v20 keeps checksums 1–19, creates strict restrictive indexed links
  assert.equal(createHash('sha256').update(JSON.stringify(migrations.slice(0,19))).digest('hex'),'26e64ee02c09c199c47b90ba812fb7ba1cefe1e12bdab88e59771cade9fb4f71')
  const root=mkdtempSync(join(tmpdir(),'hr-doc-links-')),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,19))
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,22);assert.equal(migrations[19].requiresBackup,true)
+ assert.equal(c.schemaVersion,23);assert.equal(migrations[19].requiresBackup,true)
  assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=19 ORDER BY version').all(),ledger)
  assert.equal(c.database.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_document_leave_records'").get().strict,1)
  assert.equal(c.database.prepare('SELECT count(*) AS n FROM personnel_document_leave_records').get().n,0)
@@ -53,8 +53,8 @@ test('v19→v20 keeps checksums 1–19, creates strict restrictive indexed links
 test('one document links several leaves of its worker; normalized requisites and factual no-op retries preserve all accounting facts',async t=>{
  const f=await fixture(t),d=f.docs.createDocument(docInput([f.a.id])),r=f.record(),r2=f.record()
  f.ranks.saveServiceAccounting(f.a.id,{mode:'snapshot',years:4,months:0,days:0,asOfDate:'2020-01-01'})
- f.ranks.saveRank(f.a.id,{rank:6,assignedOn:'2020-01-01',effectiveOn:null,origin:'unknown',originNote:null,reviewAnchorOn:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
- f.ranks.saveAllowance(f.a.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
+ f.ranks.saveRank(f.a.id,{rank:6,assignedOn:'2020-01-01',effectiveOn:null,origin:'unknown',originNote:null,reviewAnchorOn:null,documentType:null,documentNumber:null,documentDate:null})
+ f.ranks.saveAllowance(f.a.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
  const tables=['employees','leave_records','leave_allocations','leave_period_balances','employee_leave_rights','employee_service_leave_start','employee_service_records','employee_service_periods','employee_seniority_allowances','employee_current_ranks']
  const snapshot=()=>Object.fromEntries(tables.map(table=>[table,f.db.prepare('SELECT * FROM '+table+' ORDER BY rowid').all()]))
  const before=snapshot();assert.equal(f.docs.getLeaveDocument(r.id),null)

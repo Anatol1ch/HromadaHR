@@ -40,13 +40,13 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
   <InfoSection title={kind==='allowance'?'Підтверджена надбавка за вислугу':'Підтверджений поточний ранг'} action={current&&!current.error&&(kind==='rank'||value)&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{kind==='allowance'?'Редагувати надбавку':(value?'Редагувати ранг':'Внести ранг')}</button>}>
    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого показника…"/>:value?<>
     <strong className="seniority-value">{kind==='allowance'?allowanceLabel(allowance??null):`${rank!.rank} ранг`}</strong>
-    {(rank||allowance?.status==='confirmed'||value.effectiveOn||value.reviewOn)&&<dl className="info-grid">
+    {(rank||allowance?.status==='confirmed'||value.effectiveOn||('reviewOn' in value&&value.reviewOn))&&<dl className="info-grid">
      {allowance?.status==='confirmed'&&<InfoItem label="Статус" value="Підтверджено"/>}
      {rank&&<InfoItem label={rank.effectiveOn?'Дата присвоєння':'Присвоєно та діє з'} value={formatDate(rank.assignedOn)}/>}
      {value.effectiveOn&&<InfoItem label="Початок дії" value={formatDate(value.effectiveOn)}/>}
      {rank&&<InfoItem label="Походження рангу" value={rankOriginLabels[rank.origin]}/>}
      {rank?.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(rank.reviewAnchorOn)}/>}
-     {value.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(value.reviewOn)}/>}
+     {rank?.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(rank.reviewOn)}/>}
      {rank?.originNote&&<InfoItem label="Пояснення підстави" value={rank.originNote} wide/>}
     </dl>}
     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}

@@ -3,12 +3,12 @@ import { employeeCard, calendarDate, id } from '../personnel/schemas.js'
 import { allowancePercentages, rankOrigins } from '../../shared/seniority-ranks.js'
 export { id, calendarDate }
 const basis = { documentType: z.string().trim().min(1).max(200).nullable(),
-  documentNumber: z.string().trim().min(1).max(100).nullable(), documentDate: calendarDate.nullable(), reviewOn: calendarDate.nullable() }
+  documentNumber: z.string().trim().min(1).max(100).nullable(), documentDate: calendarDate.nullable() }
 export const allowanceInput = z.discriminatedUnion('status', [
   z.strictObject({ ...basis, status: z.literal('confirmed'), percentage: z.union(allowancePercentages.map(n => z.literal(n))), effectiveOn: calendarDate }),
   z.strictObject({ ...basis, status: z.literal('not_applicable'), percentage: z.null(), effectiveOn: z.null() }),
 ])
-export const rankInput = z.strictObject({ ...basis, origin:z.enum(rankOrigins), reviewAnchorOn:calendarDate.nullable(), originNote:z.string().trim().min(1).max(500).nullable(), rank: z.number().int().min(1).max(15), assignedOn: calendarDate, effectiveOn: calendarDate.nullable() })
+export const rankInput = z.strictObject({ ...basis, reviewOn: calendarDate.nullable(), origin:z.enum(rankOrigins), reviewAnchorOn:calendarDate.nullable(), originNote:z.string().trim().min(1).max(500).nullable(), rank: z.number().int().min(1).max(15), assignedOn: calendarDate, effectiveOn: calendarDate.nullable() })
 export const allowance = z.intersection(allowanceInput, z.object({ employeeId: id, confirmedAt: z.iso.datetime() }))
 export const rank = rankInput.extend({ employeeId: id, confirmedAt: z.iso.datetime() })
 
