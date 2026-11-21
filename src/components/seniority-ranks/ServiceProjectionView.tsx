@@ -1,28 +1,58 @@
+import type { ReactNode } from 'react'
 import type { ServiceProjection } from '../../../shared/service-calculations'
-import { Calculator } from 'lucide-react'
-import InfoSection from '../InfoSection'
-import InfoItem from '../InfoItem'
+import { CalendarClock, Clock, type LucideIcon } from 'lucide-react'
 import DataState from '../DataState'
 import Alert from '../Alert'
 import { serviceDurationLabel } from './service-accounting-model'
-import { allowanceLabel } from './model'
 import { formatDate } from '../../lib/dates'
-export default function ServiceProjectionView({value,error,onRetry,showConfirmedAllowance=true}:{value:ServiceProjection|null;error:string;onRetry:()=>void;showConfirmedAllowance?:boolean}) {
+
+export function ServiceMetricCard({ icon: Icon, title, value, detail, warning, className = '' }: {
+  icon: LucideIcon
+  title: string
+  value: ReactNode
+  detail?: ReactNode
+  warning?: ReactNode
+  className?: string
+}) {
+  return <article className={`service-metric-card ${className}`}>
+    <div className="service-metric-heading"><Icon size={18} aria-hidden="true"/><h3>{title}</h3></div>
+    <div className="service-metric-value">{value}</div>
+    {detail != null && <div className="service-metric-detail">{detail}</div>}
+    {warning != null && <div className="service-metric-warning">{warning}</div>}
+  </article>
+}
+
+export function ServiceDetailRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
+  return <div className="service-detail-row">
+    <Icon size={16} aria-hidden="true"/>
+    <dt>{label}</dt>
+    <dd>{value}</dd>
+  </div>
+}
+
+export default function ServiceProjectionView({value,error,onRetry}:{value:ServiceProjection|null;error:string;onRetry:()=>void}) {
  const calc=value?.calculation
- return <InfoSection title="Розрахункові показники">
-  {error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>{error}</Alert>:!value?<DataState kind="loading" compact message="Отримання прогнозу…"/>:value.status==='not_applicable'?<p className="employee-hint">Нормативний прогноз надбавки посадової особи ОМС не застосовується до іншого персоналу. Підтверджені кадрові відомості зберігаються окремо.</p>:calc?.current?<>
-   <strong>{serviceDurationLabel(calc.current)}</strong>
-   <span className="employee-hint">{`Розрахунок станом на ${formatDate(calc.calculatedOn)}${calc.mode?` · спосіб: ${calc.mode}`:''}`}</span>
-   <dl className="info-grid">
-    {showConfirmedAllowance&&<InfoItem label="Підтверджена надбавка" value={allowanceLabel(value.confirmedAllowance)}/>}
-    <InfoItem label={!calc.accrues?'Шкала за підтвердженими даними':'Розрахункова надбавка'} value={`${value.percentage}%`}/>
-    {calc.mode==='periods'&&calc.creditedDays!==null&&<InfoItem label="Зараховано календарних днів" value={String(calc.creditedDays)}/>}
-    {value.nextThreshold&&<InfoItem label="Наступний поріг" value={`Понад ${value.nextThreshold.years} років — ${value.nextThreshold.percentage}%`}/>}
-    {value.reviewOn&&<InfoItem label="Орієнтовна перевірка" value={formatDate(value.reviewOn)}/>}
-   </dl>
-   <p className="employee-hint">{calc.accrues?'Розрахунок і контрольні дати є орієнтовними та потребують кадрової перевірки.':'Відомості містять лише завершені періоди: стаж не продовжується й майбутня дата порогу не визначається.'} Підтверджені рішення не змінюються.</p>
-   {calc.status==='calculated'&&value.nextThreshold&&!value.reviewOn&&<p className="employee-hint">Контрольну дату в підтримуваному діапазоні визначити неможливо.</p>}
-   {value.comparison==='different'&&<Alert variant="warning">Розрахунковий показник відрізняється від підтвердженого. Перевірте право на зміну надбавки.</Alert>}
-  </>:<>{value.status==='missing_service_data'?<DataState kind="empty" className="service-empty-state" icon={<Calculator size={22} aria-hidden="true"/>} message="Для перегляду розрахункових показників внесіть підтверджені відомості стажу."/>:<DataState kind="empty" compact message="Розрахунок потребує перевірки вихідних відомостей або допустимого діапазону."/>}{showConfirmedAllowance&&<p className="employee-hint">Підтверджена надбавка: {allowanceLabel(value.confirmedAllowance)}</p>}</>}
- </InfoSection>
+ const currentValue=error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>{error}</Alert>
+  :!value?<DataState kind="loading" compact message="Отримання прогнозу…"/>
+  :calc?.current?<>{serviceDurationLabel(calc.current)}{calc.mode==='periods'&&<small className="service-metric-estimate">Оцінка за періодами</small>}</>
+  :value.status==='not_applicable'?<span className="service-metric-neutral">Не застосовується</span>
+  :calc?.status==='missing_service_data'?<span className="service-metric-neutral">Стаж не внесено</span>
+  :<span className="service-metric-neutral">Потрібна перевірка даних</span>
+ const nextValue=error?<span className="service-metric-neutral">Недоступна</span>
+  :!value?<span className="service-metric-neutral">Завантаження…</span>
+  :value.status==='not_applicable'?<span className="service-metric-neutral">Не застосовується</span>
+  :value.reviewOn?formatDate(value.reviewOn):<span className="service-metric-neutral">Не визначена</span>
+ const threshold=value?.nextThreshold
+ const nextDetail=value?.reviewOn&&threshold?<>Понад {threshold.years} років · {threshold.percentage}%</>
+  :value?.status==='not_applicable'?'Нормативний прогноз не застосовується'
+  :value&&calc?.status==='calculated'&&!calc.accrues?'Немає поточного періоду служби'
+  :'Майбутнього порогу немає'
+ return <>
+  <ServiceMetricCard icon={Clock} title="Поточний стаж" value={currentValue}
+   detail={calc?.current?<>Розраховано на {formatDate(calc.calculatedOn)}</>:value?.status==='not_applicable'?'Для цього типу працівника прогноз стажу не формується':undefined}
+   className="service-metric-current"/>
+  <ServiceMetricCard icon={CalendarClock} title="Наступна перевірка" value={nextValue} detail={nextDetail}
+   warning={value?.comparison==='different'&&<Alert variant="warning">Розрахунковий і підтверджений відсотки відрізняються. Потрібна кадрова перевірка.</Alert>}
+   className="service-metric-review"/>
+ </>
 }
