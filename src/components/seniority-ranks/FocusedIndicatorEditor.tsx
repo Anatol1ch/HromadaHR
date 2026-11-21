@@ -17,7 +17,7 @@ export default function FocusedIndicatorEditor({employeeId,kind,navigationGuard,
  const key=JSON.stringify([employeeId,kind,retry]),current=state?.key===key?state:undefined
  useEffect(()=>loadIndicatorContext(window.hromadaHR,employeeId,kind,result=>setState(result.ok?{key,row:result.data}:{key,error:personnelMessage(result.error.code)})),[employeeId,kind,key])
  if(current?.row)return <IndicatorEditor key={key} kind={kind} row={current.row} navigationGuard={navigationGuard} onClose={onClose} onSaved={onSaved} returnFocus={returnFocus}/>
- return <Modal title={kind==='allowance'?'Внести надбавку за вислугу':'Поточний ранг'} description={kind==='allowance'?'Підтвердження надбавки працівника':undefined} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:undefined} size="large" onClose={onClose} returnFocus={returnFocus}>
+ return <Modal title={kind==='allowance'?'Внести надбавку за вислугу':'Поточний ранг'} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:undefined} size="large" className={kind==='allowance'?'allowance-indicator-modal':''} onClose={onClose} returnFocus={returnFocus}>
   {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:<DataState kind="loading" message="Читання актуальних відомостей…"/>}
  </Modal>
 }

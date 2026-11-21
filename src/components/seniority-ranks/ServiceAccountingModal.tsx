@@ -151,7 +151,7 @@ export default function ServiceAccountingModal({ employeeId, hireDate, navigatio
   </div>
 
   return <>
-    <Modal title={loaded?.value ? 'Редагувати стаж служби' : 'Внести стаж служби'} description="Відомості про стаж працівника" size="wide" className="employee-form-modal seniority-modal service-accounting-modal" headerIcon={<Clock3 size={19} aria-hidden="true"/>} busy={busy} onClose={close} returnFocus={returnFocus} footer={footer}>
+    <Modal title={loaded?.value ? 'Редагувати стаж служби' : 'Внести стаж служби'} size="wide" className="employee-form-modal seniority-modal service-accounting-modal" headerIcon={<Clock3 size={19} aria-hidden="true"/>} busy={busy} onClose={close} returnFocus={returnFocus} footer={footer}>
       <div ref={owner} className="employee-form service-accounting-form">
         {loading ? <DataState kind="loading" message="Завантаження відомостей стажу…"/> : loadError ? <Alert variant="error" action={<button type="button" disabled={busy} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>{loadError}</Alert> : loaded && <form id={id + '-form'} noValidate onSubmit={event => void submit(event)}>
           <fieldset className="service-accounting-mode-section" disabled={busy}>

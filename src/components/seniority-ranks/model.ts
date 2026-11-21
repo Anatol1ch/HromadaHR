@@ -28,6 +28,9 @@ export function validateDraft(kind: Kind, v: Draft, today = todayIsoDate()) {
  for (const [key,max] of [['documentType',200],['documentNumber',100]] as const) if (v[key].trim().length>max) errors[key] = `Не більше ${max} символів.`
  return errors
 }
+export function canSaveAllowanceDraft(v: Draft, dirty: boolean, busy: boolean) {
+ return !busy && dirty && Object.keys(validateDraft('allowance',v)).length===0
+}
 function basis(v: Draft) { return { documentType: v.documentType.trim() || null, documentNumber: v.documentNumber.trim() || null, documentDate: parseDateInput(v.documentDate) } }
 export function allowanceInput(v: Draft): AllowanceInput {
  if (Object.keys(validateDraft('allowance',v)).length) throw new Error('INVALID_DRAFT')

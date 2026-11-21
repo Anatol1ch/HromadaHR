@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowanceInput, rankInput, draftFor, validateDraft } from '../src/components/seniority-ranks/model.ts'
+import { allowanceInput, rankInput, draftFor, validateDraft, canSaveAllowanceDraft } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
@@ -35,4 +35,16 @@ test('calendar drafts, future dates, mandatory fields and text limits are valida
  assert.deepEqual(validateDraft('allowance',base,'2020-02-29'),{})
  assert.match(personnelMessage('RANK_REQUIRES_OFFICIAL'),/посадової особи/)
  assert.match(personnelMessage('EMPLOYEE_HAS_CURRENT_RANK'),/очистіть поточний ранг/)
+})
+test('allowance save requires a changed valid draft, permits explicitly selected not-applicable and optional documents',()=>{
+ const initial=draftFor(null),valid={...initial,percentage:'10',effectiveOn:'01.01.2020'}
+ assert.equal(canSaveAllowanceDraft(initial,false,false),false)
+ assert.equal(canSaveAllowanceDraft(valid,false,false),false)
+ assert.equal(canSaveAllowanceDraft(initial,true,false),false)
+ assert.equal(canSaveAllowanceDraft({...valid,documentDate:'31.02.2020'},true,false),false)
+ assert.equal(canSaveAllowanceDraft(valid,true,true),false)
+ assert.equal(canSaveAllowanceDraft(valid,true,false),true)
+ const notApplicable={...initial,status:'not_applicable'}
+ assert.equal(canSaveAllowanceDraft(notApplicable,true,false),true)
+ assert.equal(canSaveAllowanceDraft({...notApplicable,documentType:'x'.repeat(201)},true,false),false)
 })

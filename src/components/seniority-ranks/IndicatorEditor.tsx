@@ -15,7 +15,7 @@ import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage, fullName } from '../../employees/model'
-import { rankOriginLabels, documentTypeOptions, toggleSeparateDate, allowanceInput, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { rankOriginLabels, documentTypeOptions, toggleSeparateDate, allowanceInput, canSaveAllowanceDraft, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
@@ -46,6 +46,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined})) }
  async function mutate(clear=false) {
   if(inFlight.current) return
+  if(!clear&&kind==='allowance'&&!dirty)return
   if(!clear) {
    const next=validateDraft(kind,draft);setErrors(next)
    if(Object.keys(next).length) {if((next.origin||next.reviewAnchorOn||next.originNote)&&details.current)details.current.open=true;setError('Перевірте позначені поля.');requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
@@ -88,11 +89,11 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
    {value&&<button type="button" className="secondary-button danger-action" disabled={busy} onClick={()=>{setError('');setClearing(true)}}><Trash2 size={17} aria-hidden="true"/>Очистити показник</button>}
    <div className="employee-form-actions">
      <button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(onClose)}><X size={17} aria-hidden="true"/>Скасувати</button>
-     <button type="submit" form={id} className="primary-button" disabled={busy} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy?'Збереження…':kind==='allowance'?'Зберегти надбавку':'Зберегти зміни'}</button>
+     <button type="submit" form={id} className="primary-button" disabled={kind==='allowance'?!canSaveAllowanceDraft(draft,dirty,busy):busy} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy?'Збереження…':kind==='allowance'?'Зберегти надбавку':'Зберегти зміни'}</button>
    </div>
   </div>
  </div>
- return <Modal title={title} description={kind==='allowance'?'Підтвердження надбавки працівника':fullName(row.employee)} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:undefined} returnFocus={returnFocus} size="large" className="employee-form-modal seniority-modal" busy={busy} onClose={close} footer={footer}>
+ return <Modal title={title} description={kind==='rank'?fullName(row.employee):undefined} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:undefined} returnFocus={returnFocus} size="large" className={`employee-form-modal seniority-modal${kind==='allowance'?' allowance-indicator-modal':''}`} busy={busy} onClose={close} footer={footer}>
   <div ref={owner} className="employee-card">
     <form id={id} ref={form} noValidate className="employee-form" aria-busy={busy} onSubmit={e=>{e.preventDefault();void mutate()}}>
      <InfoSection title={kind==='allowance'?'Відомості про надбавку':'Відомості про ранг'} icon={kind==='allowance'?<BadgePercent size={18}/>:undefined}>
