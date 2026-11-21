@@ -1,7 +1,8 @@
 import { useEffect,useRef,useState,type RefObject } from 'react'
-import { CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
+import { BadgePercent, CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
+import type { ServiceProjection } from '../../../shared/service-calculations'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import type { Kind } from './model'
 import { documentLabel,rankOriginLabels } from './model'
@@ -14,12 +15,13 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { ServiceDetailRow } from './ServiceProjectionView'
+import { ServiceDetailRow, ServiceForecastView } from './ServiceProjectionView'
 
 /** One target read, one shared editor, actual mutation replies; no employee overview scan. */
-export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh}:{
+export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh,projection=null,projectionError='',onRetryProjection=()=>{}}:{
  employee:EmployeeCard;kind:Kind;navigationGuard:RefObject<NavigationGuard>;disabled?:boolean;refreshKey?:number
  onRefresh?:()=>void
+ projection?:ServiceProjection|null;projectionError?:string;onRetryProjection?:()=>void
 }) {
  const [state,setState]=useState<{key:string;value?:Allowance|CurrentRank|null;error?:string}>(),[retry,setRetry]=useState(0),[version,setVersion]=useState(0),[open,setOpen]=useState(false)
  const opener=useRef<HTMLButtonElement|null>(null)
@@ -38,13 +40,18 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
   requestAnimationFrame(()=>{if(!opener.current?.isConnected)window.document.getElementById('employee-profile-title')?.focus()})
  }
  return <>
-  {kind==='allowance'?<InfoSection className="service-info-panel service-info-allowance" title="Підстава встановлення надбавки" icon={<FileText size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати</button>}>
-    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Завантаження надбавки…"/>:allowance?<dl className="service-detail-list">
-      {allowance.documentType&&<ServiceDetailRow icon={FileText} label="Тип документа" value={allowance.documentType}/>}
-      {allowance.documentNumber&&<ServiceDetailRow icon={FileText} label="Номер документа" value={allowance.documentNumber}/>}
-      {allowance.documentDate&&<ServiceDetailRow icon={CalendarDays} label="Дата документа" value={formatDate(allowance.documentDate)}/>}
-      {!document&&<ServiceDetailRow icon={FileText} label="Документальна підстава" value="Реквізити документа не зазначено."/>}
-    </dl>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Percent size={22} aria-hidden="true"/>} message="Підтверджену надбавку за вислугу не внесено."/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести надбавку</button></div>}
+  {kind==='allowance'?<InfoSection className="service-info-panel service-tab-section service-tab-allowance" title="Надбавка за вислугу років" icon={<BadgePercent size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати надбавку</button>}>
+    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Завантаження надбавки…"/>:allowance?<div className="service-allowance-summary">
+      <div className="service-allowance-primary">
+        <strong>{allowance.status==='confirmed'?`${allowance.percentage}%`:'Не застосовується'}</strong>
+        <span>{allowance.status==='confirmed'?'Підтверджено':'Не застосовується'}</span>
+      </div>
+      <dl className="service-allowance-facts">
+        <ServiceDetailRow icon={CalendarDays} label="Дата початку дії" value={allowance.status==='confirmed'&&allowance.effectiveOn?formatDate(allowance.effectiveOn):'Не застосовується'}/>
+        <ServiceDetailRow icon={FileText} label="Документальна підстава" value={document||'Реквізити не зазначено'}/>
+      </dl>
+    </div>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Percent size={22} aria-hidden="true"/>} message="Підтверджену надбавку за вислугу не внесено."/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести надбавку</button></div>}
+    <ServiceForecastView value={projection} error={projectionError} onRetry={onRetryProjection}/>
     {disabled&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
    </InfoSection>
    :<InfoSection title="Підтверджений поточний ранг" action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{value?'Редагувати ранг':'Внести ранг'}</button>}>

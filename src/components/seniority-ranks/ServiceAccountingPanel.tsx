@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
-import { CalendarCheck, CalendarDays, Clock, History, Layers3, Pencil, Plus } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { CalendarCheck, CalendarDays, Clock, Layers3, Pencil, Plus } from 'lucide-react'
 import ServiceProjectionView, { ServiceDetailRow } from './ServiceProjectionView'
 import ServiceAccountingModal from './ServiceAccountingModal'
 import type { ServiceProjection } from '../../../shared/service-calculations'
@@ -12,7 +12,7 @@ import { formatDate, todayIsoDate } from '../../lib/dates'
 import { serviceDurationLabel } from './service-accounting-model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 
-export default function ServiceAccountingPanel({ employeeId, hireDate, navigationGuard, onBusyChange, refreshKey=0, onEditingChange, onAccountingChanged }: {
+export default function ServiceAccountingPanel({ employeeId, hireDate, navigationGuard, onBusyChange, refreshKey=0, onEditingChange, onAccountingChanged, renderAllowancePanel }: {
   refreshKey?:number
   employeeId:string
   hireDate:string
@@ -20,6 +20,7 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
   onBusyChange:(busy:boolean)=>void
   onEditingChange?:(editing:boolean)=>void
   onAccountingChanged?:()=>void
+  renderAllowancePanel:(state:{value:ServiceProjection|null;error:string;onRetry:()=>void})=>ReactNode
 }) {
   const [value,setValue]=useState<ServiceAccounting|null>(null)
   const [loading,setLoading]=useState(true)
@@ -80,28 +81,29 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
     setValue(null);setProjection(null);setProjectionRetry(v=>v+1);onAccountingChanged?.();closeEditor()
     requestAnimationFrame(()=>trigger.current?.focus())
   }
-  const action=!loading&&!error&&value&&<button ref={trigger} type="button" className="secondary-button" onClick={event=>openEditor(event.currentTarget)}><Pencil size={15} aria-hidden="true"/>Редагувати</button>
+  const action=!loading&&!error&&value&&<button ref={trigger} type="button" className="secondary-button" onClick={event=>openEditor(event.currentTarget)}><Pencil size={15} aria-hidden="true"/>Редагувати стаж</button>
   const periods=value?.mode==='periods'?value.periods:[]
   const displayedPeriods=showAllPeriods?periods:periods.slice(0,4)
 
   return <>
-    <ServiceProjectionView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>
-    <InfoSection className="service-info-panel service-info-baseline" title="Підтверджений стаж" icon={<History size={17}/>} action={action}>
-      {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:value?
+    <InfoSection className="service-info-panel service-tab-section" title="Стаж служби" icon={<Clock size={17}/>} action={action}>
+      {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:value?<>
+        <ServiceProjectionView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>
         <dl className="service-detail-list">
           <ServiceDetailRow icon={Layers3} label="Спосіб обліку" value={value.mode==='continuous'?'Безперервна служба':value.mode==='snapshot'?'Стаж на дату':'Окремі періоди служби'}/>
           {value.mode==='continuous'&&<ServiceDetailRow icon={CalendarCheck} label="Дата початку служби" value={formatDate(value.startDate)}/>}
           {value.mode==='snapshot'&&<>
-            <ServiceDetailRow icon={Clock} label="Підтверджена тривалість" value={serviceDurationLabel(value)}/>
-            <ServiceDetailRow icon={CalendarDays} label="Стаж визначено станом на" value={formatDate(value.asOfDate)}/>
+            <ServiceDetailRow icon={CalendarDays} label="Підтверджена тривалість на дату" value={serviceDurationLabel(value)}/>
+            <ServiceDetailRow icon={CalendarDays} label="Опорна дата" value={formatDate(value.asOfDate)}/>
           </>}
           {value.mode==='periods'&&<>
             {displayedPeriods.map((period,index)=><ServiceDetailRow key={period.id} icon={CalendarDays} label={`Період ${index+1}`} value={<>{formatDate(period.startDate)} – {period.endDate?formatDate(period.endDate):'Дотепер'}</>}/>)}
             {periods.length>4&&<div className="service-period-expand"><button type="button" className="secondary-button" aria-expanded={showAllPeriods} onClick={()=>setShowAllPeriods(v=>!v)}>{showAllPeriods?'Згорнути список':`Показати всі періоди (${periods.length})`}</button></div>}
           </>}
-        </dl>:
-        <div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/><button ref={trigger} type="button" className="primary-button service-empty-action-button" onClick={event=>openEditor(event.currentTarget)}><Plus size={17} aria-hidden="true"/>Внести стаж</button></div>}
+        </dl>
+      </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/><button ref={trigger} type="button" className="primary-button service-empty-action-button" onClick={event=>openEditor(event.currentTarget)}><Plus size={17} aria-hidden="true"/>Внести стаж</button></div>}
     </InfoSection>
+    {renderAllowancePanel({value:projection,error:projectionError,onRetry:()=>setProjectionRetry(v=>v+1)})}
     {modalOpen&&<ServiceAccountingModal employeeId={employeeId} hireDate={hireDate} navigationGuard={navigationGuard} returnFocus={trigger.current} onClose={closeEditor} onSaved={saved} onCleared={cleared} onBusyChange={onBusyChange}/>}
   </>
 }
