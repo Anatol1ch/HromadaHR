@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { CalendarCheck, CalendarDays, Clock, Layers3, Pencil, Plus } from 'lucide-react'
 import ServiceProjectionView, { ServiceDetailRow, ServiceForecastView } from './ServiceProjectionView'
 import ServiceAccountingModal from './ServiceAccountingModal'
@@ -12,7 +12,7 @@ import { formatDate, todayIsoDate } from '../../lib/dates'
 import { serviceDurationLabel } from './service-accounting-model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 
-export default function ServiceAccountingPanel({ employeeId, hireDate, navigationGuard, onBusyChange, refreshKey=0, onEditingChange, onAccountingChanged, renderAllowancePanel }: {
+export default function ServiceAccountingPanel({ employeeId, hireDate, navigationGuard, onBusyChange, refreshKey=0, onEditingChange, onAccountingChanged, allowanceExtraContent=false, renderAllowancePanel }: {
   refreshKey?:number
   employeeId:string
   hireDate:string
@@ -20,6 +20,7 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
   onBusyChange:(busy:boolean)=>void
   onEditingChange?:(editing:boolean)=>void
   onAccountingChanged?:()=>void
+  allowanceExtraContent?:boolean
   renderAllowancePanel:(state:{value:ServiceProjection|null;error:string;onRetry:()=>void})=>ReactNode
 }) {
   const [value,setValue]=useState<ServiceAccounting|null>(null)
@@ -84,12 +85,21 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
   const action=!loading&&!error&&value&&<button ref={trigger} type="button" className="secondary-button" onClick={event=>openEditor(event.currentTarget)}><Pencil size={15} aria-hidden="true"/>Редагувати стаж</button>
   const periods=value?.mode==='periods'?value.periods:[]
   const displayedPeriods=showAllPeriods?periods:periods.slice(0,4)
+  const serviceDetailRowCount=!value?0:value.mode==='continuous'?2:value.mode==='snapshot'?3:1+displayedPeriods.length+(periods.length>4?1:0)
+  const hasAllowanceExtraContent=allowanceExtraContent||projection?.comparison==='different'
+  const detailTrackCount=Math.max(2,serviceDetailRowCount,hasAllowanceExtraContent?3:2)
+  const layoutStyle={
+    '--service-tab-detail-track-count':detailTrackCount,
+    '--service-tab-service-row-count':serviceDetailRowCount,
+    '--service-tab-service-span':2+serviceDetailRowCount,
+    '--service-tab-allowance-span':4+(hasAllowanceExtraContent?1:0),
+  } as CSSProperties
 
-  return <div className="service-tab-layout">
-    <InfoSection className="service-info-panel service-tab-section service-tab-service" title="Стаж служби" icon={<Clock size={17}/>} action={action}>
+  return <div className="service-tab-layout" style={layoutStyle}>
+    <InfoSection className={`service-info-panel service-tab-section service-tab-service${value?' service-tab-sync-service':''}`} title="Стаж служби" icon={<Clock size={17}/>} action={action}>
       {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:value?<>
         <ServiceProjectionView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>
-        <dl className="service-detail-list">
+        <dl className="service-detail-list service-detail-list-synchronized">
           <ServiceDetailRow icon={Layers3} label="Спосіб обліку" value={value.mode==='continuous'?'Безперервна служба':value.mode==='snapshot'?'Стаж на дату':'Окремі періоди служби'}/>
           {value.mode==='continuous'&&<ServiceDetailRow icon={CalendarCheck} label="Дата початку служби" value={formatDate(value.startDate)}/>}
           {value.mode==='snapshot'&&<>

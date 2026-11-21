@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ServiceProjection } from '../../../shared/service-calculations'
-import { ArrowRight, CalendarClock, CalendarDays, Milestone, TrendingUp, type LucideIcon } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarDays, Info, Milestone, TrendingUp, type LucideIcon } from 'lucide-react'
 import DataState from '../DataState'
 import Alert from '../Alert'
 import { serviceDurationLabel } from './service-accounting-model'
@@ -61,13 +61,13 @@ export function ServiceForecastView({value,error,onRetry}:{value:ServiceProjecti
          <TrendingUp size={18} aria-hidden="true"/>
          <strong>Розрахункова зміна надбавки</strong>
          {canProject?<div className="service-forecast-values">
-           <span><small>Поточна</small><b>{value!.percentage}%</b></span>
+            <span className="service-forecast-value-current"><small>Поточна</small><b>{value!.percentage}%</b></span>
            <ArrowRight size={17} aria-hidden="true"/>
-           <span><small>Прогнозна</small><b>{threshold!.percentage}%</b></span>
+            <span className="service-forecast-value-projected"><small>Прогнозна</small><b>{threshold!.percentage}%</b></span>
          </div>:<span className="service-forecast-card-value service-metric-neutral">Немає доступного переходу</span>}
        </div>
      </div>
    </div>
-   <p className="service-forecast-note">Прогноз є орієнтовним і не змінює підтверджену надбавку автоматично.</p>
+    <p className="service-forecast-note"><Info size={15} aria-hidden="true"/><span>Прогноз є орієнтовним і не змінює підтверджену надбавку автоматично.</span></p>
   </InfoSection>
 }
