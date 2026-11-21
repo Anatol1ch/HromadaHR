@@ -1,10 +1,10 @@
 import { useEffect,useRef,useState,type RefObject } from 'react'
-import { BadgePercent, CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
+import { CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import type { Kind } from './model'
-import { allowanceLabel,documentLabel,rankOriginLabels } from './model'
+import { documentLabel,rankOriginLabels } from './model'
 import { readIndicator } from './profile-indicators'
 import FocusedIndicatorEditor from './FocusedIndicatorEditor'
 import RankProjectionPanel from './RankProjectionPanel'
@@ -14,7 +14,7 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { ServiceDetailRow, ServiceMetricCard } from './ServiceProjectionView'
+import { ServiceDetailRow } from './ServiceProjectionView'
 
 /** One target read, one shared editor, actual mutation replies; no employee overview scan. */
 export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh}:{
@@ -38,20 +38,16 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
   requestAnimationFrame(()=>{if(!opener.current?.isConnected)window.document.getElementById('employee-profile-title')?.focus()})
  }
  return <>
-  {kind==='allowance'?<>
-   <ServiceMetricCard icon={BadgePercent} title="Підтверджена надбавка"
-    value={current?.error?<span className="service-metric-neutral">Недоступна</span>:!current?<DataState kind="loading" compact message="Завантаження…"/>:allowance?allowance.status==='not_applicable'?<span className="service-metric-neutral">Не застосовується</span>:allowanceLabel(allowance):<span className="service-metric-neutral">Не внесено</span>}
-    detail={allowance?.status==='confirmed'&&allowance.effectiveOn?<>Діє з {formatDate(allowance.effectiveOn)}</>:allowance?.status==='not_applicable'?'Нормативна надбавка не застосовується':undefined}
-    className="service-metric-allowance"/>
-   <InfoSection className="service-info-panel service-info-allowance" title="Встановлена надбавка" icon={<BadgePercent size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати</button>}>
+  {kind==='allowance'?<InfoSection className="service-info-panel service-info-allowance" title="Підстава встановлення надбавки" icon={<FileText size={17}/>} action={current&&!current.error&&allowance&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати</button>}>
     {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Завантаження надбавки…"/>:allowance?<dl className="service-detail-list">
-      <ServiceDetailRow icon={BadgePercent} label="Статус" value={allowance.status==='confirmed'?'Підтверджено':'Не застосовується'}/>
-      {allowance.status==='confirmed'&&allowance.effectiveOn&&<ServiceDetailRow icon={CalendarDays} label="Дата початку дії" value={formatDate(allowance.effectiveOn)}/>}
-      {document&&<ServiceDetailRow icon={FileText} label="Документальна підстава" value={document}/>}
+      {allowance.documentType&&<ServiceDetailRow icon={FileText} label="Тип документа" value={allowance.documentType}/>}
+      {allowance.documentNumber&&<ServiceDetailRow icon={FileText} label="Номер документа" value={allowance.documentNumber}/>}
+      {allowance.documentDate&&<ServiceDetailRow icon={CalendarDays} label="Дата документа" value={formatDate(allowance.documentDate)}/>}
+      {!document&&<ServiceDetailRow icon={FileText} label="Документальна підстава" value="Реквізити документа не зазначено."/>}
     </dl>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Percent size={22} aria-hidden="true"/>} message="Підтверджену надбавку за вислугу не внесено."/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести надбавку</button></div>}
     {disabled&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
    </InfoSection>
-  </>:<InfoSection title="Підтверджений поточний ранг" action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{value?'Редагувати ранг':'Внести ранг'}</button>}>
+   :<InfoSection title="Підтверджений поточний ранг" action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{value?'Редагувати ранг':'Внести ранг'}</button>}>
    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого показника…"/>:value?<>
     <strong className="seniority-value">{`${rank!.rank} ранг`}</strong>
     {rank&&<dl className="info-grid">
