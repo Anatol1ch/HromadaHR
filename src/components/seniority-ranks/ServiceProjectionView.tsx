@@ -24,7 +24,6 @@ export default function ServiceProjectionView({value,error,onRetry}:{value:Servi
   :calc?.status==='missing_service_data'?<span className="service-metric-neutral">Стаж не внесено</span>
   :<span className="service-metric-neutral">Потрібна перевірка вихідних відомостей</span>
  return <div className="service-current-summary">
-   <div className="service-current-date"><CalendarDays size={15} aria-hidden="true"/>{calc?.current?`Розраховано станом на ${formatDate(calc.calculatedOn)}`:'Поточний розрахунок'}</div>
    <div className="service-current-value">{result}{calc?.mode==='periods'&&calc.current&&<small className="service-metric-estimate">Розрахункова оцінка за періодами</small>}</div>
    {calc?.accrues&&<p>{calc.mode==='periods'?'Стаж продовжує накопичуватися за поточним періодом.':'Подальша служба враховується автоматично.'}</p>}
    {value?.status==='not_applicable'&&!calc?.current&&<p>Розрахунок стажу для прогнозу не застосовується.</p>}
