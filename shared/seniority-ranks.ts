@@ -7,10 +7,10 @@ export interface BasisDocument { documentType: string | null; documentNumber: st
 export type AllowanceInput = BasisDocument & (
   { status: 'confirmed'; percentage: typeof allowancePercentages[number]; effectiveOn: string } |
   { status: 'not_applicable'; percentage: null; effectiveOn: null })
-export const rankOrigins = ['oms_assigned','oms_retained','civil_service_equivalence'] as const
+export const rankOrigins = ['oms_assigned','oms_retained','civil_service_equivalence','oms_early','pension_exception'] as const
 export type RankOrigin = typeof rankOrigins[number]
-/** Retired values stay readable so existing records require explicit review, never reclassification. */
-export const storedRankOrigins = [...rankOrigins, 'unknown', 'oms_early', 'pension_exception', 'other'] as const
+/** Unknown/other legacy values stay readable and require explicit review; returned statutory origins are active again. */
+export const storedRankOrigins = [...rankOrigins, 'unknown', 'other'] as const
 export type StoredRankOrigin = typeof storedRankOrigins[number]
 export interface RankInput extends BasisDocument { origin: RankOrigin; reviewAnchorOn: string | null; rank: number; assignedOn: string }
 export type Allowance = AllowanceInput & { employeeId: string; confirmedAt: string }

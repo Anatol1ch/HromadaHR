@@ -22,6 +22,28 @@
 .service-tab-layout:has(> .service-tab-sync-service):has(> .service-tab-sync-allowance) .service-tab-sync-allowance > .service-allowance-extra-content { grid-row:5; margin-top:var(--space-3); }
 .service-tab-layout:has(> .service-tab-sync-service):has(> .service-tab-sync-allowance) .service-tab-sync-allowance > .service-allowance-extra-content > * { margin:0; }
 .service-tab-layout > .service-tab-review { margin-top:var(--space-3); }
+.rank-tab-layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); min-width:0; container:rank-tab-layout / inline-size; }
+.rank-tab-layout-synchronized { grid-template-rows:auto auto repeat(3,auto); column-gap:var(--space-3); row-gap:0; container:rank-tab-layout / inline-size; }
+.rank-tab-layout-synchronized > .rank-tab-panel { display:grid; grid-template-rows:subgrid; row-gap:0; container-type:normal; }
+.rank-tab-layout-synchronized > .rank-tab-sync-current { grid-row:1 / span 5; }
+.rank-tab-layout-synchronized > .rank-tab-sync-category { grid-row:1 / span 4; }
+.rank-tab-layout-synchronized .info-section-heading { grid-row:1; }
+.rank-tab-layout-synchronized .rank-tab-primary { grid-row:2; margin-top:var(--space-3); }
+.rank-tab-layout-synchronized .rank-tab-current-details { grid-row:3 / span 3; grid-template-rows:subgrid; margin-top:var(--space-3); }
+.rank-tab-layout-synchronized .rank-tab-category-details { grid-row:3 / span 2; grid-template-rows:subgrid; margin-top:var(--space-3); }
+.rank-tab-layout-synchronized > .rank-tab-forecast { grid-row:6; margin-top:var(--space-3); }
+.rank-tab-forecast { grid-column:1 / -1; }
+.rank-tab-forecast .rank-forecast-cards { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.8fr); }
+.rank-forecast-transition { grid-column:auto; }
+.rank-projection-state { min-height:120px; }
+@container rank-tab-layout (max-width:700px) {
+  .rank-tab-layout,.rank-tab-layout-synchronized { grid-template-columns:minmax(0,1fr); grid-template-rows:none; row-gap:var(--space-3); }
+  .rank-tab-layout-synchronized > .rank-tab-panel { grid-row:auto; grid-template-rows:none; row-gap:var(--space-3); container:info-section / inline-size; }
+  .rank-tab-layout-synchronized .info-section-heading,.rank-tab-layout-synchronized .rank-tab-primary,.rank-tab-layout-synchronized .rank-tab-current-details,.rank-tab-layout-synchronized .rank-tab-category-details { grid-row:auto; margin-top:0; }
+  .rank-tab-layout-synchronized .rank-tab-current-details,.rank-tab-layout-synchronized .rank-tab-category-details { grid-template-rows:none; }
+  .rank-tab-layout-synchronized > .rank-tab-forecast { grid-row:auto; margin-top:0; }
+  .rank-tab-forecast { grid-column:1; }
+}
 .service-tab-section { gap:var(--space-3); }
 .service-tab-section .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 .service-tab-section .info-section-heading h3 { font-size:16px; font-weight:650; }

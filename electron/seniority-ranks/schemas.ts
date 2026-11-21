@@ -33,6 +33,6 @@ export const serviceProjection=z.strictObject({
 
 export const rankProjection=z.strictObject({
  status:z.enum(['projected','category_limit_reached','retained_higher_rank','requires_review','missing_data','not_applicable']),
- reason:z.enum(['not_applicable','missing_rank','missing_category','missing_appointment','invalid_data','category_limit','higher_rank','lower_rank','unknown_origin','legacy_origin','missing_anchor','future_anchor','date_range','ordinary','explicit_anchor']),
+ reason:z.enum(['not_applicable','missing_rank','missing_category','missing_appointment','invalid_data','category_limit','higher_rank','lower_rank','unknown_origin','legacy_origin','early_assignment','early_out_of_range','pension_exception','missing_anchor','future_anchor','date_range','ordinary','explicit_anchor']),
  explanation:z.string(),calculatedOn:calendarDate,category:z.enum(['I','II','III','IV','V','VI','VII']).nullable(),positionStartedOn:calendarDate.nullable(),rank:rank.nullable(),usualRanks:z.array(z.number().int().min(1).max(15)),nextRank:z.number().int().min(1).max(15).nullable(),anchorOn:calendarDate.nullable(),reviewOn:calendarDate.nullable(),accuracy:z.literal('estimate').nullable(),timing:z.enum(['past','today','future']).nullable(),
 })

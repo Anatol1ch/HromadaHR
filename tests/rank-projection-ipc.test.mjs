@@ -40,7 +40,12 @@ test('v16→v17 preserves old rank as unknown; CRUD, SQL checks, live connection
  for(const sql of ["origin='bad'","review_anchor_on='2026-02-30'"])assert.throws(()=>f.db.exec('UPDATE employee_current_ranks SET '+sql))
  assert.throws(()=>f.db.prepare('INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,confirmed_at) VALUES (?,?,?,?)').run(randomUUID(),15,'2020-01-01',new Date().toISOString()))
  integrity(f.db);await f.reopen();assert.equal(s.getRank(e.id).origin,'civil_service_equivalence')
- s.clearRank(e.id);assert.throws(()=>s.saveRank(e.id,{...input,origin:'oms_early',reviewAnchorOn:'2024-01-01'}),code('INVALID_ARGUMENTS'))
+ s.clearRank(e.id)
+ const early=s.saveRank(e.id,{...input,origin:'oms_early',reviewAnchorOn:null})
+ assert.equal(early.origin,'oms_early');assert.equal(s.getRankProjection(e.id).reason,'early_assignment')
+ assert.throws(()=>s.saveRank(e.id,{...input,rank:12,origin:'oms_early',reviewAnchorOn:null}),code('INVALID_ARGUMENTS'))
+ const pension=s.saveRank(e.id,{...input,rank:12,origin:'pension_exception',reviewAnchorOn:null})
+ assert.equal(pension.origin,'pension_exception');assert.equal(s.getRankProjection(e.id).reason,'pension_exception')
  f.p.deleteEmployee(e.id);assert.equal(f.db.prepare('SELECT count(*) AS n FROM employee_current_ranks').get().n,0);integrity(f.db)
 })
 test('projection leaves confirmed rank, manual date, allowances, service and leave rows unchanged',async t=>{

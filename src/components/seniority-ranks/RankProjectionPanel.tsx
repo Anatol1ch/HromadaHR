@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CurrentRank } from '../../../shared/seniority-ranks'
 import type { RankProjection } from '../../../shared/rank-projection'
 import InfoSection from '../InfoSection'
-import InfoItem from '../InfoItem'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import { formatDate, todayIsoDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { rankOriginLabel } from './model'
-import { CalendarClock } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarDays, Info, Timer } from 'lucide-react'
 
-/** Read-only view shared by the rank editor and employee card. Never proposes a write. */
-export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=true,showConfirmedDetails=true,showMissingRankPrompt=false}:{employeeId:string;refreshKey?:CurrentRank|null|number;showCurrent?:boolean;showConfirmedDetails?:boolean;showMissingRankPrompt?:boolean}) {
+/** Read-only projection display. It never proposes or writes a rank decision. */
+export default function RankProjectionPanel({employeeId,refreshKey}:{employeeId:string;refreshKey?:number}) {
  const [value,setValue]=useState<RankProjection|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0)
  const day=useRef(todayIsoDate())
  useEffect(()=>{
@@ -24,21 +21,16 @@ export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=t
   window.hromadaHR.seniorityRanks.getRankProjection(employeeId).then(result=>{if(alive){if(result.ok)setValue(result.data);else setError(personnelMessage(result.error.code))}}).catch(()=>{if(alive)setError('Не вдалося отримати прогноз рангу.')})
   return()=>{alive=false}
  },[employeeId,refreshKey,retry])
- return <InfoSection className="service-info-panel service-tab-section" title="Контроль рангу" icon={<CalendarClock size={17} aria-hidden="true"/>}>
-  {error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:!value?<DataState kind="loading" compact message="Отримання прогнозу рангу…"/>:<>
-   {value.status==='not_applicable'?<DataState kind="planned" className="service-empty-state" icon={<CalendarClock size={22} aria-hidden="true"/>} message={value.explanation}/>:showMissingRankPrompt&&!value.rank?<DataState kind="empty" className="service-empty-state" icon={<CalendarClock size={22} aria-hidden="true"/>} message="Для розрахунку наступного рангу внесіть поточний ранг працівника"/>:<>
-   <dl className="info-grid">
-    {showCurrent&&value.rank&&<InfoItem label="Підтверджений поточний ранг" value={`${value.rank.rank} ранг`}/>}
-    <InfoItem label="Категорія посади" value={value.category??'Не зазначено'}/>
-    {value.usualRanks.length>0&&<InfoItem label="Звичайний діапазон" value={value.usualRanks.join(', ')}/>}
-    {value.nextRank!==null&&<InfoItem label="Наступний можливий ранг" value={`${value.nextRank} ранг`}/>}
-    {value.reviewOn&&<InfoItem label="Орієнтовна перевірка" value={formatDate(value.reviewOn)}/>}
-    {showConfirmedDetails&&value.rank&&<InfoItem label="Походження рангу" value={rankOriginLabel(value.rank.origin)}/>}
-    {showConfirmedDetails&&value.rank?.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(value.rank.reviewAnchorOn)}/>}
-   </dl>
-   <p className="employee-hint">{value.explanation}</p>
-   {(value.timing==='past'||value.timing==='today')&&<Alert variant="info">Настав орієнтовний строк перевірки можливості присвоєння чергового рангу.</Alert>}
-   </>}
-  </>}
+ return <InfoSection className="service-info-panel service-tab-section rank-tab-forecast" title="Наступний ранг" icon={<CalendarClock size={17} aria-hidden="true"/>}>
+  {error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:!value?<DataState kind="loading" compact message="Отримання прогнозу рангу…"/>:value.status==='not_applicable'?<DataState kind="planned" className="service-empty-state rank-projection-state" icon={<CalendarClock size={22} aria-hidden="true"/>} message={value.explanation}/>:value.status==='projected'&&value.reviewOn&&value.nextRank!==null&&value.rank?<>
+   <div className="service-forecast-container">
+    <div className="service-forecast-cards rank-forecast-cards">
+     <div className="service-forecast-card"><CalendarDays size={18} aria-hidden="true"/><strong>Орієнтовна дата</strong><span className="service-forecast-card-value">{formatDate(value.reviewOn)}</span></div>
+     <div className="service-forecast-card"><Timer size={18} aria-hidden="true"/><strong>Контрольний строк</strong><span className="service-forecast-card-value">2 роки</span></div>
+     <div className="service-forecast-card rank-forecast-transition"><CalendarClock size={18} aria-hidden="true"/><strong>Прогноз рангу</strong><div className="service-forecast-values"><span className="service-forecast-value-current"><small>Поточний</small><b>{value.rank.rank}</b></span><ArrowRight size={17} aria-hidden="true"/><span className="service-forecast-value-projected"><small>Наступний</small><b>{value.nextRank}</b></span></div></div>
+    </div>
+   </div>
+   <p className="service-forecast-note"><Info size={15} aria-hidden="true"/><span>Орієнтовна дата не гарантує присвоєння рангу без відповідного кадрового рішення.</span></p>
+  </>:<DataState kind="planned" className="service-empty-state rank-projection-state" icon={<CalendarClock size={22} aria-hidden="true"/>} message={value.explanation}/>}
  </InfoSection>
 }

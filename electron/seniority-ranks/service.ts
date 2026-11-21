@@ -1,4 +1,4 @@
-import { projectRank } from '../../shared/rank-projection.js'
+import { categoryRanks, projectRank } from '../../shared/rank-projection.js'
 import { projectService } from '../../shared/service-calculations.js'
 import { calculateService } from '../../shared/service-calculations.js'
 import { PersonnelService } from '../personnel/service.js'
@@ -112,6 +112,11 @@ export class SeniorityRanksService {
     this.checkDate(v.assignedOn,v.reviewAnchorOn)
     return this.run(id, (db,type) => {
       if (type !== 'official') throw new SeniorityRanksError('RANK_REQUIRES_OFFICIAL')
+      if (v.origin === 'oms_early') {
+        const employee=db.prepare<[string],{positionCategory:string|null}>('SELECT position_category AS positionCategory FROM employees WHERE id=?').get(id)
+        const ranks=employee?.positionCategory&&Object.hasOwn(categoryRanks,employee.positionCategory)?categoryRanks[employee.positionCategory as keyof typeof categoryRanks]:null
+        if (!ranks?.includes(v.rank)) throw new SeniorityRanksError('INVALID_ARGUMENTS')
+      }
       db.prepare(`INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,document_type,document_number,document_date,confirmed_at,origin,review_anchor_on)
         VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET rank=excluded.rank,assigned_on=excluded.assigned_on,
         document_type=excluded.document_type,document_number=excluded.document_number,document_date=excluded.document_date,

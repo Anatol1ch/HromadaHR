@@ -60,7 +60,7 @@ export function documentLabel(value: Pick<Allowance, 'documentType' | 'documentN
   return [value.documentType, value.documentNumber ? `№ ${value.documentNumber}` : '', value.documentDate ? `від ${formatDate(value.documentDate)}` : ''].filter(Boolean).join(' ')
 }
 export const rankOriginLabels:Record<RankOrigin,string>={
- oms_assigned:'Звичайне (перше) присвоєння',oms_retained:'Раніше присвоєний ранг ОМС',civil_service_equivalence:'Ранг з урахуванням державної служби',
+ oms_assigned:'Звичайне (перше) присвоєння',oms_retained:'Раніше присвоєний ранг ОМС',civil_service_equivalence:'Ранг з урахуванням державної служби',oms_early:'Дострокове присвоєння',pension_exception:'Присвоєння у зв’язку з виходом на пенсію',
 }
-export const legacyRankOriginLabels:Record<string,string>={unknown:'Походження не зазначено',oms_early:'Дострокове присвоєння',pension_exception:'Вихід на пенсію',other:'Інша підстава'}
+export const legacyRankOriginLabels:Record<string,string>={unknown:'Походження не зазначено',other:'Інша підстава'}
 export function rankOriginLabel(origin:string) { return rankOriginLabels[origin as RankOrigin]??legacyRankOriginLabels[origin]??origin }
