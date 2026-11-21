@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import type { ServiceProjection } from '../../../shared/service-calculations'
-import { CalendarClock, CalendarDays, type LucideIcon } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarDays, type LucideIcon } from 'lucide-react'
 import DataState from '../DataState'
 import Alert from '../Alert'
 import { serviceDurationLabel } from './service-accounting-model'
 import { formatDate } from '../../lib/dates'
+import InfoSection from '../InfoSection'
 
 export function ServiceDetailRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
   return <div className="service-detail-row">
@@ -42,12 +43,19 @@ export function ServiceForecastView({value,error,onRetry}:{value:ServiceProjecti
   :calc?.status==='requires_review'?'Перевірте вихідні відомості стажу'
   :calc?.status==='calculated'&&!calc.accrues?'Без поточного періоду дата не прогнозується'
   :'Майбутнього нормативного порогу не визначено'
- return <section className="service-forecast-panel" aria-labelledby="service-forecast-heading">
-   <div className="service-forecast-heading"><CalendarClock size={18} aria-hidden="true"/><h3 id="service-forecast-heading">Наступна кадрова перевірка</h3></div>
-   <div className="service-forecast-body">
-     <div className="service-forecast-date">{error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося отримати прогноз.</Alert>:<span className={date?'':'service-metric-neutral'}>{date?formatDate(date):emptyDate}</span>}</div>
-     <div className="service-forecast-threshold">{detail}</div>
+ const canProject=Boolean(date&&threshold&&value?.percentage!==null&&value?.percentage!==undefined&&value.status!=='not_applicable')
+ return <InfoSection className="service-info-panel service-tab-section service-tab-review" title="Наступна кадрова перевірка" icon={<CalendarClock size={17}/>}>
+   <div className="service-forecast-inner">
+     <div className="service-forecast-date-block">
+       <strong>Орієнтовна дата перевірки</strong>
+       {error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося отримати прогноз.</Alert>:<span className={date?'':'service-metric-neutral'}>{date?formatDate(date):emptyDate}</span>}
+       <small>{canProject?<>Наступний поріг: понад {threshold!.years} років</>:detail}</small>
+     </div>
+     <div className="service-forecast-transition">
+       <strong>Розрахункова зміна надбавки</strong>
+       {canProject?<div className="service-forecast-values"><span>{value!.percentage}%</span><ArrowRight size={17} aria-hidden="true"/><span>{threshold!.percentage}%</span></div>:<span className="service-forecast-no-transition">Немає доступного прогнозу зміни</span>}
+     </div>
+     <p className="service-forecast-note">Прогноз орієнтовний і не змінює підтверджену надбавку автоматично.</p>
    </div>
-   {value?.comparison==='different'&&<Alert variant="warning">Розрахункова надбавка відрізняється від підтвердженої. Потрібна кадрова перевірка.</Alert>}
-  </section>
+  </InfoSection>
 }

@@ -15,13 +15,13 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import { formatDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { ServiceDetailRow, ServiceForecastView } from './ServiceProjectionView'
+import { ServiceDetailRow } from './ServiceProjectionView'
 
 /** One target read, one shared editor, actual mutation replies; no employee overview scan. */
-export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh,projection=null,projectionError='',onRetryProjection=()=>{}}:{
+export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh,projection=null}:{
  employee:EmployeeCard;kind:Kind;navigationGuard:RefObject<NavigationGuard>;disabled?:boolean;refreshKey?:number
  onRefresh?:()=>void
- projection?:ServiceProjection|null;projectionError?:string;onRetryProjection?:()=>void
+ projection?:ServiceProjection|null
 }) {
  const [state,setState]=useState<{key:string;value?:Allowance|CurrentRank|null;error?:string}>(),[retry,setRetry]=useState(0),[version,setVersion]=useState(0),[open,setOpen]=useState(false)
  const opener=useRef<HTMLButtonElement|null>(null)
@@ -51,7 +51,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
         <ServiceDetailRow icon={FileText} label="Документальна підстава" value={document||'Реквізити не зазначено'}/>
       </dl>
     </div>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Percent size={22} aria-hidden="true"/>} message="Підтверджену надбавку за вислугу не внесено."/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести надбавку</button></div>}
-    <ServiceForecastView value={projection} error={projectionError} onRetry={onRetryProjection}/>
+    {projection?.comparison==='different'&&<Alert variant="warning">Розрахункова надбавка відрізняється від підтвердженої. Потрібна кадрова перевірка.</Alert>}
     {disabled&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
    </InfoSection>
    :<InfoSection title="Підтверджений поточний ранг" action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{value?'Редагувати ранг':'Внести ранг'}</button>}>

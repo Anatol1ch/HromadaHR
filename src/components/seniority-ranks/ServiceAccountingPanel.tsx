@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { CalendarCheck, CalendarDays, Clock, Layers3, Pencil, Plus } from 'lucide-react'
-import ServiceProjectionView, { ServiceDetailRow } from './ServiceProjectionView'
+import ServiceProjectionView, { ServiceDetailRow, ServiceForecastView } from './ServiceProjectionView'
 import ServiceAccountingModal from './ServiceAccountingModal'
 import type { ServiceProjection } from '../../../shared/service-calculations'
 import type { ServiceAccounting } from '../../../shared/seniority-ranks'
@@ -85,8 +85,8 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
   const periods=value?.mode==='periods'?value.periods:[]
   const displayedPeriods=showAllPeriods?periods:periods.slice(0,4)
 
-  return <>
-    <InfoSection className="service-info-panel service-tab-section" title="Стаж служби" icon={<Clock size={17}/>} action={action}>
+  return <div className="service-tab-layout">
+    <InfoSection className="service-info-panel service-tab-section service-tab-service" title="Стаж служби" icon={<Clock size={17}/>} action={action}>
       {loading?<DataState kind="loading" compact message="Завантаження стажу…"/>:error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{error}</Alert>:value?<>
         <ServiceProjectionView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>
         <dl className="service-detail-list">
@@ -104,6 +104,7 @@ export default function ServiceAccountingPanel({ employeeId, hireDate, navigatio
       </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Clock size={22} aria-hidden="true"/>} message="Підтверджений стаж служби не внесено."/><button ref={trigger} type="button" className="primary-button service-empty-action-button" onClick={event=>openEditor(event.currentTarget)}><Plus size={17} aria-hidden="true"/>Внести стаж</button></div>}
     </InfoSection>
     {renderAllowancePanel({value:projection,error:projectionError,onRetry:()=>setProjectionRetry(v=>v+1)})}
+    <ServiceForecastView value={projection} error={projectionError} onRetry={()=>setProjectionRetry(v=>v+1)}/>
     {modalOpen&&<ServiceAccountingModal employeeId={employeeId} hireDate={hireDate} navigationGuard={navigationGuard} returnFocus={trigger.current} onClose={closeEditor} onSaved={saved} onCleared={cleared} onBusyChange={onBusyChange}/>}
-  </>
+  </div>
 }
