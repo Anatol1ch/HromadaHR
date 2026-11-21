@@ -1,5 +1,5 @@
 import { rankOrigins, type RankOrigin, allowancePercentages, type AllowanceInput, type RankInput, type Allowance, type CurrentRank } from '../../../shared/seniority-ranks.ts'
-import { formatDate, formatDateInput, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
+import { formatDate, formatDateInput, isIsoCalendarDate, parseDateInput, todayIsoDate } from '../../lib/dates.ts'
 export type Kind = 'allowance' | 'rank'
 export interface Draft { status: string; percentage: string; rank: string; assignedOn: string; effectiveOn: string; origin: string; reviewAnchorOn: string; originNote: string; documentType: string; documentNumber: string; documentDate: string; reviewOn: string }
 export function draftFor(value: Allowance | CurrentRank | null): Draft {
@@ -30,6 +30,11 @@ export function validateDraft(kind: Kind, v: Draft, today = todayIsoDate()) {
 }
 export function canSaveAllowanceDraft(v: Draft, dirty: boolean, busy: boolean) {
  return !busy && dirty && Object.keys(validateDraft('allowance',v)).length===0
+}
+export function allowanceHireDateDraft(hireDate: string, today = todayIsoDate()) {
+ if (!isIsoCalendarDate(hireDate)) return null
+ const date = formatDateInput(hireDate)
+ return validateDraft('allowance', { ...draftFor(null), effectiveOn: date }, today).effectiveOn ? null : date
 }
 function basis(v: Draft) { return { documentType: v.documentType.trim() || null, documentNumber: v.documentNumber.trim() || null, documentDate: parseDateInput(v.documentDate) } }
 export function allowanceInput(v: Draft): AllowanceInput {

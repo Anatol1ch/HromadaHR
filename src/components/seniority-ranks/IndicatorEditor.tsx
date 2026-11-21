@@ -15,7 +15,7 @@ import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { parseDateInput, todayIsoDate } from '../../lib/dates'
 import { personnelMessage, fullName } from '../../employees/model'
-import { rankOriginLabels, documentTypeOptions, toggleSeparateDate, allowanceInput, canSaveAllowanceDraft, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { rankOriginLabels, documentTypeOptions, toggleSeparateDate, allowanceHireDateDraft, allowanceInput, canSaveAllowanceDraft, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
@@ -35,6 +35,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  const [error,setError]=useState('')
  const [clearing,setClearing]=useState(false)
  const [separateDate,setSeparateDate]=useState(!!value?.effectiveOn)
+ const [useHireDate,setUseHireDate]=useState(false)
  const details=useRef<HTMLDetailsElement>(null)
  const form=useRef<HTMLFormElement>(null), owner=useRef<HTMLDivElement>(null), alive=useRef(true)
  const id=useId()
@@ -42,8 +43,8 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  const requestClose=useUnsavedChanges(dirty,inFlight,navigationGuard,owner)
  function dateValues(v: Draft) { return { assignedOn:parseDateInput(v.assignedOn)??'', effectiveOn:parseDateInput(v.effectiveOn)??'', documentDate:parseDateInput(v.documentDate)??'', reviewOn:parseDateInput(v.reviewOn)??'', reviewAnchorOn:parseDateInput(v.reviewAnchorOn)??'' } }
- function reset(next: Allowance | CurrentRank | null) { const v=draftFor(next);setInitial(v);setDraft(v);setDates(dateValues(v));setSeparateDate(!!next?.effectiveOn);setErrors({});setError('') }
- function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined})) }
+ function reset(next: Allowance | CurrentRank | null) { const v=draftFor(next);setInitial(v);setDraft(v);setDates(dateValues(v));setSeparateDate(!!next?.effectiveOn);setUseHireDate(false);setErrors({});setError('') }
+ function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined}));if(kind==='allowance'&&key==='effectiveOn')setUseHireDate(false);if(kind==='allowance'&&key==='status'&&text!=='confirmed')setUseHireDate(false) }
  async function mutate(clear=false) {
   if(inFlight.current) return
   if(!clear&&kind==='allowance'&&!dirty)return
@@ -69,7 +70,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewOn'|'reviewAnchorOn',label:string,required=false) {
   return field(key,label,<DateField key={key} id={id+key} value={dates[key]} initialDraft={draft[key]} required={required} disabled={busy}
    max={key==='assignedOn'||key==='effectiveOn'?todayIsoDate():undefined} error={errors[key]}
-   onDraftChange={v=>change(key,v)} onChange={v=>setDates(current=>({...current,[key]:v}))}/>,required)
+   onDraftChange={v=>change(key,v)} onChange={v=>{setDates(current=>({...current,[key]:v}));if(kind==='allowance'&&key==='effectiveOn')setUseHireDate(false)}}/>,required)
  }
  function text(key: 'documentType'|'documentNumber', label: string, max: number) {
   return field(key,label,<><ValidatedInput id={id+key} value={draft[key]} maxLength={max} disabled={busy}
@@ -82,6 +83,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
   </div>
  }
  const applicable=kind==='rank'||draft.status==='confirmed'
+ const allowanceHireDate=allowanceHireDateDraft(row.employee.hireDate)
  const close=()=>requestClose(onClose)
  const footer=<div className="employee-form-footer">
   {error&&!clearing&&<Alert variant="error">{error}</Alert>}
@@ -107,6 +109,10 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
         {date('assignedOn','Дата присвоєння',true)}
        </>}
       </div></fieldset>
+      {kind==='allowance'&&applicable&&<div className="seniority-date-option allowance-hire-date-option">
+       <button type="button" className="seniority-switch" role="switch" aria-checked={useHireDate} aria-labelledby={id+'-hire-date-label'} aria-describedby={id+'-hire-date-hint'} disabled={busy||!allowanceHireDate} onClick={()=>{const next=!useHireDate;setUseHireDate(next);if(next&&allowanceHireDate){setDraft(current=>({...current,effectiveOn:allowanceHireDate}));setErrors(current=>({...current,effectiveOn:undefined}));setDates(current=>({...current,effectiveOn:parseDateInput(allowanceHireDate)??''}))}}}><span aria-hidden="true"/></button>
+       <div><span id={id+'-hire-date-label'}>Використати дату прийняття на роботу</span><small id={id+'-hire-date-hint'}>Підставити дату прийняття як початок дії надбавки</small></div>
+      </div>}
       {kind==='rank'&&<>
        <div className="seniority-date-option">
         <button type="button" className="seniority-switch" role="switch" aria-checked={separateDate} aria-labelledby={id+'-separate-label'} aria-describedby={id+'-separate-hint'} aria-controls={separateDate?id+'-separate-field':undefined} disabled={busy}

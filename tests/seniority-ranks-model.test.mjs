@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowanceInput, rankInput, draftFor, validateDraft, canSaveAllowanceDraft } from '../src/components/seniority-ranks/model.ts'
+import { allowanceInput, rankInput, draftFor, validateDraft, canSaveAllowanceDraft, allowanceHireDateDraft } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
@@ -47,4 +47,10 @@ test('allowance save requires a changed valid draft, permits explicitly selected
  const notApplicable={...initial,status:'not_applicable'}
  assert.equal(canSaveAllowanceDraft(notApplicable,true,false),true)
  assert.equal(canSaveAllowanceDraft({...notApplicable,documentType:'x'.repeat(201)},true,false),false)
+})
+test('allowance hire-date shortcut accepts only valid non-future dates',()=>{
+ assert.equal(allowanceHireDateDraft('2020-02-29','2026-11-21'),'29.02.2020')
+ assert.equal(allowanceHireDateDraft('2026-11-22','2026-11-21'),null)
+ assert.equal(allowanceHireDateDraft('2026-02-30','2026-11-21'),null)
+ assert.equal(allowanceHireDateDraft('','2026-11-21'),null)
 })
