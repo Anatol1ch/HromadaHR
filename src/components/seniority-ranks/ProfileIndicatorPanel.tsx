@@ -1,5 +1,5 @@
 import { useEffect,useRef,useState,type RefObject } from 'react'
-import { BadgePercent, CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
+import { Award, BadgePercent, CalendarDays, FileText, Percent, Plus, Pencil } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
 import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
 import type { ServiceProjection } from '../../../shared/service-calculations'
@@ -57,7 +57,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
       {disabled&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
     </div>}
    </InfoSection>
-   :<InfoSection title="Підтверджений поточний ранг" action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>{value?'Редагувати ранг':'Внести ранг'}</button>}>
+   :<InfoSection className="service-info-panel service-tab-section" title="Підтверджений поточний ранг" icon={<Award size={17} aria-hidden="true"/>} action={current&&!current.error&&value&&<button ref={opener} type="button" className="secondary-button" disabled={disabled} onClick={()=>setOpen(true)}>Редагувати ранг</button>}>
    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого показника…"/>:value?<>
     <strong className="seniority-value">{`${rank!.rank} ранг`}</strong>
     {rank&&<dl className="info-grid">
@@ -69,9 +69,9 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
      {rank.originNote&&<InfoItem label="Пояснення підстави" value={rank.originNote} wide/>}
     </dl>}
     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
-   </>:<DataState kind="empty" compact message="Поточний ранг не внесено."/>}
+   </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Award size={22} aria-hidden="true"/>} message="Поточний ранг працівника не внесено"/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести ранг</button></div>}
   </InfoSection>}
-  {kind==='rank'&&<RankProjectionPanel employeeId={employee.id} refreshKey={refreshKey+version} showCurrent={false} showConfirmedDetails={false}/>}
+  {kind==='rank'&&<RankProjectionPanel employeeId={employee.id} refreshKey={refreshKey+version} showCurrent={false} showConfirmedDetails={false} showMissingRankPrompt/>}
   {open&&<FocusedIndicatorEditor key={employee.id+kind} employeeId={employee.id} kind={kind} navigationGuard={navigationGuard} returnFocus={opener.current} onClose={()=>close()} onSaved={(_,saved)=>{setState({key,value:saved});setVersion(v=>v+1);onRefresh?.();close(false)}}/>}
  </>
 }
