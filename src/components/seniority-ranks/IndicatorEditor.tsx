@@ -111,7 +111,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
       </div></fieldset>
       {kind==='allowance'&&applicable&&<div className="seniority-date-option allowance-hire-date-option">
        <button type="button" className="seniority-switch" role="switch" aria-checked={useHireDate} aria-labelledby={id+'-hire-date-label'} aria-describedby={id+'-hire-date-hint'} disabled={busy||!allowanceHireDate} onClick={()=>{const next=!useHireDate;setUseHireDate(next);if(next&&allowanceHireDate){setDraft(current=>({...current,effectiveOn:allowanceHireDate}));setErrors(current=>({...current,effectiveOn:undefined}));setDates(current=>({...current,effectiveOn:parseDateInput(allowanceHireDate)??''}))}}}><span aria-hidden="true"/></button>
-       <div><span id={id+'-hire-date-label'}>Використати дату прийняття на роботу</span><small id={id+'-hire-date-hint'}>Підставити дату прийняття як початок дії надбавки</small></div>
+       <div><span id={id+'-hire-date-label'}>Підставити дату прийняття як початок дії надбавки</span><span className="visually-hidden" id={id+'-hire-date-hint'}>Перемикач лише заповнює поле; зв’язок між датами не зберігається.</span></div>
       </div>}
       {kind==='rank'&&<>
        <div className="seniority-date-option">

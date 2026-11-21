@@ -5,7 +5,7 @@
 .service-empty-action-button.primary-button { box-sizing:border-box; width:184px; max-width:100%; height:auto; min-height:40px; padding:var(--space-2) var(--space-3); gap:var(--space-2); font-size:13px; font-weight:600; white-space:normal; }
 .service-empty-action-button.primary-button svg { width:17px; height:17px; }
 .seniority-date-option { display: flex; align-items: center; gap: var(--space-2); padding-block: var(--space-1); font-size: 13px; color: var(--color-text-label); }
-.allowance-hire-date-option { box-sizing: border-box; width: 100%; padding-block: var(--space-3); border-top: 1px solid var(--border-surface); }
+.allowance-hire-date-option { box-sizing: border-box; width: 100%; padding-block: var(--space-2); border-top: 1px solid var(--border-surface); }
 
 .seniority-footer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .seniority-footer-actions .employee-form-actions { margin-inline-start: auto; }
