@@ -6,6 +6,7 @@ import { serviceBaselineSql } from './service-baseline-migration.js'
 import { serviceAccountingSql } from './service-accounting-migration.js'
 import { seniorityRanksSql } from './seniority-ranks-migration.js'
 import { allowanceReviewRemovalSql } from './allowance-review-removal-migration.js'
+import { rankEditorRefinementSql } from './rank-editor-refinement-migration.js'
 import { leaveRightsSql } from './leave-rights-migration.js'
 import { specialLeavesSql } from './special-leaves-migration.js'
 import { leaveCorrectionsSql } from './leave-corrections-migration.js'
@@ -192,7 +193,8 @@ CREATE TABLE personnel_reminder_states (
 }, { version:20, name:'document_leave_links', requiresBackup:true, sql:documentLeaveLinksSql,
 }, {version:21,name:"document_numbering",requiresBackup:true,sql:documentNumberingSql},
 {version:22,name:'service_accounting_model',requiresBackup:true,sql:serviceAccountingSql},
-{version:23,name:'remove_allowance_review_date',requiresBackup:true,sql:allowanceReviewRemovalSql}]
+{version:23,name:'remove_allowance_review_date',requiresBackup:true,sql:allowanceReviewRemovalSql},
+{version:24,name:'rank_editor_refinement',requiresBackup:true,sql:rankEditorRefinementSql}]
 
 function checksum(migration: Migration) {
   return createHash('sha256').update(`${migration.name}\n${migration.sql}`).digest('hex')

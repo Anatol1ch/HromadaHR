@@ -9,6 +9,6 @@ export const stateInput=z.union([
 ])
 export const issue=z.strictObject({...identity,employeeId:id,employeeName:z.string(),direction:z.enum(['allowance','rank','service_leave']),category:z.enum(['upcoming','due','review_needed','data_incomplete']),
  title:z.string(),explanation:z.string(),date:calendarDate.nullable(),tab:z.enum(['general','leave','service','rank']),
- dates:z.array(z.strictObject({source:z.enum(['manual','projection']),date:calendarDate})),state:z.enum(['active','reviewed','snoozed']),snoozedUntil:calendarDate.nullable(),
+ dates:z.array(z.strictObject({source:z.literal('projection'),date:calendarDate})),state:z.enum(['active','reviewed','snoozed']),snoozedUntil:calendarDate.nullable(),
 })
 export const overview=z.strictObject({calculatedOn:calendarDate,settings,issues:z.array(issue),activeCount:z.number().int().nonnegative()})

@@ -13,7 +13,7 @@ const categories={upcoming:'Наближається перевірка',due:'Н
 export function IssueSummary({issue,onOpen}:{issue:PersonnelIssue;onOpen:(issue:PersonnelIssue)=>void}) {
  return <><div className="control-issue-heading"><strong>{issue.title}</strong><span>{categories[issue.category]}</span></div>
   <p>{issue.employeeName} · {directionLabels[issue.direction]}</p><p className="employee-hint">{issue.explanation}</p>
-  {issue.dates.length>0&&<ul className="control-dates">{issue.dates.map(d=><li key={d.source+d.date}>{d.source==='manual'?'Ручний контроль':'Орієнтовний прогноз'}: {formatDate(d.date)}</li>)}</ul>}
+  {issue.dates.length>0&&<ul className="control-dates">{issue.dates.map(d=><li key={d.source+d.date}>Орієнтовний прогноз: {formatDate(d.date)}</li>)}</ul>}
   {issue.state==='snoozed'&&issue.snoozedUntil&&<p className="employee-hint">Відкладено до {formatDate(issue.snoozedUntil)}</p>}
   {issue.state==='reviewed'&&<p className="employee-hint">Переглянуто. Це не підтверджує оформлення кадрового рішення.</p>}
   <button type="button" className="secondary-button" onClick={()=>onOpen(issue)}>Відкрити картку</button>

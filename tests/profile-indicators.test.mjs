@@ -12,7 +12,7 @@ import { todayIsoDate } from '../dist-electron/src/lib/dates.js'
 const ok=data=>({ok:true,data}),failed=code=>({ok:false,error:{code}})
 const employee={id:'e',lastName:'Тест',firstName:'Анна',middleName:null,employeeType:'official'}
 const allowance={status:'confirmed',percentage:0,effectiveOn:'2020-01-01',documentType:'Історична підстава',documentNumber:'7',documentDate:'2020-01-02'}
-const rank={rank:6,assignedOn:'2020-01-01',origin:'civil_service_equivalence',reviewAnchorOn:'2020-02-01',originNote:'Документально підтверджено',effectiveOn:null}
+const rank={rank:6,assignedOn:'2020-01-01',origin:'civil_service_equivalence',reviewAnchorOn:'2020-02-01'}
 const tick=()=>new Promise(resolve=>setImmediate(resolve))
 
 test('fresh context reads only the target and current employee; null, confirmed zero and not-applicable remain distinct',async()=>{
@@ -64,10 +64,10 @@ test('existing Main APIs preserve actual allowance/rank replies, refresh project
  const snapshot=()=>Object.fromEntries(['employee_service_records','employee_service_periods','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,c.database.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot()
  const a=s.saveAllowance(e.id,{...allowance,percentage:10});assert.deepEqual((await readIndicatorContext(api,e.id,'allowance')).data.allowance,a);assert.equal(s.getServiceProjection(e.id).comparison,'different')
- const r=s.saveRank(e.id,{...rank,documentType:'Рішення ради',documentNumber:'8',documentDate:'2020-01-03',reviewOn:'2030-01-01'});assert.deepEqual((await readIndicatorContext(api,e.id,'rank')).data.rank,r);assert.equal(s.getRankProjection(e.id).status,'retained_higher_rank')
+ const r=s.saveRank(e.id,{...rank,origin:'oms_assigned',documentType:'Рішення ради',documentNumber:'8',documentDate:'2020-01-03'});assert.deepEqual((await readIndicatorContext(api,e.id,'rank')).data.rank,r);assert.equal(s.getRankProjection(e.id).status,'retained_higher_rank')
  s.saveAllowance(e.id,{...allowance,percentage:15});assert.equal(s.getServiceProjection(e.id).comparison,'matches');assert.deepEqual(s.getRank(e.id),r)
  s.clearAllowance(e.id);assert.equal((await readIndicatorContext(api,e.id,'allowance')).data.allowance,null);assert.deepEqual(s.getRank(e.id),r)
  const final=s.saveAllowance(e.id,{...allowance,percentage:0});assert.equal(final.percentage,0)
  s.clearRank(e.id);assert.equal((await readIndicatorContext(api,e.id,'rank')).data.rank,null);assert.equal(s.getRankProjection(e.id).reason,'missing_rank');assert.deepEqual(s.getAllowance(e.id),final)
- assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
+ assert.deepEqual(snapshot(),before);assert.equal(c.schemaVersion,24);assert.deepEqual(c.database.pragma('foreign_key_check'),[]);assert.equal(c.database.pragma('integrity_check',{simple:true}),'ok')
 })

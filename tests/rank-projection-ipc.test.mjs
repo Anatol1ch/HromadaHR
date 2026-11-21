@@ -23,7 +23,7 @@ async function fixture(t){
  c.database.prepare('INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,confirmed_at,review_on) VALUES (?,?,?,?,?)').run(employee.id,15,'2023-01-01','2023-01-01T00:00:00.000Z','2030-01-01')
  const ledger=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file)
  t.after(()=>{c.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-rank-projection-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
- assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
+ assert.equal(c.schemaVersion,24);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=16 ORDER BY version').all(),ledger)
  const s=new SeniorityRanksService(storage,()=>false),leave=new LeaveService(storage,()=>false)
  return {s,p,leave,storage,employee,staff,get db(){return c.database},async reopen(){c.close();c=await openStorageSafely(file)}}
 }
@@ -31,16 +31,16 @@ function integrity(db){assert.deepEqual(db.pragma('foreign_key_check'),[]);asser
 test('v16→v17 preserves old rank as unknown; CRUD, SQL checks, live connection and cascade',async t=>{
  const f=await fixture(t),{s,employee:e}=f
  const legacy=s.getRank(e.id)
- assert.equal(legacy.origin,'unknown');assert.equal(legacy.reviewAnchorOn,null);assert.equal(legacy.originNote,null);assert.equal(legacy.rank,15);assert.equal(legacy.confirmedAt,'2023-01-01T00:00:00.000Z')
+ assert.equal(legacy.origin,'unknown');assert.equal(legacy.reviewAnchorOn,null);assert.equal(Object.hasOwn(legacy,'originNote'),false);assert.equal(legacy.rank,15);assert.equal(legacy.confirmedAt,'2023-01-01T00:00:00.000Z')
  assert.equal(s.getRankProjection(e.id).reason,'unknown_origin')
  const {employeeId,confirmedAt,...input}=legacy
- const saved=s.saveRank(e.id,{...input,origin:'civil_service_equivalence',reviewAnchorOn:'2022-01-01',originNote:'Підтверджено документами'})
- assert.equal(saved.origin,'civil_service_equivalence');assert.equal(s.listOverview().find(row=>row.employee.id===e.id).rank.originNote,'Підтверджено документами')
- for(const patch of [{origin:'bad'},{reviewAnchorOn:'2026-02-30'},{originNote:'x'.repeat(501)}])assert.throws(()=>s.saveRank(e.id,{...input,...patch}),code('INVALID_ARGUMENTS'))
- for(const sql of ["origin='bad'","review_anchor_on='2026-02-30'","origin_note=''"])assert.throws(()=>f.db.exec('UPDATE employee_current_ranks SET '+sql))
+ const saved=s.saveRank(e.id,{...input,origin:'civil_service_equivalence',reviewAnchorOn:'2022-01-01'})
+ assert.equal(saved.origin,'civil_service_equivalence');assert.equal(s.listOverview().find(row=>row.employee.id===e.id).rank.origin,'civil_service_equivalence')
+ for(const patch of [{origin:'bad'},{reviewAnchorOn:'2026-02-30'}])assert.throws(()=>s.saveRank(e.id,{...input,...patch}),code('INVALID_ARGUMENTS'))
+ for(const sql of ["origin='bad'","review_anchor_on='2026-02-30'"])assert.throws(()=>f.db.exec('UPDATE employee_current_ranks SET '+sql))
  assert.throws(()=>f.db.prepare('INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,confirmed_at) VALUES (?,?,?,?)').run(randomUUID(),15,'2020-01-01',new Date().toISOString()))
- integrity(f.db);await f.reopen();assert.equal(s.getRank(e.id).originNote,'Підтверджено документами')
- s.clearRank(e.id);assert.equal(s.saveRank(e.id,{...input,origin:'oms_early',reviewAnchorOn:'2024-01-01',originNote:null}).origin,'oms_early')
+ integrity(f.db);await f.reopen();assert.equal(s.getRank(e.id).origin,'civil_service_equivalence')
+ s.clearRank(e.id);assert.throws(()=>s.saveRank(e.id,{...input,origin:'oms_early',reviewAnchorOn:'2024-01-01'}),code('INVALID_ARGUMENTS'))
  f.p.deleteEmployee(e.id);assert.equal(f.db.prepare('SELECT count(*) AS n FROM employee_current_ranks').get().n,0);integrity(f.db)
 })
 test('projection leaves confirmed rank, manual date, allowances, service and leave rows unchanged',async t=>{
@@ -53,7 +53,7 @@ test('projection leaves confirmed rank, manual date, allowances, service and lea
  leave.savePeriods(e.id,[{leaveType:'annual_main',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:5,referenceEntitlementDays:null}])
  const snapshot=()=>Object.fromEntries(['employees','employee_current_ranks','employee_seniority_allowances','employee_service_records','employee_service_periods','employee_service_leave_start','employee_leave_rights','leave_period_balances','leave_records','leave_allocations'].map(table=>[table,f.db.prepare('SELECT * FROM '+table).all()]))
  const before=snapshot(),forecast=s.getRankProjection(e.id)
- assert.equal(forecast.nextRank,14);assert.equal(forecast.reviewOn,'2026-06-15');assert.equal(forecast.rank.reviewOn,'2030-01-01')
+ assert.equal(forecast.nextRank,14);assert.equal(forecast.reviewOn,'2026-06-15');assert.equal(Object.hasOwn(forecast.rank,'reviewOn'),false)
  assert.deepEqual(snapshot(),before)
  assert.equal(s.getRankProjection(f.staff.id).status,'not_applicable')
  assert.throws(()=>s.getRankProjection(randomUUID()),code('NOT_FOUND'))

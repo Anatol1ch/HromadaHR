@@ -9,7 +9,7 @@ export interface ControlSettings {horizonDays:WarningHorizon}
 export interface PersonnelIssue {
  id:string;employeeId:string;employeeName:string;direction:ControlDirection;category:ControlCategory
  title:string;explanation:string;date:string|null;tab:EmployeeCardTab
- dates:{source:'manual'|'projection';date:string}[]
+ dates:{source:'projection';date:string}[]
  fingerprint:string;state:'active'|'reviewed'|'snoozed';snoozedUntil:string|null
 }
 export interface ControlOverview {calculatedOn:string;settings:ControlSettings;issues:PersonnelIssue[];activeCount:number}

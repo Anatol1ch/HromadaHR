@@ -7,15 +7,15 @@ import Select from '../Select'
 import Alert from '../Alert'
 import ConfirmDialog from '../ConfirmDialog'
 import Modal from '../Modal'
-import ValidatedInput, { ValidatedTextarea } from '../ValidatedInput'
+import ValidatedInput from '../ValidatedInput'
 import useUnsavedChanges, { type NavigationGuard } from '../employees/useUnsavedChanges'
-import { Check, X, Trash2, Percent, BadgePercent, FileText } from 'lucide-react'
+import { Check, X, Trash2, Percent, BadgePercent, FileText, Award } from 'lucide-react'
 import { uncertainIndicatorResult } from './profile-indicators'
 import { focusFirstInvalid } from '../../lib/keyboardNavigation'
 import { notifySystemToast } from '../SystemToastHost'
 import { parseDateInput, todayIsoDate } from '../../lib/dates'
-import { personnelMessage, fullName } from '../../employees/model'
-import { rankOriginLabels, documentTypeOptions, toggleSeparateDate, allowanceHireDateDraft, allowanceInput, canSaveAllowanceDraft, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
+import { personnelMessage } from '../../employees/model'
+import { rankOriginLabels, legacyRankOriginLabels, documentTypeOptions, allowanceHireDateDraft, allowanceInput, canSaveAllowanceDraft, canSaveRankDraft, draftFor, rankInput, validateDraft, type Draft, type Kind } from './model'
 
 type Props = {
  kind: Kind; row: SeniorityOverview; navigationGuard: RefObject<NavigationGuard>
@@ -34,23 +34,21 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  const [errors,setErrors]=useState<Partial<Record<keyof Draft,string>>>({})
  const [error,setError]=useState('')
  const [clearing,setClearing]=useState(false)
- const [separateDate,setSeparateDate]=useState(!!value?.effectiveOn)
  const [useHireDate,setUseHireDate]=useState(false)
- const details=useRef<HTMLDetailsElement>(null)
  const form=useRef<HTMLFormElement>(null), owner=useRef<HTMLDivElement>(null), alive=useRef(true)
  const id=useId()
  const dirty= JSON.stringify(initial)!==JSON.stringify(draft)
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
  const requestClose=useUnsavedChanges(dirty,inFlight,navigationGuard,owner)
- function dateValues(v: Draft) { return { assignedOn:parseDateInput(v.assignedOn)??'', effectiveOn:parseDateInput(v.effectiveOn)??'', documentDate:parseDateInput(v.documentDate)??'', reviewOn:parseDateInput(v.reviewOn)??'', reviewAnchorOn:parseDateInput(v.reviewAnchorOn)??'' } }
- function reset(next: Allowance | CurrentRank | null) { const v=draftFor(next);setInitial(v);setDraft(v);setDates(dateValues(v));setSeparateDate(!!next?.effectiveOn);setUseHireDate(false);setErrors({});setError('') }
- function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined}));if(kind==='allowance'&&key==='effectiveOn')setUseHireDate(false);if(kind==='allowance'&&key==='status'&&text!=='confirmed')setUseHireDate(false) }
+ function dateValues(v: Draft) { return { assignedOn:parseDateInput(v.assignedOn)??'', effectiveOn:parseDateInput(v.effectiveOn)??'', documentDate:parseDateInput(v.documentDate)??'', reviewAnchorOn:parseDateInput(v.reviewAnchorOn)??'' } }
+ function reset(next: Allowance | CurrentRank | null) { const v=draftFor(next);setInitial(v);setDraft(v);setDates(dateValues(v));setUseHireDate(false);setErrors({});setError('') }
+ function change(key: keyof Draft, text: string) { setDraft(v=>({...v,[key]:text}));setErrors(v=>({...v,[key]:undefined}));if((kind==='allowance'&&key==='effectiveOn')||(kind==='rank'&&key==='assignedOn'))setUseHireDate(false);if(kind==='allowance'&&key==='status'&&text!=='confirmed')setUseHireDate(false) }
  async function mutate(clear=false) {
   if(inFlight.current) return
-  if(!clear&&kind==='allowance'&&!dirty)return
+  if(!clear&&(kind==='allowance'?!canSaveAllowanceDraft(draft,dirty,busy):!canSaveRankDraft(draft,dirty,busy)))return
   if(!clear) {
    const next=validateDraft(kind,draft);setErrors(next)
-   if(Object.keys(next).length) {if((next.origin||next.reviewAnchorOn||next.originNote)&&details.current)details.current.open=true;setError('Перевірте позначені поля.');requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
+   if(Object.keys(next).length) {setError('Перевірте позначені поля.');requestAnimationFrame(()=>{if(form.current)focusFirstInvalid(form.current)});return}
    if(!form.current?.checkValidity()) {form.current?.reportValidity();return}
   }
   inFlight.current=true;onBusy(true);setError('')
@@ -67,10 +65,10 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
  function field(key: keyof Draft, label: string, control: ReactNode, required=false) {
   return <div className="recipient-field employee-field"><label htmlFor={id+key}>{label}{required&&<span aria-hidden="true"> *</span>}</label>{control}</div>
  }
- function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewOn'|'reviewAnchorOn',label:string,required=false) {
+ function date(key: 'assignedOn'|'effectiveOn'|'documentDate'|'reviewAnchorOn',label:string,required=false) {
   return field(key,label,<DateField key={key} id={id+key} value={dates[key]} initialDraft={draft[key]} required={required} disabled={busy}
-   max={key==='assignedOn'||key==='effectiveOn'?todayIsoDate():undefined} error={errors[key]}
-   onDraftChange={v=>change(key,v)} onChange={v=>{setDates(current=>({...current,[key]:v}));if(kind==='allowance'&&key==='effectiveOn')setUseHireDate(false)}}/>,required)
+   max={key==='assignedOn'||key==='effectiveOn'||key==='reviewAnchorOn'?todayIsoDate():undefined} error={errors[key]}
+   onDraftChange={v=>change(key,v)} onChange={v=>{setDates(current=>({...current,[key]:v}));if((kind==='allowance'&&key==='effectiveOn')||(kind==='rank'&&key==='assignedOn'))setUseHireDate(false)}}/>,required)
  }
  function text(key: 'documentType'|'documentNumber', label: string, max: number) {
   return field(key,label,<><ValidatedInput id={id+key} value={draft[key]} maxLength={max} disabled={busy}
@@ -91,15 +89,15 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
    {value&&<button type="button" className="secondary-button danger-action" disabled={busy} onClick={()=>{setError('');setClearing(true)}}><Trash2 size={17} aria-hidden="true"/>Очистити показник</button>}
    <div className="employee-form-actions">
      <button type="button" className="secondary-button" disabled={busy} onClick={()=>requestClose(onClose)}><X size={17} aria-hidden="true"/>Скасувати</button>
-     <button type="submit" form={id} className="primary-button" disabled={kind==='allowance'?!canSaveAllowanceDraft(draft,dirty,busy):busy} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy?'Збереження…':kind==='allowance'?'Зберегти надбавку':'Зберегти зміни'}</button>
+     <button type="submit" form={id} className="primary-button" disabled={kind==='allowance'?!canSaveAllowanceDraft(draft,dirty,busy):!canSaveRankDraft(draft,dirty,busy)} aria-busy={busy}><Check size={17} aria-hidden="true"/>{busy?'Збереження…':kind==='allowance'?'Зберегти надбавку':'Зберегти ранг'}</button>
    </div>
   </div>
  </div>
- return <Modal title={title} description={kind==='rank'?fullName(row.employee):undefined} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:undefined} returnFocus={returnFocus} size="large" className={`employee-form-modal seniority-modal${kind==='allowance'?' allowance-indicator-modal':''}`} busy={busy} onClose={close} footer={footer}>
+ return <Modal title={title} headerIcon={kind==='allowance'?<Percent size={21} aria-hidden="true"/>:<Award size={21} aria-hidden="true"/>} returnFocus={returnFocus} size="large" className={`employee-form-modal seniority-modal${kind==='allowance'?' allowance-indicator-modal':''}`} busy={busy} onClose={close} footer={footer}>
   <div ref={owner} className="employee-card">
     <form id={id} ref={form} noValidate className="employee-form" aria-busy={busy} onSubmit={e=>{e.preventDefault();void mutate()}}>
-     <InfoSection title={kind==='allowance'?'Відомості про надбавку':'Відомості про ранг'} icon={kind==='allowance'?<BadgePercent size={18}/>:undefined}>
-      <fieldset className="recipient-fieldset" disabled={busy}><div className={`employee-form-grid${kind==='allowance'?' allowance-fields':''}`}>
+     <InfoSection title={kind==='allowance'?'Відомості про надбавку':'Відомості про ранг'} icon={kind==='allowance'?<BadgePercent size={18}/>:<Award size={18}/>}>
+      <fieldset className="recipient-fieldset" disabled={busy}><div className={`employee-form-grid${kind==='allowance'?' allowance-fields':' rank-fields'}`}>
        {kind==='allowance'?<>
         {select('status','Статус',[{value:'confirmed',label:'Підтверджено'},{value:'not_applicable',label:'Не застосовується'}])}
         {applicable&&select('percentage','Відсоток',allowancePercentages.map(n=>({value:String(n),label:`${n}%`})),true)}
@@ -109,31 +107,23 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
         {date('assignedOn','Дата присвоєння',true)}
        </>}
       </div></fieldset>
+      {kind==='rank'&&<div className="seniority-date-option rank-hire-date-option">
+       <button type="button" className="seniority-switch" role="switch" aria-checked={useHireDate} aria-labelledby={id+'-rank-hire-label'} aria-describedby={id+'-rank-hire-hint'} disabled={busy||!allowanceHireDate} onClick={()=>{const next=!useHireDate;setUseHireDate(next);if(next&&allowanceHireDate){setDraft(current=>({...current,assignedOn:allowanceHireDate}));setErrors(current=>({...current,assignedOn:undefined}));setDates(current=>({...current,assignedOn:parseDateInput(allowanceHireDate)??''}))}}}><span aria-hidden="true"/></button>
+       <div><span id={id+'-rank-hire-label'}>Підставити дату прийняття як дату присвоєння рангу</span><span className="visually-hidden" id={id+'-rank-hire-hint'}>Перемикач лише заповнює поле; зв’язок між датами не зберігається.</span></div>
+      </div>}
+      {kind==='rank'&&Object.hasOwn(legacyRankOriginLabels,draft.origin)&&<Alert variant="warning">Збережене походження «{legacyRankOriginLabels[draft.origin]}» потребує перегляду. Виберіть актуальний варіант перед збереженням; запис не перекласифіковано.</Alert>}
+      {kind==='rank'&&<div className="employee-form-grid rank-origin-grid">
+       {select('origin','Походження рангу',[...(Object.hasOwn(legacyRankOriginLabels,draft.origin)?[{value:draft.origin,label:`${legacyRankOriginLabels[draft.origin]} — потрібно переглянути`}]:[]),...Object.entries(rankOriginLabels).map(([value,label])=>({value,label}))],true)}
+       {(draft.origin==='oms_retained'||draft.origin==='civil_service_equivalence')&&date('reviewAnchorOn','Опорна дата для контрольного строку')}
+      </div>}
       {kind==='allowance'&&applicable&&<div className="seniority-date-option allowance-hire-date-option">
        <button type="button" className="seniority-switch" role="switch" aria-checked={useHireDate} aria-labelledby={id+'-hire-date-label'} aria-describedby={id+'-hire-date-hint'} disabled={busy||!allowanceHireDate} onClick={()=>{const next=!useHireDate;setUseHireDate(next);if(next&&allowanceHireDate){setDraft(current=>({...current,effectiveOn:allowanceHireDate}));setErrors(current=>({...current,effectiveOn:undefined}));setDates(current=>({...current,effectiveOn:parseDateInput(allowanceHireDate)??''}))}}}><span aria-hidden="true"/></button>
        <div><span id={id+'-hire-date-label'}>Підставити дату прийняття як початок дії надбавки</span><span className="visually-hidden" id={id+'-hire-date-hint'}>Перемикач лише заповнює поле; зв’язок між датами не зберігається.</span></div>
       </div>}
-      {kind==='rank'&&<>
-       <div className="seniority-date-option">
-        <button type="button" className="seniority-switch" role="switch" aria-checked={separateDate} aria-labelledby={id+'-separate-label'} aria-describedby={id+'-separate-hint'} aria-controls={separateDate?id+'-separate-field':undefined} disabled={busy}
-         onClick={()=>{const next=toggleSeparateDate(draft,!separateDate);setSeparateDate(!separateDate);setDraft(next);setDates(v=>({...v,effectiveOn:parseDateInput(next.effectiveOn)??''}));setErrors(v=>({...v,effectiveOn:undefined}))}}><span aria-hidden="true"/></button>
-        <div><span id={id+'-separate-label'}>Окрема дата початку дії</span><small id={id+'-separate-hint'}>За замовчуванням збігається з датою присвоєння</small></div>
-       </div>
-       {separateDate&&<div id={id+'-separate-field'} className="employee-form-grid">{date('effectiveOn','Дата початку дії')}</div>}
-      </>}
      </InfoSection>
-     {kind==='rank'&&<details ref={details} className="employee-card-section">
-      <summary>Додаткові відомості про ранг</summary>
-      <div className="employee-form-grid">
-       {select('origin','Походження рангу',Object.entries(rankOriginLabels).map(([value,label])=>({value,label})))}
-       {date('reviewAnchorOn','Опорна дата для контрольного строку')}
-       <div className="recipient-field employee-field"><label htmlFor={id+'originNote'}>Пояснення особливої підстави</label><ValidatedTextarea id={id+'originNote'} value={draft.originNote} maxLength={500} rows={3} disabled={busy} aria-invalid={!!errors.originNote} onChange={e=>change('originNote',e.target.value)}/>{errors.originNote&&<span className="field-error">{errors.originNote}</span>}</div>
-      </div>
-     </details>}
-     <InfoSection title="Документальна підстава" icon={kind==='allowance'?<FileText size={18}/>:undefined}><fieldset className="recipient-fieldset" disabled={busy}><div className={`employee-form-grid${kind==='allowance'?' allowance-document-fields':''}`}>
+     <InfoSection title="Документальна підстава" icon={<FileText size={18}/>}><fieldset className="recipient-fieldset" disabled={busy}><div className="employee-form-grid allowance-document-fields">
       {select('documentType','Тип документа',documentTypeOptions(draft.documentType))}{text('documentNumber','Номер документа',100)}{date('documentDate','Дата документа')}
      </div></fieldset></InfoSection>
-     {kind==='rank'&&<InfoSection title="Контроль"><div className="employee-form-grid">{date('reviewOn','Дата наступної перевірки')}</div></InfoSection>}
     </form>
   </div>
   {clearing&&<ConfirmDialog title={kind==='allowance'?'Очистити надбавку?':'Очистити поточний ранг?'} message="Поточний запис і незбережені зміни цього напряму буде вилучено. Попередня версія не зберігається окремо. Інший показник залишиться без змін." confirmLabel="Очистити" error={error} onCancel={()=>{if(!inFlight.current){setClearing(false);setError('')}}} onConfirm={()=>mutate(true)}/>}

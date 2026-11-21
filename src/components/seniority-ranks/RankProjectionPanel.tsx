@@ -7,7 +7,7 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import { formatDate, todayIsoDate } from '../../lib/dates'
 import { personnelMessage } from '../../employees/model'
-import { rankOriginLabels } from './model'
+import { rankOriginLabel } from './model'
 import { CalendarClock } from 'lucide-react'
 
 /** Read-only view shared by the rank editor and employee card. Never proposes a write. */
@@ -33,14 +33,11 @@ export default function RankProjectionPanel({employeeId,refreshKey,showCurrent=t
     {value.usualRanks.length>0&&<InfoItem label="Звичайний діапазон" value={value.usualRanks.join(', ')}/>}
     {value.nextRank!==null&&<InfoItem label="Наступний можливий ранг" value={`${value.nextRank} ранг`}/>}
     {value.reviewOn&&<InfoItem label="Орієнтовна перевірка" value={formatDate(value.reviewOn)}/>}
-    {showConfirmedDetails&&value.rank&&<InfoItem label="Походження рангу" value={rankOriginLabels[value.rank.origin]}/>}
+    {showConfirmedDetails&&value.rank&&<InfoItem label="Походження рангу" value={rankOriginLabel(value.rank.origin)}/>}
     {showConfirmedDetails&&value.rank?.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(value.rank.reviewAnchorOn)}/>}
-    {showConfirmedDetails&&value.rank?.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(value.rank.reviewOn)}/>}
-    {showConfirmedDetails&&value.rank?.originNote&&<InfoItem label="Пояснення підстави" value={value.rank.originNote} wide/>}
    </dl>
    <p className="employee-hint">{value.explanation}</p>
    {(value.timing==='past'||value.timing==='today')&&<Alert variant="info">Настав орієнтовний строк перевірки можливості присвоєння чергового рангу.</Alert>}
-   {value.rank?.reviewOn&&value.reviewOn&&value.rank.reviewOn!==value.reviewOn&&<p className="employee-hint">Ручна й розрахункова дати відрізняються. Ручну дату не змінено.</p>}
    </>}
   </>}
  </InfoSection>

@@ -7,11 +7,14 @@ export interface BasisDocument { documentType: string | null; documentNumber: st
 export type AllowanceInput = BasisDocument & (
   { status: 'confirmed'; percentage: typeof allowancePercentages[number]; effectiveOn: string } |
   { status: 'not_applicable'; percentage: null; effectiveOn: null })
-export const rankOrigins = ['unknown','oms_assigned','oms_retained','civil_service_equivalence','oms_early','pension_exception','other'] as const
+export const rankOrigins = ['oms_assigned','oms_retained','civil_service_equivalence'] as const
 export type RankOrigin = typeof rankOrigins[number]
-export interface RankInput extends BasisDocument { reviewOn: string | null; origin: RankOrigin; reviewAnchorOn: string | null; originNote: string | null; rank: number; assignedOn: string; effectiveOn: string | null }
+/** Retired values stay readable so existing records require explicit review, never reclassification. */
+export const storedRankOrigins = [...rankOrigins, 'unknown', 'oms_early', 'pension_exception', 'other'] as const
+export type StoredRankOrigin = typeof storedRankOrigins[number]
+export interface RankInput extends BasisDocument { origin: RankOrigin; reviewAnchorOn: string | null; rank: number; assignedOn: string }
 export type Allowance = AllowanceInput & { employeeId: string; confirmedAt: string }
-export interface CurrentRank extends RankInput { employeeId: string; confirmedAt: string }
+export interface CurrentRank extends Omit<RankInput, 'origin'> { origin: StoredRankOrigin; employeeId: string; confirmedAt: string }
 export type SeniorityRanksErrorCode = 'RANK_REQUIRES_OFFICIAL'
 export interface SeniorityOverview { employee: EmployeeCard; allowance: Allowance | null; rank: CurrentRank | null }
 export interface ServicePeriod { id: string; startDate: string; endDate: string | null }

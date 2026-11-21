@@ -7,7 +7,7 @@ import { createCloseGuards } from '../src/employees/closeGuards.ts'
 import { createControlRequests } from '../src/components/personnel-control/requests.ts'
 const base={mode:'snapshot',years:4,months:0,days:0,asOfDate:'2026-01-01'}
 const allowance={employeeId:'e',status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
-const rank={employeeId:'e',rank:15,origin:'oms_assigned',assignedOn:'2025-01-01',effectiveOn:null,reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
+const rank={employeeId:'e',rank:15,origin:'oms_assigned',assignedOn:'2025-01-01',reviewAnchorOn:null,documentType:null,documentNumber:null,documentDate:null,confirmedAt:'2020-01-01T00:00:00.000Z'}
 const employee={id:'e',lastName:'Тест',firstName:'Анна',middleName:null,employeeType:'official',positionCategory:'VII',positionStartedOn:'2025-01-01',positionId:'p',departmentId:'d'}
 const facts={employee,serviceAccounting:base,allowance,rank,leave:{acquiredOn:null,rightStatus:'has_right',periods:[]}}
 const items=(f=facts,on='2026-01-01',horizon=30)=>buildPersonnelIssues(f,on,horizon)
@@ -37,15 +37,16 @@ test('all three projections produce issues without new formulas, and crossed thr
  assert.equal(control(items({...service,leave:{...service.leave,rightStatus:'no_right'}},'2026-01-15'),'service_leave').category,'review_needed')
  assert.deepEqual(items({...facts,employee:{...employee,employeeType:'staff'}}),[])
 })
-test('missing data is separate; special ranks are never called illegal or given an ordinary next rank',()=>{
+test('missing data is separate; special or unprojectable ranks never receive a manual control date',()=>{
  const missing=items({...facts,serviceAccounting:null,rank:null,allowance:null,employee:{...employee,positionCategory:null,positionStartedOn:null}})
  assert.ok(missing.length);assert.ok(missing.every(i=>i.category==='data_incomplete'));assert.equal(missing.find(i=>i.direction==='rank').tab,'general')
  for(const patch of [{rank:13},{rank:6},{rank:15,origin:'unknown'},{rank:15,origin:'civil_service_equivalence'}]){
   const rows=items({...facts,rank:{...rank,...patch}},'2028-01-01')
   assert.equal(control(rows,'rank'),undefined)
  }
- const manual=control(items({...facts,rank:{...rank,rank:6,reviewOn:'2026-01-01'}},'2026-01-01'),'rank')
- assert.equal(manual.category,'due');assert.doesNotMatch(manual.title,/присвоєння/)
+ const calculated=control(items({...facts,rank:{...rank,rank:15,assignedOn:'2024-01-01'},employee:{...employee,positionStartedOn:'2024-01-01'}},'2026-01-01'),'rank')
+ assert.equal(calculated.category,'due');assert.match(calculated.title,/присвоєння 14-го рангу/)
+ assert.equal(control(items({...facts,rank:{...rank,rank:6}},'2026-01-01'),'rank'),undefined)
  assert.equal(items({...facts,rank:{...rank,rank:6,origin:'unknown'}}).find(i=>i.direction==='rank').category,'data_incomplete')
  const frozen=items({...facts,serviceAccounting:{mode:'periods',periods:[{id:'12345678-1234-4123-8123-123456789012',startDate:'2022-01-02',endDate:'2026-01-01'}]}},'2030-01-01')
  assert.equal(control(frozen,'allowance'),undefined);assert.equal(control(frozen,'service_leave'),undefined)
@@ -56,10 +57,11 @@ test('historical balances are not normative discrepancies; new comparable confir
  assert.equal(control(items(f,'2027-01-01'),'service_leave'),undefined)
  const current=control(items({...f,leave:{...f.leave,periods:[{...period,accountingBasis:'confirmed_entitlement'}]}},'2027-01-01'),'service_leave')
  assert.equal(current.category,'review_needed');assert.match(current.explanation,/не є залишком/)
- const stamped=items({...facts,rank:{...rank,reviewOn:'2026-01-05'},allowance:{...allowance,confirmedAt:'2026-01-01T00:00:00.000Z'}})
- assert.equal(control(stamped,'rank').fingerprintData,control(items({...facts,rank:{...rank,reviewOn:'2026-01-05'}}),'rank').fingerprintData)
- const reversed=Object.fromEntries(Object.entries({...rank,reviewOn:'2026-01-05'}).reverse())
- assert.equal(control(items({...facts,rank:reversed}),'rank').fingerprintData,control(stamped,'rank').fingerprintData)
+ const rankFacts={...facts,employee:{...employee,positionStartedOn:'2024-01-04'},rank:{...rank,assignedOn:'2024-01-04'}}
+ const stamped=items({...rankFacts,allowance:{...allowance,confirmedAt:'2026-01-01T00:00:00.000Z'}})
+ assert.equal(control(stamped,'rank').fingerprintData,control(items(rankFacts),'rank').fingerprintData)
+ const reversed=Object.fromEntries(Object.entries(rankFacts.rank).reverse())
+ assert.equal(control(items({...rankFacts,rank:reversed}),'rank').fingerprintData,control(stamped,'rank').fingerprintData)
 })
 test('calendar shifts and priority order are deterministic, bounded and independent of DST',()=>{
  assert.equal(controlDay('2024-02-28',1),'2024-02-29');assert.equal(controlDay('2024-12-31',1),'2025-01-01')

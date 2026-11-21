@@ -1,12 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { allowanceInput, rankInput, draftFor, validateDraft, canSaveAllowanceDraft, allowanceHireDateDraft } from '../src/components/seniority-ranks/model.ts'
+import { allowanceInput, rankInput, draftFor, validateDraft, canSaveAllowanceDraft, canSaveRankDraft, allowanceHireDateDraft } from '../src/components/seniority-ranks/model.ts'
 import { personnelMessage } from '../src/employees/model.ts'
 const basis={documentType:null,documentNumber:null,documentDate:null}
 const confirmed={...basis,status:'confirmed',percentage:0,effectiveOn:'2020-02-29'}
 const notApplicable={...basis,status:'not_applicable',percentage:null,effectiveOn:null}
-const rank={...basis,reviewOn:null,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:13,assignedOn:'2020-02-29',effectiveOn:null}
-test('forms require explicit values and keep optional rank effective date null',()=>{
+const rank={...basis,origin:'oms_assigned',reviewAnchorOn:null,rank:13,assignedOn:'2020-02-29'}
+test('forms require explicit rank origin and use assignment date as the only rank date',()=>{
  const empty=draftFor(null)
  assert.equal(empty.percentage,'');assert.equal(empty.rank,'')
  assert.ok(validateDraft('allowance',empty).percentage)
@@ -17,9 +17,10 @@ test('forms require explicit values and keep optional rank effective date null',
  assert.deepEqual(allowanceInput(draftFor(confirmed)),confirmed)
  assert.deepEqual(rankInput(draftFor(rank)),rank)
  assert.deepEqual(allowanceInput({...draftFor(confirmed),status:'not_applicable'}),notApplicable)
- const reviewed={...draftFor(rank),reviewOn:'01.01.2099',documentDate:'01.01.2099'}
- assert.equal(rankInput(reviewed).reviewOn,'2099-01-01')
+ const reviewed={...draftFor(rank),documentDate:'01.01.2099'}
+ assert.ok(validateDraft('rank',{...reviewed,assignedOn:'01.01.2099'}).assignedOn)
  assert.equal(rankInput(reviewed).documentDate,'2099-01-01')
+ assert.equal(validateDraft('rank',empty).origin,'Оберіть один із чинних варіантів походження рангу.')
 })
 test('calendar drafts, future dates, mandatory fields and text limits are validated before conversion',()=>{
  const base=draftFor(confirmed)
@@ -47,6 +48,9 @@ test('allowance save requires a changed valid draft, permits explicitly selected
  const notApplicable={...initial,status:'not_applicable'}
  assert.equal(canSaveAllowanceDraft(notApplicable,true,false),true)
  assert.equal(canSaveAllowanceDraft({...notApplicable,documentType:'x'.repeat(201)},true,false),false)
+ assert.equal(canSaveRankDraft(draftFor(rank),false,false),false)
+ assert.equal(canSaveRankDraft(draftFor(rank),true,true),false)
+ assert.equal(canSaveRankDraft(draftFor(rank),true,false),true)
 })
 test('allowance hire-date shortcut accepts only valid non-future dates',()=>{
  assert.equal(allowanceHireDateDraft('2020-02-29','2026-11-21'),'29.02.2020')

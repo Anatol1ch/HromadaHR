@@ -58,10 +58,9 @@ export function buildPersonnelIssues(f:ControlFacts,on:string,horizon:number):Dr
   [different?`Розрахунковий показник — ${service.percentage}%, підтверджений — ${f.allowance?.percentage}%. Перевірте підстави для зміни.`:'Перевірте кадрові підстави та умови застосування надбавки.',allowanceEvent.map(event=>`Поріг понад ${(event.threshold as {years:number}).years} років — ${(event.threshold as {percentage:number}).percentage}%. Розрахункова дата ${event.date<=on?'настала':'наближається'} й залишається орієнтовною.`).join(' '),'Автоматичний прогноз не змінює підтверджене кадрове рішення.'].filter(Boolean).join(' '),
   different?'review_needed':allowanceDates.some(d=>d.date<=on)?'due':'upcoming',allowanceDates,'service',[f.serviceAccounting,f.allowance,allowanceEvent])
  const rankDates:PersonnelIssue['dates']=[]
- if(f.rank?.reviewOn&&f.rank.reviewOn<=through)rankDates.push({source:'manual',date:f.rank.reviewOn})
  if(rank.status==='projected'&&rank.reviewOn&&rank.reviewOn<=through)rankDates.push({source:'projection',date:rank.reviewOn})
  if(rankDates.length)add('rank','control',rank.status==='projected'?`Перевірити можливість присвоєння ${rank.nextRank}-го рангу`:'Перевірити підтверджені відомості рангу',
-  rank.status==='projected'?'Орієнтовний строк кадрової перевірки. Потрібна перевірка результатів роботи та інших застосовних умов.':`Ручний контрольний строк. ${rank.explanation}`,
+   `Орієнтовний строк кадрової перевірки. Потрібна перевірка результатів роботи та інших застосовних умов. ${rank.explanation}`,
   rankDates.some(d=>d.date<=on)?'due':'upcoming',rankDates,'rank',[f.rank,e.positionCategory,e.positionStartedOn,e.positionId,e.departmentId])
  const leaveEvent=leave.status==='calculated'?thresholdEvent(f.serviceAccounting,on,through,date=>projectOmsServiceLeave(f.serviceAccounting,date,e.employeeType,f.leave),(threshold,date)=>f.leave.rightStatus==='has_right'&&(date<=on||leave.currentPeriods.some(p=>p.accountingBasis==='confirmed_entitlement'&&p.confirmedDays>=(threshold as {days:number}).days))):[]
  const rightDiff=leave.status==='calculated'&&(leave.recommendedDays??0)>0&&leave.rightStatus!=='has_right'

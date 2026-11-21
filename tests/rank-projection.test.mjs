@@ -5,7 +5,7 @@ import { positionCategories } from '../dist-electron/shared/personnel.js'
 import { rankOrigins } from '../dist-electron/shared/seniority-ranks.js'
 import { draftFor,rankInput,validateDraft } from '../src/components/seniority-ranks/model.ts'
 const e={employeeType:'official',positionCategory:'VII',positionStartedOn:'2024-06-15'}
-const rank={employeeId:'11111111-1111-4111-8111-111111111111',rank:15,assignedOn:'2023-01-01',effectiveOn:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:'2030-01-01',confirmedAt:'2024-01-01T00:00:00.000Z',origin:'oms_assigned',reviewAnchorOn:null,originNote:null}
+const rank={employeeId:'11111111-1111-4111-8111-111111111111',rank:15,assignedOn:'2023-01-01',documentType:null,documentNumber:null,documentDate:null,confirmedAt:'2024-01-01T00:00:00.000Z',origin:'oms_assigned',reviewAnchorOn:null}
 const run=(employee=e,r=rank,on='2026-01-01')=>projectRank(employee,r,on)
 test('all category bounds and one-number progression share one matrix',()=>{
  positionCategories.forEach((category,index)=>{
@@ -29,17 +29,17 @@ test('higher retained rank, below-range rank, missing facts and staff never fabr
  assert.equal(run(e,null).reason,'missing_rank')
  assert.equal(run({...e,employeeType:'staff',positionCategory:null}).status,'not_applicable')
 })
-test('origins require suitable explicit anchors, preserve special cases and manual dates',()=>{
+test('retired origins remain visible but require review; current special origins require a confirmed anchor',()=>{
  assert.equal(run(e,{...rank,origin:'unknown'}).reason,'unknown_origin')
- assert.equal(run(e,{...rank,origin:'pension_exception',reviewAnchorOn:'2024-01-01'}).reason,'pension_exception')
- for(const origin of rankOrigins.filter(o=>!['unknown','oms_assigned','pension_exception'].includes(o))){
+ for(const origin of ['oms_early','pension_exception','other']) assert.equal(run(e,{...rank,origin,reviewAnchorOn:'2024-01-01'}).reason,'legacy_origin')
+ for(const origin of rankOrigins.filter(o=>o!=='oms_assigned')){
   assert.equal(run(e,{...rank,origin}).reason,'missing_anchor')
   const projected=run(e,{...rank,origin,reviewAnchorOn:'2025-01-01'})
   assert.equal(projected.status,'projected');assert.equal(projected.reviewOn,'2027-01-01');assert.equal(projected.reason,'explicit_anchor')
  }
  const earlier=run({...e,positionStartedOn:'2021-01-01'},{...rank,origin:'civil_service_equivalence',assignedOn:'2025-01-01',reviewAnchorOn:'2022-01-01'})
- assert.equal(earlier.reviewOn,'2024-01-01');assert.equal(earlier.timing,'past');assert.equal(earlier.rank.reviewOn,'2030-01-01')
- assert.equal(run(e,{...rank,reviewAnchorOn:'2099-01-01'}).reason,'future_anchor')
+ assert.equal(earlier.reviewOn,'2024-01-01');assert.equal(earlier.timing,'past')
+ assert.equal(run(e,{...rank,origin:'oms_retained',reviewAnchorOn:'2099-01-01'}).reason,'future_anchor')
 })
 test('two calendar years clamp leap day and timing includes today without inventing entitlement',()=>{
  const leap={...e,positionStartedOn:'2024-02-29'},r={...rank,assignedOn:'2024-01-01'}
@@ -48,13 +48,14 @@ test('two calendar years clamp leap day and timing includes today without invent
  }
  assert.equal(run(e,rank).reviewOn,'2026-06-15')
  assert.equal(run({...e,positionStartedOn:'9998-01-01'},{...rank,assignedOn:'9998-01-01'},'9999-01-01').reason,'date_range')
- for(const patch of [{assignedOn:'2026-02-30'},{assignedOn:'2099-01-01'},{reviewAnchorOn:'bad'},{rank:16},{origin:'invalid'}])assert.equal(run(e,{...rank,...patch}).status,'requires_review')
+ for(const patch of [{assignedOn:'2026-02-30'},{assignedOn:'2099-01-01'},{origin:'oms_retained',reviewAnchorOn:'bad'},{rank:16},{origin:'invalid'}])assert.equal(run(e,{...rank,...patch}).status,'requires_review')
 })
 test('rank form roundtrips origin facts and validates only rank-specific drafts',()=>{
- const draft=draftFor({...rank,origin:'oms_retained',reviewAnchorOn:'2020-02-29',originNote:'Документальне пояснення'})
+ const draft=draftFor({...rank,origin:'oms_retained',reviewAnchorOn:'2020-02-29'})
  const input=rankInput(draft)
- assert.equal(input.origin,'oms_retained');assert.equal(input.reviewAnchorOn,'2020-02-29');assert.equal(input.originNote,'Документальне пояснення')
- for(const patch of [{origin:'bad'},{reviewAnchorOn:'31.02.2024'},{originNote:'x'.repeat(501)}])assert.ok(Object.keys(validateDraft('rank',{...draft,...patch})).length)
- const clean={...draft,reviewAnchorOn:'',originNote:''};assert.equal(rankInput(clean).reviewAnchorOn,null);assert.equal(rankInput(clean).originNote,null)
+ assert.equal(input.origin,'oms_retained');assert.equal(input.reviewAnchorOn,'2020-02-29')
+ for(const patch of [{origin:'bad'},{reviewAnchorOn:'31.02.2024'},{reviewAnchorOn:'31.12.2099'}])assert.ok(Object.keys(validateDraft('rank',{...draft,...patch},'2026-01-01')).length)
+ const ordinary=rankInput({...draft,origin:'oms_assigned',reviewAnchorOn:'29.02.2020'});assert.equal(ordinary.reviewAnchorOn,null)
+ assert.equal(validateDraft('rank',draftFor(null)).origin,'Оберіть один із чинних варіантів походження рангу.')
  const copy=structuredClone(rank);run(e,rank);assert.deepEqual(rank,copy)
 })

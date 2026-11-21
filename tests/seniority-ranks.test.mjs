@@ -15,7 +15,7 @@ import { ipcChannels } from '../dist-electron/shared/ipc.js'
 import { allowanceInput as allowanceFormInput, draftFor } from '../src/components/seniority-ranks/model.ts'
 const basis = { documentType: null, documentNumber: null, documentDate: null }
 const allowance = { ...basis, status: 'confirmed', percentage: 0, effectiveOn: '2020-01-01' }
-const rank = { ...basis, reviewOn:null, origin:'unknown', reviewAnchorOn:null, originNote:null, rank:15, assignedOn: '2020-01-01', effectiveOn: null }
+const rank = { ...basis, origin:'oms_assigned', reviewAnchorOn:null, rank:15, assignedOn: '2020-01-01' }
 const code = expected => error => error.code === expected
 function integrity(db) {
   assert.equal(db.pragma('integrity_check', { simple: true }), 'ok')
@@ -28,7 +28,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,23)
+  assert.equal(connection.schemaVersion,24)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
@@ -61,8 +61,8 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   s.clearAllowance(e.id); s.clearAllowance(e.id)
   assert.equal(s.getAllowance(e.id),null)
   s.saveAllowance(other.id,allowance)
-  assert.equal(s.saveRank(e.id,rank).effectiveOn,null)
-  assert.equal(s.saveRank(e.id,{...rank,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:1,documentDate:'2021-02-01'}).rank,1)
+  assert.equal(s.saveRank(e.id,rank).origin,'oms_assigned')
+  assert.equal(s.saveRank(e.id,{...rank, rank:1,documentDate:'2021-02-01'}).rank,1)
   assert.throws(()=>p.updateEmployee(e.id,{...details,employeeType:'staff'}),code('EMPLOYEE_HAS_CURRENT_RANK'))
   assert.throws(()=>f.db.prepare("UPDATE employees SET employee_type='staff' WHERE id=?").run(e.id))
   s.clearRank(e.id)
@@ -104,7 +104,7 @@ test('v12→v13, current indicators, integrity, atomic failure, cascade and live
   for (const table of ['employee_seniority_allowances','employee_current_ranks']) assert.equal(f.db.prepare(`SELECT count(*) AS n FROM ${table} WHERE employee_id=?`).get(e.id).n,0)
   assert.equal(s.getAllowance(other.id).percentage,0)
   assert.equal(f.db.pragma('table_info(employee_seniority_allowances)').some(c=>c.name==='review_on'),false)
-  assert.equal(f.db.pragma('table_info(employee_current_ranks)').some(c=>c.name==='review_on'),true)
+  assert.equal(f.db.pragma('table_info(employee_current_ranks)').some(c=>['review_on','effective_on','origin_note'].includes(c.name)),false)
   integrity(f.db)
 })
 test('v22→v23 removes only allowance review_on and preserves allowance and rank records',async t=>{
@@ -116,24 +116,45 @@ test('v22→v23 removes only allowance review_on and preserves allowance and ran
  const service=new SeniorityRanksService(storage,()=>false)
  service.saveAllowance(employee.id,{...allowance,percentage:15,documentType:'Розпорядження голови',documentNumber:'123',documentDate:'2020-01-02'})
  connection.database.prepare("UPDATE employee_seniority_allowances SET review_on='2031-02-03' WHERE employee_id=?").run(employee.id)
- service.saveRank(employee.id,{...rank,reviewOn:'2030-01-01'})
- connection.close();connection=await openStorageSafely(file)
+ service.saveRank(employee.id,rank)
+ connection.close();connection=await openStorageSafely(file,migrations.slice(0,23))
  t.after(()=>{connection.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep));rmSync(root,{recursive:true,force:true,maxRetries:5})})
  const db=connection.database
  assert.equal(connection.schemaVersion,23)
  assert.deepEqual(db.prepare('SELECT status,percentage,effective_on AS effectiveOn,document_type AS documentType,document_number AS documentNumber,document_date AS documentDate FROM employee_seniority_allowances WHERE employee_id=?').get(employee.id),{status:'confirmed',percentage:15,effectiveOn:'2020-01-01',documentType:'Розпорядження голови',documentNumber:'123',documentDate:'2020-01-02'})
- assert.equal(db.prepare('SELECT review_on FROM employee_current_ranks WHERE employee_id=?').get(employee.id).review_on,'2030-01-01')
+ assert.equal(db.prepare('SELECT assigned_on FROM employee_current_ranks WHERE employee_id=?').get(employee.id).assigned_on,'2020-01-01')
  assert.equal(db.pragma('table_info(employee_seniority_allowances)').some(c=>c.name==='review_on'),false)
  assert.equal(db.pragma('table_info(employee_current_ranks)').some(c=>c.name==='review_on'),true)
  assert.deepEqual(db.pragma('foreign_key_check'),[])
+})
+test('v23→v24 removes only retired rank fields and preserves legacy origin and other HR records',async t=>{
+ const root=mkdtempSync(join(tmpdir(),'hr-rank-v24-')),file=join(root,'test.db')
+ let connection=await openStorageSafely(file,migrations.slice(0,23))
+ const db0=connection.database,storage={getDatabase:()=>db0},personnel=new PersonnelService(storage,()=>false)
+ const departmentId=personnel.createDepartment({name:'Тест'}).id,positionId=personnel.createPosition({name:'Тест'}).id
+ const employee=personnel.createEmployee({firstName:'Тест',lastName:'Міграція',middleName:null,birthDate:null,positionStartedOn:null,positionCategory:null,hireDate:'2020-01-01',employeeType:'official',departmentId,positionId})
+ const service=new SeniorityRanksService(storage,()=>false)
+ service.saveAllowance(employee.id,{...allowance,percentage:15,documentType:'Розпорядження голови',documentNumber:'123',documentDate:'2020-01-02'})
+ service.saveRank(employee.id,{...rank,origin:'oms_assigned',reviewAnchorOn:null,documentType:'Рішення ради',documentNumber:'9-р',documentDate:'2020-01-02'})
+ db0.prepare("UPDATE employee_current_ranks SET origin='oms_early',review_anchor_on='2021-02-03',effective_on='2022-03-04',review_on='2024-05-06',origin_note='legacy note' WHERE employee_id=?").run(employee.id)
+ const beforeEmployee=db0.prepare('SELECT * FROM employees WHERE id=?').get(employee.id)
+ connection.close();connection=await openStorageSafely(file)
+ t.after(()=>{connection.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep));rmSync(root,{recursive:true,force:true,maxRetries:5})})
+ const db=connection.database
+ assert.equal(connection.schemaVersion,24)
+ assert.deepEqual(db.prepare('SELECT employee_id,rank,assigned_on,document_type,document_number,document_date,origin,review_anchor_on FROM employee_current_ranks WHERE employee_id=?').get(employee.id),{employee_id:employee.id,rank:15,assigned_on:'2020-01-01',document_type:'Рішення ради',document_number:'9-р',document_date:'2020-01-02',origin:'oms_early',review_anchor_on:'2021-02-03'})
+ assert.deepEqual(db.prepare('SELECT * FROM employees WHERE id=?').get(employee.id),beforeEmployee)
+ assert.equal(db.prepare('SELECT percentage FROM employee_seniority_allowances WHERE employee_id=?').get(employee.id).percentage,15)
+ assert.equal(db.pragma('table_info(employee_current_ranks)').some(c=>['effective_on','review_on','origin_note'].includes(c.name)),false)
+ assert.ok(migrations[23].requiresBackup);assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.equal(db.pragma('integrity_check',{simple:true}),'ok')
 })
 test('Zod and SQLite reject invalid indicators and dates', async t => {
   const f=await fixture(t),s=f.service,id=f.employee.id
   assert.throws(()=>s.saveAllowance(id,{...allowance,reviewOn:null}),code('INVALID_ARGUMENTS'))
   for(const v of [{percentage:5},{percentage:10.5},{percentage:null},{status:'unknown'},{effectiveOn:'2026-02-30'},{effectiveOn:'2099-01-01'},{status:'not_applicable'},{confirmedAt:'2020-01-01T00:00:00.000Z'},{documentDate:'2025-02-29'}]) assert.throws(()=>s.saveAllowance(id,{...allowance,...v}),code('INVALID_ARGUMENTS'))
-  for(const v of [{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:0},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:16},{origin:'unknown', reviewAnchorOn:null, originNote:null, rank:1.5},{assignedOn:'2099-01-01'},{effectiveOn:'2099-01-01'},{assignedOn:'2025-02-29'}]) assert.throws(()=>s.saveRank(id,{...rank,...v}),code('INVALID_ARGUMENTS'))
+  for(const v of [{origin:'unknown', reviewAnchorOn:null, rank:1},{rank:0},{rank:16},{rank:1.5},{assignedOn:'2099-01-01'},{effectiveOn:'2099-01-01'},{assignedOn:'2025-02-29'}]) assert.throws(()=>s.saveRank(id,{...rank,...v}),code('INVALID_ARGUMENTS'))
   s.saveAllowance(id,allowance);s.saveRank(id,rank)
-  for(const sql of ["UPDATE employee_seniority_allowances SET percentage=5", "UPDATE employee_seniority_allowances SET status='not_applicable'", "UPDATE employee_seniority_allowances SET effective_on='2025-02-29'", "UPDATE employee_current_ranks SET rank=16", "UPDATE employee_current_ranks SET assigned_on='2099-01-01'", "UPDATE employee_current_ranks SET effective_on='2099-01-01'", "UPDATE employee_current_ranks SET assigned_on=NULL"]) assert.throws(()=>f.db.exec(sql))
+  for(const sql of ["UPDATE employee_seniority_allowances SET percentage=5", "UPDATE employee_seniority_allowances SET status='not_applicable'", "UPDATE employee_seniority_allowances SET effective_on='2025-02-29'", "UPDATE employee_current_ranks SET rank=16", "UPDATE employee_current_ranks SET assigned_on='2099-01-01'", "UPDATE employee_current_ranks SET assigned_on=NULL"]) assert.throws(()=>f.db.exec(sql))
   integrity(f.db)
 })
 test('preload IPC roundtrip, sender guards, payloads and sanitized failures',async t=>{
@@ -177,7 +198,7 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
   assert.equal(handle(event,...args,'extra').error.code,'INVALID_ARGUMENTS')
  }
  const h=handlers.get(ipcChannels.senioritySaveRank)
- for(const args of [[id],[id,{...rank,origin:'unknown', reviewAnchorOn:null, originNote:null, rank:16}],[id,{...rank,confirmedAt:'injected'}],['bad',rank],[id,rank,'extra']]) assert.equal(h(event,...args).error.code,'INVALID_ARGUMENTS')
+ for(const args of [[id],[id,{...rank,origin:'unknown', reviewAnchorOn:null, rank:16}],[id,{...rank,confirmedAt:'injected'}],['bad',rank],[id,rank,'extra']]) assert.equal(h(event,...args).error.code,'INVALID_ARGUMENTS')
  for(const bad of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}]) assert.equal(h(bad,id,rank).error.code,'FORBIDDEN')
  contents.mainFrame.url='https://invalid.test/'
  assert.equal(h(event,id,rank).error.code,'FORBIDDEN');contents.mainFrame.url=url

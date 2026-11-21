@@ -17,7 +17,7 @@ const code=c=>e=>e.code===c
 async function fixture(t,migrationCount=13) {
  const root=mkdtempSync(join(tmpdir(),'hr-service-accounting-')),file=join(root,'test.db')
  let c=await openStorageSafely(file,migrations.slice(0,migrationCount));c.close();c=await openStorageSafely(file)
- assert.equal(c.schemaVersion,23)
+ assert.equal(c.schemaVersion,24)
  const storage={getDatabase:()=>c.database},p=new PersonnelService(storage,()=>false),s=new SeniorityRanksService(storage,()=>false)
  const departmentId=p.createDepartment({name:'Тест'}).id,positionId=p.createPosition({name:'Тест'}).id
  const details={lastName:'Синтетичний',firstName:'Приклад',middleName:null,birthDate:null,positionStartedOn:null,positionCategory:null,hireDate:'2026-01-01',employeeType:'official',departmentId,positionId}
@@ -97,7 +97,7 @@ test('v21 migration preserves only unambiguous auto-accruing snapshots and leave
  db.prepare('INSERT INTO employee_service_baselines VALUES (?,?,?,?,?,?,?,?)').run(no,2,0,0,'2020-01-01',null,new Date().toISOString(),0)
  db.prepare("INSERT INTO employee_seniority_allowances(employee_id,status,percentage,effective_on,confirmed_at) VALUES (?,'confirmed',10,'2020-01-01',?)").run(yes,new Date().toISOString())
  old.close();old=await openStorageSafely(file);t.after(()=>{old.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep)&&basename(root).startsWith('hr-service-migration-'));rmSync(root,{recursive:true,force:true,maxRetries:5})})
- assert.equal(old.schemaVersion,23);assert.deepEqual(old.database.prepare('SELECT * FROM employee_service_records').all().map(r=>[r.employee_id,r.mode,r.years,r.months,r.days]),[[yes,'snapshot',4,2,3]])
+ assert.equal(old.schemaVersion,24);assert.deepEqual(old.database.prepare('SELECT * FROM employee_service_records').all().map(r=>[r.employee_id,r.mode,r.years,r.months,r.days]),[[yes,'snapshot',4,2,3]])
  assert.equal(old.database.prepare('SELECT count(*) AS n FROM employees').get().n,2);assert.equal(old.database.prepare('SELECT count(*) AS n FROM employee_seniority_allowances').get().n,1)
  assert.equal(old.database.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE name='employee_service_baselines'").get().n,0);integrity(old.database)
 })

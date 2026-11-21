@@ -28,7 +28,7 @@ async function fixture(t){
  const base={mode:'snapshot',years:4,months:0,days:0,asOfDate:'2026-01-01'}
  s.saveServiceAccounting(e.id,base)
  s.saveAllowance(e.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
- s.saveRank(e.id,{rank:15,assignedOn:'2024-01-02',effectiveOn:null,origin:'oms_assigned',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:'2026-01-02'})
+ s.saveRank(e.id,{rank:15,assignedOn:'2024-01-02',origin:'oms_assigned',reviewAnchorOn:null,documentType:null,documentNumber:null,documentDate:null})
  leave.saveRights(e.id,[{leaveType:'oms_service_additional',status:'has_right'}]);leave.saveServiceLeaveStart(e.id,'2020-01-01')
  return {root,file,storage,p,s,leave,clock,control,e,staff,base,cleanup,get db(){return storage.getDatabase()}}
 }
@@ -38,7 +38,7 @@ const integrity=db=>{assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.
 test('v17→v18 retains the old ledger and facts, singleton defaults and strict FK/CHECK state structure',async t=>{
  const root=temp(t),file=join(root,'test.db');let c=await openStorageSafely(file,migrations.slice(0,17))
  const old=c.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();c.close();c=await openStorageSafely(file);t.after(()=>{c.close();clean(root)})
- assert.equal(c.schemaVersion,23);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
+ assert.equal(c.schemaVersion,24);assert.deepEqual(c.database.prepare('SELECT * FROM schema_migrations WHERE version<=17 ORDER BY version').all(),old)
  assert.deepEqual(c.database.prepare('SELECT * FROM personnel_control_settings').all(),[{id:1,horizon_days:30}])
  for(const sql of ['UPDATE personnel_control_settings SET horizon_days=15','INSERT INTO personnel_control_settings VALUES (2,30)'])assert.throws(()=>c.database.exec(sql))
  const f=await fixture(t),issue=rankIssue(f),insert=f.db.prepare('INSERT INTO personnel_reminder_states VALUES (?,?,?,?,?,?)')
@@ -62,7 +62,7 @@ test('overview is read-only; states expire, repeat on due, ignore technical stam
  control.setReminderState({id:due.id,fingerprint:due.fingerprint,state:'reviewed'});clock.on='2026-01-10';assert.equal(rankIssue(f).state,'reviewed')
  const saved=f.s.getRank(f.e.id);const {employeeId,confirmedAt,...input}=saved
  f.s.saveRank(f.e.id,input);assert.equal(rankIssue(f).state,'reviewed')
- f.s.saveRank(f.e.id,{...input,originNote:'Нова підтверджена обставина'});const updated=rankIssue(f);assert.equal(updated.state,'active');assert.notEqual(updated.fingerprint,due.fingerprint)
+ f.s.saveRank(f.e.id,{...input,documentNumber:'Новий реквізит'});const updated=rankIssue(f);assert.equal(updated.state,'active');assert.notEqual(updated.fingerprint,due.fingerprint)
  control.setReminderState({id:updated.id,fingerprint:updated.fingerprint,state:'snoozed',days:1})
  control.setReminderState({id:updated.id,fingerprint:updated.fingerprint,state:'active'});assert.equal(rankIssue(f).state,'active');assert.equal(f.db.prepare('SELECT count(*) AS n FROM personnel_reminder_states').get().n,0)
  const {id:cardId,position,department,...details}=f.p.getEmployee(f.e.id)

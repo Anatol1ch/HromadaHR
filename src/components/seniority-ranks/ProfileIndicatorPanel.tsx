@@ -5,7 +5,7 @@ import type { Allowance,CurrentRank } from '../../../shared/seniority-ranks'
 import type { ServiceProjection } from '../../../shared/service-calculations'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import type { Kind } from './model'
-import { documentLabel,rankOriginLabels } from './model'
+import { documentLabel,rankOriginLabel } from './model'
 import { readIndicator } from './profile-indicators'
 import FocusedIndicatorEditor from './FocusedIndicatorEditor'
 import RankProjectionPanel from './RankProjectionPanel'
@@ -61,12 +61,9 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
    {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого показника…"/>:value?<>
     <strong className="seniority-value">{`${rank!.rank} ранг`}</strong>
     {rank&&<dl className="info-grid">
-     <InfoItem label={rank.effectiveOn?'Дата присвоєння':'Присвоєно та діє з'} value={formatDate(rank.assignedOn)}/>
-     {rank.effectiveOn&&<InfoItem label="Початок дії" value={formatDate(rank.effectiveOn)}/>}
-     <InfoItem label="Походження рангу" value={rankOriginLabels[rank.origin]}/>
+     <InfoItem label="Дата присвоєння" value={formatDate(rank.assignedOn)}/>
+     <InfoItem label="Походження рангу" value={rankOriginLabel(rank.origin)}/>
      {rank.reviewAnchorOn&&<InfoItem label="Підтверджена опорна дата" value={formatDate(rank.reviewAnchorOn)}/>}
-     {rank.reviewOn&&<InfoItem label="Ручна контрольна дата" value={formatDate(rank.reviewOn)}/>}
-     {rank.originNote&&<InfoItem label="Пояснення підстави" value={rank.originNote} wide/>}
     </dl>}
     {document&&<p className="seniority-document"><span>Документ-підстава</span><span>{document}</span></p>}
    </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Award size={22} aria-hidden="true"/>} message="Поточний ранг працівника не внесено"/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести ранг</button></div>}

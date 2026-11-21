@@ -38,7 +38,7 @@ test('v18→v19 protects the original manifest, ledger and facts; STRICT/CHECK/F
   const old=connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all();connection.close()
   connection=await openStorageSafely(file);t.after(()=>{connection.close();clean(root)})
   const db=connection.database
-  assert.equal(connection.schemaVersion,23);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
+  assert.equal(connection.schemaVersion,24);assert.deepEqual(db.prepare('SELECT * FROM schema_migrations WHERE version<=18 ORDER BY version').all(),old)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_documents'").get().strict,1)
   assert.equal(db.prepare("SELECT strict FROM pragma_table_list WHERE name='personnel_document_employees'").get().strict,1)
   const service=new DocumentsService({getDatabase:()=>db},()=>false),doc=service.createDocument(input())
@@ -116,7 +116,7 @@ test('employee RESTRICT and controlled deletion are atomic; documents never muta
   const f=await fixture(t),s=f.service,leave=new LeaveService(f.storage,()=>false),ranks=new SeniorityRanksService(f.storage,()=>false)
   ranks.saveServiceAccounting(f.a.id,{mode:'snapshot',years:4,months:0,days:0,asOfDate:'2020-01-01'})
   ranks.saveAllowance(f.a.id,{status:'confirmed',percentage:10,effectiveOn:'2020-01-01',documentType:null,documentNumber:null,documentDate:null})
-  ranks.saveRank(f.a.id,{rank:6,assignedOn:'2020-01-01',effectiveOn:null,origin:'unknown',reviewAnchorOn:null,originNote:null,documentType:null,documentNumber:null,documentDate:null,reviewOn:null})
+  ranks.saveRank(f.a.id,{rank:6,assignedOn:'2020-01-01',origin:'oms_assigned',reviewAnchorOn:null,documentType:null,documentNumber:null,documentDate:null})
   leave.saveRights(f.a.id,[{leaveType:'annual_main',status:'has_right'}])
   leave.saveServiceLeaveStart(f.a.id,'2020-01-01')
   leave.savePeriods(f.a.id,[{leaveType:'annual_main',periodStart:'2020-01-01',periodEnd:'2020-12-31',accountingBasis:'initial_balance',confirmedDays:10,referenceEntitlementDays:null}])

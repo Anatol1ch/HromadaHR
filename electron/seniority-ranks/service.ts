@@ -48,7 +48,7 @@ export class SeniorityRanksService {
     return db.prepare<[string], Allowance>(`SELECT ${sharedColumns}, status, percentage FROM employee_seniority_allowances WHERE employee_id=?`).get(id) ?? null
   }
   private rank(db: Database.Database, id: string) {
-    return db.prepare<[string], CurrentRank>(`SELECT ${sharedColumns}, review_on AS reviewOn, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
+    return db.prepare<[string], CurrentRank>(`SELECT employee_id AS employeeId, rank, assigned_on AS assignedOn, document_type AS documentType, document_number AS documentNumber, document_date AS documentDate, confirmed_at AS confirmedAt, origin, review_anchor_on AS reviewAnchorOn FROM employee_current_ranks WHERE employee_id=?`).get(id) ?? null
   }
   private accounting(db: Database.Database, id: string): ServiceAccounting | null {
     try{return readServiceAccounting(db,id)}catch{throw new SeniorityRanksError('CONFLICT')}
@@ -86,7 +86,7 @@ export class SeniorityRanksService {
   }
   listOverview = () => this.run(null, db => {
     const allowances = new Map(db.prepare<[], Allowance>(`SELECT ${sharedColumns}, status, percentage FROM employee_seniority_allowances`).all().map(row => [row.employeeId, row]))
-    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT ${sharedColumns}, review_on AS reviewOn, rank, assigned_on AS assignedOn, origin,review_anchor_on AS reviewAnchorOn,origin_note AS originNote FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
+    const ranks = new Map(db.prepare<[], CurrentRank>(`SELECT employee_id AS employeeId, rank, assigned_on AS assignedOn, document_type AS documentType, document_number AS documentNumber, document_date AS documentDate, confirmed_at AS confirmedAt, origin, review_anchor_on AS reviewAnchorOn FROM employee_current_ranks`).all().map(row => [row.employeeId, row]))
     return new PersonnelService(this.storage, this.isBusy).listEmployees().map(employee => ({
       employee, allowance: allowances.get(employee.id) ?? null, rank: ranks.get(employee.id) ?? null,
     }))
@@ -109,14 +109,14 @@ export class SeniorityRanksService {
   }
   saveRank = (id: string, input: RankInput): CurrentRank => {
     const v = this.parse(schemas.rankInput, input)
-    this.checkDate(v.assignedOn,v.effectiveOn)
+    this.checkDate(v.assignedOn,v.reviewAnchorOn)
     return this.run(id, (db,type) => {
       if (type !== 'official') throw new SeniorityRanksError('RANK_REQUIRES_OFFICIAL')
-      db.prepare(`INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,effective_on,document_type,document_number,document_date,review_on,confirmed_at,origin,review_anchor_on,origin_note)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET rank=excluded.rank,assigned_on=excluded.assigned_on,
-        effective_on=excluded.effective_on,document_type=excluded.document_type,document_number=excluded.document_number,
-        document_date=excluded.document_date,review_on=excluded.review_on,confirmed_at=excluded.confirmed_at,origin=excluded.origin,review_anchor_on=excluded.review_anchor_on,origin_note=excluded.origin_note`)
-        .run(id,v.rank,v.assignedOn,v.effectiveOn,v.documentType,v.documentNumber,v.documentDate,v.reviewOn,new Date().toISOString(),v.origin,v.reviewAnchorOn,v.originNote)
+      db.prepare(`INSERT INTO employee_current_ranks(employee_id,rank,assigned_on,document_type,document_number,document_date,confirmed_at,origin,review_anchor_on)
+        VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(employee_id) DO UPDATE SET rank=excluded.rank,assigned_on=excluded.assigned_on,
+        document_type=excluded.document_type,document_number=excluded.document_number,document_date=excluded.document_date,
+        confirmed_at=excluded.confirmed_at,origin=excluded.origin,review_anchor_on=excluded.review_anchor_on`)
+        .run(id,v.rank,v.assignedOn,v.documentType,v.documentNumber,v.documentDate,new Date().toISOString(),v.origin,v.reviewAnchorOn)
       return this.rank(db,id)!
     })
   }
