@@ -12,6 +12,7 @@ import { LeaveService } from '../dist-electron/electron/leave/service.js'
 import { SeniorityRanksService } from '../dist-electron/electron/seniority-ranks/service.js'
 import { registerIpcHandlers } from '../dist-electron/electron/ipc.js'
 import { ipcChannels } from '../dist-electron/shared/ipc.js'
+import { allowanceInput as allowanceFormInput, draftFor } from '../src/components/seniority-ranks/model.ts'
 const basis = { documentType: null, documentNumber: null, documentDate: null }
 const allowance = { ...basis, status: 'confirmed', percentage: 0, effectiveOn: '2020-01-01' }
 const rank = { ...basis, reviewOn:null, origin:'unknown', reviewAnchorOn:null, originNote:null, rank:15, assignedOn: '2020-01-01', effectiveOn: null }
@@ -162,6 +163,14 @@ test('preload IPC roundtrip, sender guards, payloads and sanitized failures',asy
   assert.equal((await api[clear](id)).ok,true)
   assert.equal((await api[get](id)).data,null)
  }
+ const allowanceDraft={...draftFor(null),percentage:'0',effectiveOn:'14.11.2025',documentType:'Розпорядження голови',documentNumber:'14-р',documentDate:'13.11.2025'}
+ const allowanceInput=allowanceFormInput(allowanceDraft)
+ assert.deepEqual(allowanceInput,{status:'confirmed',percentage:0,effectiveOn:'2025-11-14',documentType:'Розпорядження голови',documentNumber:'14-р',documentDate:'2025-11-13'})
+ const savedAllowance=await api.saveAllowance(id,allowanceInput)
+ assert.equal(savedAllowance.ok,true,JSON.stringify(savedAllowance))
+ assert.equal(savedAllowance.data.percentage,0)
+ assert.equal(savedAllowance.data.effectiveOn,'2025-11-14')
+ assert.equal(savedAllowance.data.documentDate,'2025-11-13')
  for (const [name,args] of [['GetAllowance',[id]],['SaveAllowance',[id,allowance]],['ClearAllowance',[id]],['GetRank',[id]],['SaveRank',[id,rank]],['ClearRank',[id]]]) {
   const handle=handlers.get(ipcChannels['seniority'+name])
   for(const bad of [{...event,sender:{}},{...event,senderFrame:null},{...event,senderFrame:{url}}]) assert.equal(handle(bad,...args).error.code,'FORBIDDEN')
