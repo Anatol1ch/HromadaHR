@@ -105,6 +105,7 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
        </>:<>
         {select('rank','Номер рангу',Array.from({length:15},(_,i)=>({value:String(i+1),label:`${i+1} ранг`})),true)}
         {date('assignedOn','Дата присвоєння',true)}
+        {select('origin','Походження рангу',[...(Object.hasOwn(legacyRankOriginLabels,draft.origin)?[{value:draft.origin,label:`${legacyRankOriginLabels[draft.origin]} — потрібно переглянути`}]:[]),...Object.entries(rankOriginLabels).map(([value,label])=>({value,label}))],true)}
        </>}
       </div></fieldset>
       {kind==='rank'&&<div className="seniority-date-option rank-hire-date-option">
@@ -112,9 +113,8 @@ export default function IndicatorEditor({ kind, row, navigationGuard, onClose, o
        <div><span id={id+'-rank-hire-label'}>Підставити дату прийняття як дату присвоєння рангу</span><span className="visually-hidden" id={id+'-rank-hire-hint'}>Перемикач лише заповнює поле; зв’язок між датами не зберігається.</span></div>
       </div>}
       {kind==='rank'&&Object.hasOwn(legacyRankOriginLabels,draft.origin)&&<Alert variant="warning">Збережене походження «{legacyRankOriginLabels[draft.origin]}» потребує перегляду. Виберіть актуальний варіант перед збереженням; запис не перекласифіковано.</Alert>}
-      {kind==='rank'&&<div className="employee-form-grid rank-origin-grid">
-       {select('origin','Походження рангу',[...(Object.hasOwn(legacyRankOriginLabels,draft.origin)?[{value:draft.origin,label:`${legacyRankOriginLabels[draft.origin]} — потрібно переглянути`}]:[]),...Object.entries(rankOriginLabels).map(([value,label])=>({value,label}))],true)}
-       {(draft.origin==='oms_retained'||draft.origin==='civil_service_equivalence')&&date('reviewAnchorOn','Опорна дата для контрольного строку')}
+      {kind==='rank'&&(draft.origin==='oms_retained'||draft.origin==='civil_service_equivalence')&&<div className="employee-form-grid rank-origin-grid">
+       {date('reviewAnchorOn','Опорна дата для контрольного строку')}
       </div>}
       {kind==='allowance'&&applicable&&<div className="seniority-date-option allowance-hire-date-option">
        <button type="button" className="seniority-switch" role="switch" aria-checked={useHireDate} aria-labelledby={id+'-hire-date-label'} aria-describedby={id+'-hire-date-hint'} disabled={busy||!allowanceHireDate} onClick={()=>{const next=!useHireDate;setUseHireDate(next);if(next&&allowanceHireDate){setDraft(current=>({...current,effectiveOn:allowanceHireDate}));setErrors(current=>({...current,effectiveOn:undefined}));setDates(current=>({...current,effectiveOn:parseDateInput(allowanceHireDate)??''}))}}}><span aria-hidden="true"/></button>
