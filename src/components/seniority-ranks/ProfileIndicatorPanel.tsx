@@ -18,9 +18,10 @@ import { ServiceDetailRow } from './ServiceProjectionView'
 import { categoryRanks } from '../../../shared/rank-projection'
 
 /** One target read, one shared editor, actual mutation replies; no employee overview scan. */
-export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh,projection=null}:{
+export default function ProfileIndicatorPanel({employee,kind,navigationGuard,disabled=false,refreshKey=0,onRefresh,onEditEmployee,projection=null}:{
  employee:EmployeeCard;kind:Kind;navigationGuard:RefObject<NavigationGuard>;disabled?:boolean;refreshKey?:number
  onRefresh?:()=>void
+ onEditEmployee?:()=>void
  projection?:ServiceProjection|null
 }) {
  const [state,setState]=useState<{key:string;value?:Allowance|CurrentRank|null;error?:string}>(),[retry,setRetry]=useState(0),[version,setVersion]=useState(0),[open,setOpen]=useState(false)
@@ -36,7 +37,6 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
  const document=documentLabel(value??null)
  const categoryRange=employee.positionCategory?categoryRanks[employee.positionCategory]:null
  const rankCategoryStatus=!rank?'Поточний ранг не внесено':!categoryRange?'Категорію посади не зазначено':rank.origin==='pension_exception'?'Пенсійна підстава може передбачати ранг поза звичайним діапазоном':rank.rank<categoryRange[0]?rank.origin==='oms_retained'?'Ранг ОМС збережено за попереднім рішенням':rank.origin==='civil_service_equivalence'?'Ранг ураховано з державної служби':rank.origin==='oms_early'?'Перевірте межу категорії для дострокового присвоєння':'Вище звичайного діапазону':rank.rank>categoryRange.at(-1)!?rank.origin==='oms_early'?'Перевірте межу категорії для дострокового присвоєння':'Потрібно перевірити відповідність категорії':rank.origin==='oms_early'?'У межах категорії; присвоєно достроково':'У межах звичайного діапазону'
- const synchronizeRankPanels=Boolean(current&&!current.error&&rank)
  const close=(reconcile=true)=>{
   setOpen(false)
   // Cancel/close also reconciles an operation whose transport result may be unknown; never touch its draft while open.
@@ -60,8 +60,8 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
       {disabled&&<p className="employee-hint">Завершіть редагування стажу перед відкриттям надбавки.</p>}
     </div>}
    </InfoSection>
-   :<div className={`rank-tab-layout${synchronizeRankPanels?' rank-tab-layout-synchronized':''}`}>
-    <InfoSection className={`service-info-panel service-tab-section rank-tab-panel rank-tab-current${synchronizeRankPanels?' rank-tab-sync-current':''}`} title="Поточний ранг" icon={<Award size={17} aria-hidden="true"/>} action={current&&!current.error&&rank&&<button ref={opener} type="button" className="secondary-button section-header-edit-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати ранг</button>}>
+   :<div className="rank-tab-layout">
+    <InfoSection className="service-info-panel service-tab-section rank-tab-panel rank-tab-current" title="Поточний ранг" icon={<Award size={17} aria-hidden="true"/>} action={current&&!current.error&&rank&&<button ref={opener} type="button" className="secondary-button section-header-edit-button" disabled={disabled} onClick={()=>setOpen(true)}><Pencil size={15} aria-hidden="true"/>Редагувати ранг</button>}>
      {current?.error?<Alert variant="error" action={<button type="button" onClick={()=>setRetry(v=>v+1)}>Повторити</button>}>{current.error}</Alert>:!current?<DataState kind="loading" compact message="Читання підтвердженого рангу…"/>:rank?<>
       <div className="service-current-summary rank-tab-primary"><div className="service-current-value"><strong>{`${rank.rank} ранг`}</strong></div></div>
       <dl className="service-detail-list rank-tab-details rank-tab-current-details">
@@ -71,7 +71,7 @@ export default function ProfileIndicatorPanel({employee,kind,navigationGuard,dis
       </dl>
      </>:<div className="service-empty-action-state"><DataState kind="empty" className="service-empty-state-message" icon={<Award size={22} aria-hidden="true"/>} message="Поточний ранг працівника не внесено"/><button ref={opener} type="button" className="primary-button service-empty-action-button" disabled={disabled} onClick={()=>setOpen(true)}><Plus size={17} aria-hidden="true"/>Внести ранг</button></div>}
     </InfoSection>
-    <InfoSection className={`service-info-panel service-tab-section rank-tab-panel rank-tab-category${synchronizeRankPanels?' rank-tab-sync-category':''}`} title="Категорія посади" icon={<Layers size={17} aria-hidden="true"/>}>
+    <InfoSection className="service-info-panel service-tab-section rank-tab-panel rank-tab-category" title="Категорія посади" icon={<Layers size={17} aria-hidden="true"/>} action={<button type="button" className="secondary-button section-header-edit-button" disabled={disabled} onClick={onEditEmployee}><Pencil size={15} aria-hidden="true"/>Редагувати</button>}>
      <div className="service-current-summary rank-tab-primary"><div className={`service-current-value${employee.positionCategory?'':' service-metric-neutral'}`}><strong>{employee.positionCategory?`${employee.positionCategory} категорія`:'Категорію не зазначено'}</strong></div></div>
      <dl className="service-detail-list rank-tab-details rank-tab-category-details">
       <ServiceDetailRow icon={Layers} label="Звичайний діапазон рангів" value={categoryRange?categoryRange.join('–'):'Не визначено'}/>
