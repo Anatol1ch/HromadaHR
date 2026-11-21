@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ServiceProjection } from '../../../shared/service-calculations'
-import { ArrowRight, CalendarClock, CalendarDays, type LucideIcon } from 'lucide-react'
+import { ArrowRight, CalendarClock, CalendarDays, Milestone, TrendingUp, type LucideIcon } from 'lucide-react'
 import DataState from '../DataState'
 import Alert from '../Alert'
 import { serviceDurationLabel } from './service-accounting-model'
@@ -45,17 +45,29 @@ export function ServiceForecastView({value,error,onRetry}:{value:ServiceProjecti
   :'Майбутнього нормативного порогу не визначено'
  const canProject=Boolean(date&&threshold&&value?.percentage!==null&&value?.percentage!==undefined&&value.status!=='not_applicable')
  return <InfoSection className="service-info-panel service-tab-section service-tab-review" title="Наступна кадрова перевірка" icon={<CalendarClock size={17}/>}>
-   <div className="service-forecast-inner">
-     <div className="service-forecast-date-block">
-       <strong>Орієнтовна дата перевірки</strong>
-       {error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося отримати прогноз.</Alert>:<span className={date?'':'service-metric-neutral'}>{date?formatDate(date):emptyDate}</span>}
-       <small>{canProject?<>Наступний поріг: понад {threshold!.years} років</>:detail}</small>
+   <div className="service-forecast-container">
+     <div className="service-forecast-cards">
+       <div className="service-forecast-card">
+         <CalendarDays size={18} aria-hidden="true"/>
+         <strong>Орієнтовна дата</strong>
+         {error?<Alert variant="error" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося отримати прогноз.</Alert>:<span className={`service-forecast-card-value${date ? '' : ' service-metric-neutral'}`}>{date?formatDate(date):emptyDate}</span>}
+       </div>
+       <div className="service-forecast-card">
+         <Milestone size={18} aria-hidden="true"/>
+         <strong>Наступний поріг</strong>
+         <span className={`service-forecast-card-value${canProject ? '' : ' service-metric-neutral'}`}>{canProject?`Понад ${threshold!.years} років`:detail||'Не визначено'}</span>
+       </div>
+       <div className="service-forecast-card service-forecast-transition">
+         <TrendingUp size={18} aria-hidden="true"/>
+         <strong>Розрахункова зміна надбавки</strong>
+         {canProject?<div className="service-forecast-values">
+           <span><small>Поточна</small><b>{value!.percentage}%</b></span>
+           <ArrowRight size={17} aria-hidden="true"/>
+           <span><small>Прогнозна</small><b>{threshold!.percentage}%</b></span>
+         </div>:<span className="service-forecast-card-value service-metric-neutral">Немає доступного переходу</span>}
+       </div>
      </div>
-     <div className="service-forecast-transition">
-       <strong>Розрахункова зміна надбавки</strong>
-       {canProject?<div className="service-forecast-values"><span>{value!.percentage}%</span><ArrowRight size={17} aria-hidden="true"/><span>{threshold!.percentage}%</span></div>:<span className="service-forecast-no-transition">Немає доступного прогнозу зміни</span>}
-     </div>
-     <p className="service-forecast-note">Прогноз орієнтовний і не змінює підтверджену надбавку автоматично.</p>
    </div>
+   <p className="service-forecast-note">Прогноз є орієнтовним і не змінює підтверджену надбавку автоматично.</p>
   </InfoSection>
 }
