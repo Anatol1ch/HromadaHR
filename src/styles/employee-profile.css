@@ -91,7 +91,7 @@
 .profile-leave-workbench .leave-register-table :is(th, td):nth-child(-n+4) { min-width:0; }
 .profile-leave-workbench .leave-register-table .leave-journal-date { min-width:6.5rem; }
 .profile-leave-toolbar .primary-button { height:auto; min-height:var(--control-height); white-space:normal; }
-@container leave-workspace (max-width:60rem) {
+@container leave-workspace (max-width:48rem) {
  .leave-workbench-layout { grid-template-columns:minmax(0,1fr); }
  .leave-workbench-nav { display:none; }
  .leave-workbench-compact-select { display:block; }

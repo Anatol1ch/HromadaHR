@@ -13,7 +13,7 @@ import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
 import DocumentsWorkspace from './components/documents/DocumentsWorkspace'
 import { useEffect, useRef, useState } from 'react'
 import { Activity, BookOpen, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, PanelLeftClose, PanelLeftOpen, Settings, UsersRound } from 'lucide-react'
-import { isCompactSidebar, readCompactSidebar, writeCompactSidebar } from './lib/sidebar-preference'
+import { getSidebarToggleLabel, isCompactSidebar, readCompactSidebar, writeCompactSidebar } from './lib/sidebar-preference'
 import Alert from './components/Alert'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
@@ -174,7 +174,7 @@ export default function App() {
   }, [])
   const current = sections.find(section => section.id === active)!
   const compactSidebar = isCompactSidebar(narrowViewport, preferredCompact)
-  const sidebarToggleLabel = `${preferredCompact ? 'Розгорнути' : 'Згорнути'} бічне меню${narrowViewport ? ' на широкому вікні' : ''}`
+  const sidebarToggleLabel = getSidebarToggleLabel(preferredCompact, narrowViewport)
 
   if (storage.state === 'error' || storage.state === 'closed') return <RecoveryScreen status={storage} />
   if (!startupReady) return <StartupScreen />
@@ -226,7 +226,8 @@ export default function App() {
           <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setEmployeeProfileLabel(undefined);setActive('overview');void control.refresh()})}/>
         </div>
       </header>
-      <DocumentNavigationContext.Provider value={openDocument}><main id="workspace-content" tabIndex={-1} className="content home-content">
+      <DocumentNavigationContext.Provider value={openDocument}><main id="workspace-content" tabIndex={-1}
+        className={`content home-content${active === 'employees' || active === 'documents' ? ' content-workspace' : ''}`}>
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard}

@@ -22,7 +22,7 @@ type LoadedOverview = { key: string; data?: LeaveOverviewData; error?: string }
 const leaveSections: { id: LeaveWorkspaceView; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Зведення', icon: LayoutDashboard },
   { id: 'rights', label: 'Права', icon: ShieldCheck },
-  { id: 'balances', label: 'Залишки та періоди', icon: Wallet },
+  { id: 'balances', label: 'Залишки', icon: Wallet },
   { id: 'history', label: 'Історія', icon: History },
 ]
 const balanceOptions = (['annual_main', 'oms_service_additional', 'children_social_additional'] as const)
@@ -118,7 +118,9 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       else heading.current?.focus()
     })
   }
-  const title = view === 'overview' ? 'Зведення' : leaveSections.find(section => section.id === view)?.label ?? 'Відпустки'
+  const title = view === 'overview' ? 'Зведення' : view === 'balances'
+    ? 'Залишки та облікові періоди'
+    : leaveSections.find(section => section.id === view)?.label ?? 'Відпустки'
   const selectedStatus = data?.rights.find(right => right.leaveType === balanceType)?.status
 
   return <div className="profile-leave-workbench">
@@ -131,6 +133,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       <nav className="leave-workbench-nav" aria-label="Розділи відпусток">
         {leaveSections.map(({ id, label, icon: Icon }) => <button type="button" key={id}
           className={view === id ? 'is-active' : undefined} aria-current={view === id ? 'page' : undefined}
+          title={id === 'balances' ? 'Залишки та облікові періоди' : label}
           onClick={() => navigate(id)}><Icon size={18} aria-hidden="true"/><span>{label}</span></button>)}
       </nav>
       <div className="leave-workbench-content" aria-label={title}>

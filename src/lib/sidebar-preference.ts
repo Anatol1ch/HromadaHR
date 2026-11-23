@@ -11,3 +11,8 @@ export function writeCompactSidebar(storage: Pick<Storage, 'setItem'>, compact: 
 export function isCompactSidebar(narrow: boolean, preferredCompact: boolean): boolean {
   return narrow || preferredCompact
 }
+
+export function getSidebarToggleLabel(preferredCompact: boolean, narrow: boolean): string {
+  const action = preferredCompact ? 'Розгорнути' : 'Згорнути'
+  return `${action} бічне меню${narrow ? ' на широкому вікні' : ''}`
+}

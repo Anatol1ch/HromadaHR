@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { isCompactSidebar, readCompactSidebar, SIDEBAR_PREFERENCE_KEY, writeCompactSidebar } from '../src/lib/sidebar-preference.ts'
+import { getSidebarToggleLabel, isCompactSidebar, readCompactSidebar, SIDEBAR_PREFERENCE_KEY, writeCompactSidebar } from '../src/lib/sidebar-preference.ts'
 
 test('sidebar preference persists the desktop choice while narrow viewports remain compact', () => {
   const values = new Map()
@@ -14,6 +14,9 @@ test('sidebar preference persists the desktop choice while narrow viewports rema
   assert.equal(isCompactSidebar(false, false), false)
   writeCompactSidebar(storage, false)
   assert.equal(isCompactSidebar(false, readCompactSidebar(storage)), false)
+  assert.equal(getSidebarToggleLabel(false, true), 'Згорнути бічне меню на широкому вікні')
+  assert.equal(getSidebarToggleLabel(true, true), 'Розгорнути бічне меню на широкому вікні')
+  assert.equal(getSidebarToggleLabel(true, false), 'Розгорнути бічне меню')
 })
 
 test('sidebar preference storage failures do not break navigation', () => {
