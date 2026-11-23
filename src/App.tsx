@@ -188,16 +188,8 @@ export default function App() {
           <div className="brand-mark" title="HromadaHR"><UsersRound size={22} strokeWidth={2.1} aria-hidden="true" /></div>
           <div className="brand-copy">
             <div className="brand-name">Hromada<span>HR</span></div>
-            <div className="brand-caption">Автоматизована система кадрового обліку</div>
           </div>
         </div>
-      </div>
-      <div className="sidebar-control-row">
-        <button type="button" className="sidebar-toggle" aria-label={sidebarToggleLabel}
-          title={sidebarToggleLabel} aria-pressed={preferredCompact}
-          onClick={() => setPreferredCompact(value => !value)}>
-          {preferredCompact ? <PanelLeftOpen size={18} aria-hidden="true"/> : <PanelLeftClose size={18} aria-hidden="true"/>}
-        </button>
       </div>
       <nav className="nav-list" aria-label="Робочий простір">
         {sections.filter(section => section.id !== 'settings').map(section =>
@@ -217,6 +209,11 @@ export default function App() {
     <div className="main-area">
       <header className="topbar">
         <div className="topbar-inner">
+          <button type="button" className="sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
+            title={sidebarToggleLabel} aria-pressed={preferredCompact}
+            onClick={() => setPreferredCompact(value => !value)}>
+            {preferredCompact ? <PanelLeftOpen size={18} aria-hidden="true"/> : <PanelLeftClose size={18} aria-hidden="true"/>}
+          </button>
           <nav className="crumb" aria-label="Навігаційні крихти">
             <ol>
               <li>{active === 'home' ? <span>Робочий простір</span> :
