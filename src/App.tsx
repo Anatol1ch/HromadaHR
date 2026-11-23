@@ -208,7 +208,7 @@ export default function App() {
     </aside>
     <div className="main-area">
       <header className="topbar">
-        <div className="topbar-inner">
+        <div className={`topbar-inner${active === 'employees' || active === 'documents' ? ' topbar-inner-workspace' : ''}`}>
           <button type="button" className="sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
             title={sidebarToggleLabel} aria-pressed={preferredCompact}
             onClick={() => setPreferredCompact(value => !value)}>
