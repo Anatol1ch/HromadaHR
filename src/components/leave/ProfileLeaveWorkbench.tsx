@@ -1,31 +1,32 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
-import { ArrowLeft, History, Plus, ShieldCheck } from 'lucide-react'
+import { useEffect, useReducer, useRef, useState, type RefObject } from 'react'
+import { ArrowLeft, History, Plus } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import { isPeriodLeave, type EmployeeLeaveRight, type LeaveRecord, type LeaveType } from '../../../shared/leave'
+import { isPeriodLeave, type LeaveType } from '../../../shared/leave'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import { notifySystemToast } from '../SystemToastHost'
-import LeaveOverview from './LeaveOverview'
-import LeaveRights from './LeaveRights'
+import LeaveOverview, { type LeaveOverviewData } from './LeaveOverview'
 import LeaveBalances from './LeaveBalances'
-import LeaveEventAccounting from './LeaveEventAccounting'
 import LeaveJournal from './LeaveJournal'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
-import { accountingYears } from './usage'
+import LeaveTypeContextModal from './LeaveTypeContextModal'
+import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from './workbench-navigation'
 import useAccountingDate from './useAccountingDate'
-import { leaveLabels, rightLabels } from './presentation'
+import { leaveWorkspaceLabels } from './presentation'
 import { leaveRecordBelongsToEmployee, type LeaveJournalContext, type RegistrationHistory } from './registry'
+import { accountingYears } from './usage'
 
-type View = 'overview' | 'detail' | 'rights' | 'history'
+type LoadedOverview = { key: string; data?: LeaveOverviewData; error?: string }
 
-/** Fixed employee context; all mutations remain in the existing leave editors. */
+/** Main leave workspace; domain mutations stay in the existing leave components. */
 export default function ProfileLeaveWorkbench({ employee, navigationGuard, revision }: {
   employee: EmployeeCard; navigationGuard: RefObject<NavigationGuard>; revision: number
 }) {
   const employeeId = employee.id
-  const [view, setView] = useState<View>('overview')
+  const [workspace, dispatchWorkspace] = useReducer(leaveWorkspaceNavigation, initialLeaveWorkspaceState)
+  const { view, selectedType } = workspace
   const [type, setType] = useState<LeaveType>('annual_main')
   const [chosenYear, setChosenYear] = useState('')
   const [localRevision, setLocalRevision] = useState(0)
@@ -33,64 +34,67 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   const refresh = () => setLocalRevision(value => value + 1)
   const [creating, setCreating] = useState(false)
   const [context, setContext] = useState<LeaveJournalContext | null>(null)
-  const historyReturn = useRef<View>('overview')
   const opener = useRef<HTMLElement | null>(null)
-  const heading = useRef<HTMLDivElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
   const { throughDate } = useAccountingDate()
-  const [records, setRecords] = useState<{ key: string; data?: LeaveRecord[]; error?: string }>()
-  const [rights, setRights] = useState<{ key: string; data?: EmployeeLeaveRight[]; error?: string }>()
+  const [loaded, setLoaded] = useState<LoadedOverview>()
   const readKey = JSON.stringify([employeeId, refreshRevision, throughDate])
 
   useEffect(() => {
     let active = true
-    void window.hromadaHR.leave.listRecords(employeeId).then(result => {
-      if (active) setRecords(result.ok ? { key: readKey, data: result.data.filter(record => leaveRecordBelongsToEmployee(record, employeeId)) }
-        : { key: readKey, error: personnelMessage(result.error.code) })
-    }).catch(() => { if (active) setRecords({ key: readKey, error: 'Не вдалося завантажити історію відпусток.' }) })
-    void window.hromadaHR.leave.listRights(employeeId).then(result => {
-      if (active) setRights(result.ok ? { key: readKey, data: result.data }
-        : { key: readKey, error: personnelMessage(result.error.code) })
-    }).catch(() => { if (active) setRights({ key: readKey, error: 'Не вдалося завантажити права на відпустки.' }) })
+    setLoaded(undefined)
+    async function load() {
+      try {
+        const api = window.hromadaHR.leave
+        const [balances, records, rights, ...proposals] = await Promise.all([
+          api.getBalances(employeeId), api.listRecords(employeeId), api.listRights(employeeId),
+          ...(['annual_main', 'oms_service_additional', 'children_social_additional'] as const).map(type => api.proposePeriods(employeeId, throughDate, type)),
+        ] as const)
+        if (!active) return
+        if (!balances.ok) { setLoaded({ key: readKey, error: personnelMessage(balances.error.code) }); return }
+        if (!records.ok) { setLoaded({ key: readKey, error: personnelMessage(records.error.code) }); return }
+        if (!rights.ok) { setLoaded({ key: readKey, error: personnelMessage(rights.error.code) }); return }
+        const failedProposal = proposals.find(result => !result.ok)
+        if (failedProposal && !failedProposal.ok) { setLoaded({ key: readKey, error: personnelMessage(failedProposal.error.code) }); return }
+        setLoaded({ key: readKey, data: {
+          balances: balances.data,
+          records: records.data.filter(record => leaveRecordBelongsToEmployee(record, employeeId)),
+          rights: rights.data,
+          proposals: proposals.flatMap(result => result.ok ? result.data : []),
+        } })
+      } catch {
+        if (active) setLoaded({ key: readKey, error: 'Не вдалося завантажити відомості про відпустки.' })
+      }
+    }
+    void load()
     return () => { active = false }
-  }, [employeeId, readKey])
+  }, [employeeId, readKey, throughDate])
 
-  const currentRecords = records?.key === readKey ? records : undefined
-  const currentRights = rights?.key === readKey ? rights : undefined
+  const current = loaded?.key === readKey ? loaded : undefined
+  const data = current?.data
+  const currentRecords = data?.records ?? []
   const history: RegistrationHistory = {
-    records: currentRecords?.data ?? [], error: currentRecords?.error ?? '',
-    loading: !currentRecords, retry: refresh, suspended: context !== null,
+    records: currentRecords, error: current?.error ?? '', loading: !current, retry: refresh, suspended: context !== null,
     open: next => {
       if (next.employeeId !== employeeId) return
-      historyReturn.current = view
       setContext(next)
-      setView('history')
+      dispatchWorkspace({ type: 'open-history', returnTo: view })
       refresh()
     },
   }
   const currentYear = throughDate.slice(0, 4)
-  const years = accountingYears(history.records, employeeId, currentYear)
-  const calendar = { years, year: years.includes(chosenYear) ? chosenYear : currentYear,
-    onYear: (year: string) => navigationGuard.current(() => setChosenYear(year)) }
-  const status = currentRights?.data?.find(right => right.leaveType === type)?.status ?? 'unknown'
-  const badge = currentRights?.data ? <span className={'leave-right-status is-' + status}>{rightLabels[status]}</span> : null
+  const years = accountingYears(currentRecords, employeeId, currentYear)
+  const year = years.includes(chosenYear) ? chosenYear : currentYear
 
-  function changeView(next: View, nextType?: LeaveType) {
+  function openHistory() {
     navigationGuard.current(() => {
-      setCreating(false)
-      setContext(null)
-      if (nextType) setType(nextType)
-      setView(next)
+      dispatchWorkspace({ type: 'open-history', returnTo: view })
       requestAnimationFrame(() => heading.current?.focus())
     })
   }
   function register() {
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    navigationGuard.current(() => {
-      // Leaving rights/detail unmounts any explicitly discarded inline draft.
-      setView('overview')
-      setContext(null)
-      setCreating(true)
-    })
+    navigationGuard.current(() => setCreating(true))
   }
   function closeRegistration() {
     setCreating(false)
@@ -101,39 +105,61 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       else heading.current?.focus()
     })
   }
-  const title = view === 'detail' ? leaveLabels[type] : view === 'rights' ? 'Права на відпустки'
-    : view === 'history' ? 'Історія відпусток' : 'Огляд відпусток'
+  function returnToOverview() {
+    navigationGuard.current(() => {
+      refresh()
+      dispatchWorkspace({ type: 'return-to-overview' })
+      requestAnimationFrame(() => heading.current?.focus())
+    })
+  }
+  function openBalances() {
+    navigationGuard.current(() => {
+      dispatchWorkspace({ type: 'open-balances' })
+      requestAnimationFrame(() => heading.current?.focus())
+    })
+  }
+  const title = view === 'history' ? 'Історія відпусток'
+    : view === 'balances' && selectedType ? leaveWorkspaceLabels[selectedType] : 'Відпустки'
+  const selectedStatus = data?.rights.find(right => right.leaveType === selectedType)?.status
+  const rightBadge = selectedType && selectedStatus
+    ? <span className={'leave-right-status is-' + selectedStatus}>{selectedStatus === 'has_right' ? 'Право підтверджено' : 'Права немає'}</span>
+    : null
 
   return <div className="profile-leave-workbench">
-    <div className="profile-leave-toolbar" role="group" aria-label={title} ref={heading} tabIndex={-1}>
-      {view !== 'rights' && view !== 'history' && <h3>{title}</h3>}
+    <div className="profile-leave-toolbar" role="group" aria-label={title}>
+      <h3 ref={heading} tabIndex={-1}>{title}</h3>
       <div className="leave-accounting-actions">
-        {view !== 'overview' && <button type="button" className="secondary-button" onClick={() => changeView('overview')}><ArrowLeft size={16}/>До огляду відпусток</button>}
-        {view !== 'rights' && <button type="button" className="secondary-button" onClick={() => changeView('rights')}><ShieldCheck size={16}/>Права на відпустки</button>}
-        {view !== 'history' && <button type="button" className="secondary-button" onClick={() => changeView('history')}><History size={16}/>Історія відпусток</button>}
-        <button type="button" className="primary-button" disabled={creating || context !== null} onClick={register}><Plus size={17}/>Зареєструвати відпустку</button>
+        {view === 'overview' && <>
+          <button type="button" className="secondary-button" onClick={openHistory}><History size={16} aria-hidden="true"/>Історія</button>
+          <button type="button" className="primary-button" disabled={creating} onClick={register}><Plus size={17} aria-hidden="true"/>Зареєструвати відпустку</button>
+        </>}
+        {view === 'history' && <button type="button" className="secondary-button" onClick={returnToOverview}><ArrowLeft size={16} aria-hidden="true"/>До огляду відпусток</button>}
+        {view === 'balances' && <button type="button" className="secondary-button" onClick={returnToOverview}><ArrowLeft size={16} aria-hidden="true"/>До відомостей про відпустку</button>}
       </div>
     </div>
-    {view === 'overview' && <LeaveOverview employeeId={employeeId} revision={refreshRevision} onOpen={destination =>
-      changeView(destination.section === 'rights' ? 'rights' : 'detail', destination.section === 'balances' ? destination.type ?? type : undefined)}/>}
-    {view === 'rights' && <LeaveRights employeeId={employeeId} navigationGuard={navigationGuard} onSaved={refresh}/>}
-    {view === 'detail' && <>
-      {currentRights?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{currentRights.error}</Alert>}
-      {!currentRights && <DataState kind="loading" compact message="Завантаження прав…"/>}
-      {isPeriodLeave(type) ? <LeaveBalances key={type} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate}
-        type={type} navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!currentRights?.data}
-        historicalOnly={status === 'no_right'} rightBadge={badge}/>
-        : <LeaveEventAccounting employeeId={employeeId} type={type} calendar={calendar} history={history} right={badge}
-          noRight={status === 'no_right'} showLimit={!!currentRights?.data && status !== 'no_right'}
-          actions={<button type="button" className="secondary-button" onClick={() => changeView('history')}>Переглянути історію</button>}/>}
+
+    {view === 'overview' && <LeaveOverview data={data} throughDate={throughDate} loading={!current} error={current?.error} onRetry={refresh}
+      onOpen={(selected, snapshot) => { setType(selected); dispatchWorkspace({ type: 'open-type', leaveType: selected }); setLoaded({ key: readKey, data: snapshot }) }}/ >}
+
+    {view === 'balances' && selectedType && isPeriodLeave(selectedType) && <>
+      {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
+      <LeaveBalances employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={selectedType}
+        navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
+        historicalOnly={selectedStatus === 'no_right'} rightBadge={rightBadge}/>
     </>}
+
     {view === 'history' && <>
-      {history.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{history.error}</Alert>}
-      {history.loading && <DataState kind="loading" compact message="Завантаження історії…"/>}
+      {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
+      {!current && <DataState kind="loading" compact message="Завантаження історії…"/>}
       <LeaveJournal employeeId={employeeId} records={history.records} navigationGuard={navigationGuard} onChanged={refresh}
-        history={history} context={context} onResume={() => { setContext(null); setView(historyReturn.current) }}/>
+        history={history} context={context} onResume={() => { setContext(null); dispatchWorkspace({ type: 'resume-history' }); refresh() }}/>
     </>}
-    {/* Keep this instance mounted while history.suspended hides its modal. */}
+
+    {view === 'overview' && selectedType && <LeaveTypeContextModal employee={employee} type={selectedType} data={data} loading={!current}
+      error={current?.error} throughDate={throughDate} year={year} years={years} history={history} navigationGuard={navigationGuard} revision={refreshRevision}
+      onYear={setChosenYear} onClose={() => dispatchWorkspace({ type: 'close-type' })} onOpenHistory={openHistory}
+      onOpenBalances={openBalances} onChanged={refresh}/>}
+
     {creating && <LeaveRegistrationForm employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate}
       initialType={type} navigationGuard={navigationGuard} history={history} returnFocus={opener.current}
       onClose={closeRegistration} onSaved={() => {

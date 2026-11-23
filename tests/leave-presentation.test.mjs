@@ -2,6 +2,9 @@ import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextua
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { balanceSummary, allocationDraft, formatLeaveDays } from '../src/components/leave/summary.ts'
+import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
+import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
+import { leaveWorkspaceLabels } from '../src/components/leave/presentation.ts'
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
   const rows = [{leaveType:'annual_main',periodStart:'2024-01-01',confirmedDays:40,usedDays:14,availableDays:26}, {leaveType:'children_social_additional',periodStart:'2024-01-01',confirmedDays:0,usedDays:0,availableDays:0}]
   const proposals = [{leaveType:'annual_main',periodStart:'2024-01-01'}, {leaveType:'annual_main',periodStart:'2025-01-01'}]
@@ -11,6 +14,35 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(balanceSummary('oms_service_additional',rows,proposals).count,0)
   assert.equal(formatLeaveDays(0n),'0 днів')
   assert.equal(formatLeaveDays(21),'21 день')
+})
+
+test('workbench returns from period accounting to the selected type and resumes history context', () => {
+  const selected = leaveWorkspaceNavigation(initialLeaveWorkspaceState, { type: 'open-type', leaveType: 'annual_main' })
+  const accounting = leaveWorkspaceNavigation(selected, { type: 'open-balances' })
+  assert.equal(accounting.view, 'balances')
+  assert.equal(accounting.selectedType, 'annual_main')
+  const detail = leaveWorkspaceNavigation(accounting, { type: 'return-to-overview' })
+  assert.equal(detail.view, 'overview')
+  assert.equal(detail.selectedType, 'annual_main')
+  const history = leaveWorkspaceNavigation(detail, { type: 'open-history', returnTo: detail.view })
+  const resumed = leaveWorkspaceNavigation(history, { type: 'resume-history' })
+  assert.equal(resumed.view, 'overview')
+  assert.equal(resumed.selectedType, 'annual_main')
+  assert.equal(leaveWorkspaceNavigation(resumed, { type: 'close-type' }).selectedType, null)
+})
+
+test('focused right editor submits only its selected status and uses the agreed workspace labels', () => {
+  const saved = [
+    { employeeId: 'e1', leaveType: 'annual_main', status: 'has_right', checkedAt: '2026-11-20T12:00:00Z' },
+    { employeeId: 'e1', leaveType: 'oms_service_additional', status: 'no_right', checkedAt: '2026-11-20T12:00:00Z' },
+  ]
+  const draft = { annual_main: 'no_right', oms_service_additional: 'has_right' }
+  assert.deepEqual(changedLeaveRights([{ value: 'annual_main' }], draft, saved), [
+    { leaveType: 'annual_main', status: 'no_right' },
+  ])
+  assert.equal(leaveWorkspaceLabels.oms_service_additional, 'Додаткова за стаж ОМС')
+  assert.equal(leaveWorkspaceLabels.study_leave, 'Навчальна')
+  assert.equal(leaveWorkspaceLabels.veteran_special_leave, 'Для УБД та інших категорій')
 })
 test('manual allocation starts empty, validates row limits and counts only eligible period IDs', () => {
   const rows = [{ id: 'old', availableDays: 4 }, { id: 'next', availableDays: 4 }]

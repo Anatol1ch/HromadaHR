@@ -98,7 +98,6 @@
 /* 4.6.3: named modal containers respond to their actual available width. */
 .leave-workspace { width:100%; min-width:0; display:grid; gap:var(--space-3); }
 .leave-workspace [hidden] { display:none !important; }
-.leave-overview .leave-balance-choice { cursor:default; }
 .leave-overview .dictionary-table-wrap, .leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
 .leave-editor-modal { width:min(54rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
 .leave-editor-modal .app-modal-content { container:leave-modal / inline-size; min-width:0; overflow-y:auto; overflow-x:hidden; }
@@ -285,6 +284,23 @@
 .leave-accounting-note { margin:0; overflow-wrap:anywhere; }
 .leave-accounting-grid { align-items:stretch; }
 .leave-overview .leave-accounting-grid { grid-auto-rows:1fr; }
+.leave-overview { gap:var(--space-3); }
+.leave-overview .info-grid { align-items:stretch; }
+.leave-overview .leave-type-card { min-height:112px; cursor:pointer; }
+.leave-overview .leave-type-card-trigger { z-index:1; }
+.leave-overview .leave-type-card-identity { align-self:start; }
+.leave-overview .leave-type-card-metric { align-self:end; }
+.leave-overview .leave-type-card-arrow { z-index:2; pointer-events:none; }
+.leave-overview .leave-type-card:has(.leave-type-card-trigger:focus-visible) { outline:2px solid var(--border-focus); outline-offset:2px; }
+.leave-context-modal { width:min(72rem,calc(100vw - 2rem)); }
+.leave-context-content,.leave-context-period-content { display:grid; gap:var(--space-3); min-width:0; }
+.leave-context-content > .leave-rights-panel { min-width:0; padding:var(--space-3); }
+.leave-context-period-content .info-section { min-width:0; }
+.leave-context-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-2); margin:0; }
+.leave-context-period-table { min-width:42rem; }
+.leave-context-footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--space-2); }
+.leave-context-footer button { min-height:var(--control-height-compact); height:auto; white-space:normal; }
+@container info-section (max-width:590px) { .leave-context-metrics { grid-template-columns:minmax(0,1fr); } }
 .leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
 @container info-section (max-width: 590px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }

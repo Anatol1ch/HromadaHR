@@ -12,6 +12,12 @@ export const leaveLabels = {
   oms_service_additional: 'Додаткова за стаж',
   children_social_additional: 'Додаткова на дітей',
 }
+export const leaveWorkspaceLabels = {
+  ...leaveLabels,
+  oms_service_additional: 'Додаткова за стаж ОМС',
+  study_leave: 'Навчальна',
+  veteran_special_leave: 'Для УБД та інших категорій',
+} satisfies Record<LeaveType, string>
 export const periodLeaveOptions = periodLeaveTypes.map(value => ({ value, label: leaveLabels[value] }))
 export const leaveOptions = leaveTypes.map(value => ({ value, label: leaveLabels[value] }))
 

@@ -16,10 +16,10 @@ export function LeaveBalanceMetric({ count, remaining, incomplete, historical }:
   </>
 }
 
-export default function LeaveTypeCard({ type, onOpen, right, metric }: {
-  type: LeaveType; onOpen: () => void; right: ReactNode; metric?: ReactNode
+export default function LeaveTypeCard({ type, label: labelOverride, onOpen, right, metric }: {
+  type: LeaveType; label?:string; onOpen: () => void; right: ReactNode; metric?: ReactNode
 }) {
-  const label = leaveLabels[type]
+  const label = labelOverride ?? leaveLabels[type]
   return <article className="info-item leave-type-card">
     <div className="leave-type-card-identity">
       <LeaveTypeIcon type={type}/>
