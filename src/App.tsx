@@ -197,7 +197,7 @@ export default function App() {
       </nav>
       <div className="sidebar-spacer" aria-hidden="true" />
       <div className="sidebar-bottom">
-        <button type="button" className="nav-item sidebar-help" aria-label="Допомога та підтримка"
+        <button type="button" className="nav-item" aria-label="Допомога та підтримка"
           title="Допомога та підтримка" onClick={() => setHelpOpen(true)}>
           <CircleHelp size={20} strokeWidth={1.8} aria-hidden="true"/><span>Допомога та підтримка</span>
         </button>
@@ -209,10 +209,10 @@ export default function App() {
     <div className="main-area">
       <header className="topbar">
         <div className={`topbar-inner${active === 'employees' || active === 'documents' ? ' topbar-inner-workspace' : ''}`}>
-          <button type="button" className="sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
+          <button type="button" className="secondary-button sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
             title={sidebarToggleLabel} aria-pressed={preferredCompact}
             onClick={() => setPreferredCompact(value => !value)}>
-            {preferredCompact ? <PanelLeftOpen size={18} aria-hidden="true"/> : <PanelLeftClose size={18} aria-hidden="true"/>}
+            {preferredCompact ? <PanelLeftOpen size={20} aria-hidden="true"/> : <PanelLeftClose size={20} aria-hidden="true"/>}
           </button>
           <nav className="crumb" aria-label="Навігаційні крихти">
             <ol>
