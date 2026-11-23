@@ -209,10 +209,10 @@ export default function App() {
     <div className="main-area">
       <header className="topbar">
         <div className="topbar-inner">
-          <button type="button" className="employee-profile-return sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
+          <button type="button" className="employee-profile-return topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
             title={sidebarToggleLabel} aria-pressed={preferredCompact}
             onClick={() => setPreferredCompact(value => !value)}>
-            {preferredCompact ? <PanelLeftOpen size={22} aria-hidden="true"/> : <PanelLeftClose size={22} aria-hidden="true"/>}
+            {preferredCompact ? <PanelLeftOpen size={17} strokeWidth={2.6} aria-hidden="true"/> : <PanelLeftClose size={17} strokeWidth={2.6} aria-hidden="true"/>}
           </button>
           <span className="employee-profile-return-separator" aria-hidden="true" />
           <nav className="crumb" aria-label="Навігаційні крихти">
