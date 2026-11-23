@@ -30,7 +30,7 @@ export default function LeaveRights({employeeId,navigationGuard,onSaved,type,onD
   useEffect(()=>{onDirtyChange?.(changes.length>0)},[changes.length,onDirtyChange])
   useUnsavedChanges(changes.length>0,pending,navigationGuard,owner)
   async function save(){if(pending.current||!saved||!changes.length)return;pending.current=true;setBusy(true);setError('');try{const result=await window.hromadaHR.leave.saveRights(employeeId,changes);if(!alive.current)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])));onSaved();notifySystemToast('success','Статуси права збережено','Дні та минулі реєстрації не змінено.')}else setError(personnelMessage(result.error.code))}catch{if(alive.current)setError('Результат не підтверджено. Повторне збереження тих самих статусів безпечне.')}finally{pending.current=false;if(alive.current)setBusy(false)}}
-  return <section ref={owner} className="dashboard-panel leave-rights-panel"><header className="employee-group-heading"><h2>{type?'Статус права':'Права на відпустки'}</h2></header>
+  return <section ref={owner} className={'dashboard-panel leave-rights-panel' + (type ? ' leave-rights-focused' : '')}>{!type && <header className="employee-group-heading"><h2>Права на відпустки</h2></header>}
     {error && !saved && <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert>}
     {!saved&&!error&&<DataState kind="loading" compact message="Завантаження статусу права…"/>}
     {saved&&<div className="leave-rights-list">{options.map(option => {

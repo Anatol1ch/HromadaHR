@@ -282,101 +282,58 @@
 
 .leave-accounting-year { display:grid; gap:var(--space-1); min-width:8rem; font-size:13px; }
 .leave-accounting-note { margin:0; overflow-wrap:anywhere; }
-.leave-accounting-grid { align-items:stretch; }
-.leave-overview .leave-accounting-grid { grid-auto-rows:1fr; }
 .leave-overview { gap:var(--space-3); }
-.leave-overview .info-grid { align-items:stretch; }
-.leave-overview .leave-type-card { min-height:112px; cursor:pointer; }
-.leave-overview .leave-type-card-trigger { z-index:1; }
-.leave-overview .leave-type-card-identity { align-self:start; }
-.leave-overview .leave-type-card-metric { align-self:end; }
-.leave-overview .leave-type-card-arrow { z-index:2; pointer-events:none; }
-.leave-overview .leave-type-card:has(.leave-type-card-trigger:focus-visible) { outline:2px solid var(--border-focus); outline-offset:2px; }
-.leave-context-modal { width:min(72rem,calc(100vw - 2rem)); }
-.leave-context-content,.leave-context-period-content { display:grid; gap:var(--space-3); min-width:0; }
-.leave-context-content > .leave-rights-panel { min-width:0; padding:var(--space-3); }
-.leave-context-period-content .info-section { min-width:0; }
-.leave-context-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-2); margin:0; }
-.leave-context-period-table { min-width:42rem; }
-.leave-context-footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--space-2); }
-.leave-context-footer button { min-height:var(--control-height-compact); height:auto; white-space:normal; }
-@container info-section (max-width:590px) { .leave-context-metrics { grid-template-columns:minmax(0,1fr); } }
 .leave-accounting-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
 .leave-accounting-actions .secondary-button { min-height:var(--control-height-legacy); height:auto; max-width:100%; white-space:normal; }
-@container info-section (max-width: 590px) { .leave-accounting-grid { grid-template-columns:minmax(0,1fr); } }
-@container info-section (max-width: 590px) { .leave-overview .leave-accounting-grid { grid-auto-rows:auto; } }
-
-.leave-type-card {
-  position:relative;
-  padding:var(--space-3);
-  display:grid;
-  grid-template-columns:minmax(0,1fr) fit-content(34%) 16px;
-  align-items:center;
-  gap:var(--space-2) var(--space-1);
-  min-height:64px;
-  border:1px solid var(--border-surface);
-  transition:transform var(--motion-duration-page) ease, border-color var(--motion-duration-page) ease, box-shadow var(--motion-duration-page) ease;
-}
-.leave-type-card-trigger {
-  position:absolute;
-  inset:0;
-  border:0;
-  border-radius:inherit;
-  padding:0;
-  background:transparent;
-  color:var(--accent);
-  cursor:pointer;
-}
-.leave-type-card-identity { grid-column:1; display:flex; align-items:center; gap:var(--space-2); min-width:0; }
-.leave-type-card-identity > div { min-width:0; overflow-wrap:anywhere; }
-.leave-type-card-identity h4 { margin:0; font-size:13px; line-height:1.4; text-wrap:balance; }
-.leave-type-card-metric { grid-column:2; display:grid; justify-items:end; min-width:0; text-align:end; overflow-wrap:anywhere; }
-.leave-type-card-metric strong { color:var(--accent-hover); font-size:17px; font-variant-numeric:tabular-nums; }
-.leave-type-card-metric small { color:var(--color-text-secondary); font-size:12px; line-height:1.35; }
-.leave-type-card-metric .leave-type-card-note { font-size:11px; }
-.leave-type-card-arrow { grid-column:3; color:var(--accent); transition:transform var(--motion-duration-page) ease; }
-.leave-type-card > .leave-type-card-trigger:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
-@media (hover:hover) {
-  .leave-type-card:hover { transform:translateY(-2px); border-color:var(--tab-active-border); box-shadow:0 3px 9px color-mix(in srgb, var(--accent) 15%, transparent); }
-  .leave-type-card:hover .leave-type-card-arrow { transform:translateX(2px); }
-}
-@media (prefers-reduced-motion:reduce) {
-  .leave-type-card, .leave-type-card-arrow { transition:none; }
-  .leave-type-card:hover, .leave-type-card:hover .leave-type-card-arrow { transform:none; }
-}
-.leave-event-accounting .info-section-heading { flex-wrap:nowrap; }
-.leave-event-accounting .info-section-action { flex:none; }
-.leave-event-title { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-1) var(--space-2); min-width:0; }
-.leave-event-title > :first-child { min-width:0; overflow-wrap:anywhere; }
-.leave-event-title .leave-right-status { font-weight:400; }
-.leave-event-content { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); min-width:0; }
-.leave-event-context {
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:space-between;
-  gap:var(--space-2) var(--space-3);
-}
-.leave-event-context .leave-accounting-actions { align-items:stretch; margin-inline-start:auto; }
-.leave-event-context .leave-accounting-actions .secondary-button { min-height:var(--control-height-compact); }
-.leave-event-metrics {
-  display:flex;
-  flex-wrap:wrap;
-  gap:var(--space-2) var(--space-4);
-  margin:0;
-  padding:var(--space-2) var(--space-3);
-  border-radius:var(--radius-control);
-  background:var(--surface-card);
-}
-.leave-event-metrics .info-item { padding:0; background:transparent; }
-.leave-event-metrics .info-item dd { margin:0; }
-.leave-event-history { padding:var(--space-2) var(--space-3); border-radius:var(--radius-control); background:var(--surface-card); }
-.leave-event-history > p { font-size:12px; }
-.leave-event-history .dictionary-table-wrap { margin-block-start:var(--space-2); }
-.leave-event-history-table { min-width:22rem; }
-.leave-event-history-table .leave-event-history-days { text-align:right; font-variant-numeric:tabular-nums; }
-@container info-section (max-width: 280px) {
-  .leave-event-accounting .info-section-heading { flex-wrap:wrap; }
-}
-
 .leave-projection-action { margin-top: var(--space-2); max-width: 100%; white-space: normal; text-align: left; }
+
+/* 9.12.2: leave balances, focused right editing, and compact history entry. */
+.leave-overview-main-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:var(--space-3); min-width:0; }
+.leave-overview .info-section { min-width:0; background:var(--surface-card); }
+.leave-overview .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
+.leave-overview-main-panel { align-content:start; gap:var(--space-3); }
+.leave-overview-main-panel .info-section-action { flex:0 1 160px; }
+.leave-overview-main-panel .section-header-edit-button { width:160px; min-height:36px; }
+.leave-overview-main-panel .leave-type-icon { width:28px; height:28px; flex-basis:28px; }
+.leave-confirmed-balance { display:grid; justify-items:center; align-content:center; gap:var(--space-1); min-width:0; min-height:112px; padding:var(--space-3); border:1px solid var(--border-accent); border-radius:var(--radius-control); background:var(--accent-soft); text-align:center; }
+.leave-confirmed-balance > span { color:var(--color-text-secondary); font-size:12px; line-height:1.4; }
+.leave-confirmed-balance > strong { color:var(--accent-hover); font-size:30px; line-height:1.2; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.leave-overview-detail-list { display:grid; gap:0; min-width:0; margin:0; }
+.leave-overview .service-detail-row { grid-template-columns:20px minmax(116px,145px) minmax(0,1fr); }
+.leave-overview .service-detail-row dd { min-width:0; }
+.leave-overview-right-value { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-right-edit-button { min-height:var(--control-height-compact); height:auto; max-width:100%; white-space:normal; }
+.leave-overview-main-panel > .ui-alert { margin:0; }
+.leave-overview-special-panel .service-detail-row { grid-template-columns:20px minmax(200px,260px) minmax(0,1fr); }
+.leave-overview-special-list .service-detail-row dd { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-2); }
+.leave-overview-special-status { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2) var(--space-3); min-width:0; }
+.leave-overview-special-status > span:last-child { display:grid; gap:2px; min-width:0; }
+.leave-overview-special-status strong { font-size:13px; font-weight:400; }
+.leave-overview-special-status small { color:var(--color-text-secondary); font-size:11px; }
+.leave-overview-special-list .section-header-edit-button { width:auto; min-width:120px; min-height:var(--control-height-compact); height:auto; white-space:normal; }
+.leave-overview-special-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:var(--space-2); }
+.leave-history-summary { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); }
+.leave-history-summary-count { margin:0; color:var(--color-text-secondary); font-size:13px; }
+.leave-history-summary-count strong { color:var(--color-text); font-variant-numeric:tabular-nums; }
+.leave-right-modal .leave-rights-focused { min-width:0; padding:0; border:0; border-radius:0; background:transparent; }
+.leave-right-modal .leave-rights-panel .leave-right-row { grid-template-columns:minmax(0,1fr); }
+@container leave-workspace (max-width:60rem) {
+  .leave-overview-main-grid { grid-template-columns:minmax(0,1fr); }
+}
+@container leave-workspace (max-width:42rem) {
+  .leave-overview .service-detail-row { grid-template-columns:20px minmax(0,1fr); }
+  .leave-overview .service-detail-row dt,.leave-overview .service-detail-row dd { grid-column:2; }
+  .leave-overview .service-detail-row dd { padding:var(--space-1) 0 0; }
+  .leave-overview .service-detail-row dd::before { display:none; }
+  .leave-overview .service-detail-row > svg { grid-row:1 / span 2; align-self:start; margin-top:2px; }
+  .leave-overview-special-list .service-detail-row dd { align-items:flex-start; }
+}
+@container leave-workspace (max-width:30rem) {
+  .leave-overview-main-panel .info-section-heading { align-items:flex-start; }
+  .leave-overview-main-panel .info-section-action { flex-basis:100%; margin-inline-start:36px; }
+  .leave-overview-main-panel .section-header-edit-button { width:100%; }
+  .leave-overview-special-list .service-detail-row dd { flex-direction:column; align-items:stretch; }
+  .leave-overview-special-list .section-header-edit-button { width:100%; }
+  .leave-overview-special-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .leave-overview-special-actions .section-header-edit-button { width:100%; min-width:0; }
+}

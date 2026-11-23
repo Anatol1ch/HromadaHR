@@ -16,9 +16,8 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(formatLeaveDays(21),'21 день')
 })
 
-test('workbench returns from period accounting to the selected type and resumes history context', () => {
-  const selected = leaveWorkspaceNavigation(initialLeaveWorkspaceState, { type: 'open-type', leaveType: 'annual_main' })
-  const accounting = leaveWorkspaceNavigation(selected, { type: 'open-balances' })
+test('workbench opens period accounting directly and resumes history context', () => {
+  const accounting = leaveWorkspaceNavigation(initialLeaveWorkspaceState, { type: 'open-balances', leaveType: 'annual_main' })
   assert.equal(accounting.view, 'balances')
   assert.equal(accounting.selectedType, 'annual_main')
   const detail = leaveWorkspaceNavigation(accounting, { type: 'return-to-overview' })
@@ -28,7 +27,6 @@ test('workbench returns from period accounting to the selected type and resumes 
   const resumed = leaveWorkspaceNavigation(history, { type: 'resume-history' })
   assert.equal(resumed.view, 'overview')
   assert.equal(resumed.selectedType, 'annual_main')
-  assert.equal(leaveWorkspaceNavigation(resumed, { type: 'close-type' }).selectedType, null)
 })
 
 test('focused right editor submits only its selected status and uses the agreed workspace labels', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type RefObject } from 'react'
-import { ArrowLeft, History, Plus } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import { isPeriodLeave, type LeaveType } from '../../../shared/leave'
+import { isPeriodLeave, type LeaveType, type PeriodLeaveType } from '../../../shared/leave'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import Alert from '../Alert'
@@ -11,12 +11,11 @@ import LeaveOverview, { type LeaveOverviewData } from './LeaveOverview'
 import LeaveBalances from './LeaveBalances'
 import LeaveJournal from './LeaveJournal'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
-import LeaveTypeContextModal from './LeaveTypeContextModal'
+import LeaveRightModal from './LeaveRightModal'
 import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from './workbench-navigation'
 import useAccountingDate from './useAccountingDate'
 import { leaveWorkspaceLabels } from './presentation'
 import { leaveRecordBelongsToEmployee, type LeaveJournalContext, type RegistrationHistory } from './registry'
-import { accountingYears } from './usage'
 
 type LoadedOverview = { key: string; data?: LeaveOverviewData; error?: string }
 
@@ -28,11 +27,11 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   const [workspace, dispatchWorkspace] = useReducer(leaveWorkspaceNavigation, initialLeaveWorkspaceState)
   const { view, selectedType } = workspace
   const [type, setType] = useState<LeaveType>('annual_main')
-  const [chosenYear, setChosenYear] = useState('')
   const [localRevision, setLocalRevision] = useState(0)
   const refreshRevision = revision + localRevision
   const refresh = () => setLocalRevision(value => value + 1)
   const [creating, setCreating] = useState(false)
+  const [rightType, setRightType] = useState<LeaveType | null>(null)
   const [context, setContext] = useState<LeaveJournalContext | null>(null)
   const opener = useRef<HTMLElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -82,10 +81,6 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       refresh()
     },
   }
-  const currentYear = throughDate.slice(0, 4)
-  const years = accountingYears(currentRecords, employeeId, currentYear)
-  const year = years.includes(chosenYear) ? chosenYear : currentYear
-
   function openHistory() {
     navigationGuard.current(() => {
       dispatchWorkspace({ type: 'open-history', returnTo: view })
@@ -112,9 +107,10 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       requestAnimationFrame(() => heading.current?.focus())
     })
   }
-  function openBalances() {
+  function openBalances(selected: PeriodLeaveType) {
     navigationGuard.current(() => {
-      dispatchWorkspace({ type: 'open-balances' })
+      dispatchWorkspace({ type: 'open-balances', leaveType: selected })
+      setType(selected)
       requestAnimationFrame(() => heading.current?.focus())
     })
   }
@@ -130,7 +126,6 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
       <h3 ref={heading} tabIndex={-1}>{title}</h3>
       <div className="leave-accounting-actions">
         {view === 'overview' && <>
-          <button type="button" className="secondary-button" onClick={openHistory}><History size={16} aria-hidden="true"/>Історія</button>
           <button type="button" className="primary-button" disabled={creating} onClick={register}><Plus size={17} aria-hidden="true"/>Зареєструвати відпустку</button>
         </>}
         {view === 'history' && <button type="button" className="secondary-button" onClick={returnToOverview}><ArrowLeft size={16} aria-hidden="true"/>До огляду відпусток</button>}
@@ -139,7 +134,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     </div>
 
     {view === 'overview' && <LeaveOverview data={data} throughDate={throughDate} loading={!current} error={current?.error} onRetry={refresh}
-      onOpen={(selected, snapshot) => { setType(selected); dispatchWorkspace({ type: 'open-type', leaveType: selected }); setLoaded({ key: readKey, data: snapshot }) }}/ >}
+      onOpenBalances={openBalances} onEditRight={setRightType} onOpenHistory={openHistory}/ >}
 
     {view === 'balances' && selectedType && isPeriodLeave(selectedType) && <>
       {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
@@ -155,10 +150,8 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         history={history} context={context} onResume={() => { setContext(null); dispatchWorkspace({ type: 'resume-history' }); refresh() }}/>
     </>}
 
-    {view === 'overview' && selectedType && <LeaveTypeContextModal employee={employee} type={selectedType} data={data} loading={!current}
-      error={current?.error} throughDate={throughDate} year={year} years={years} history={history} navigationGuard={navigationGuard} revision={refreshRevision}
-      onYear={setChosenYear} onClose={() => dispatchWorkspace({ type: 'close-type' })} onOpenHistory={openHistory}
-      onOpenBalances={openBalances} onChanged={refresh}/>}
+    {rightType && <LeaveRightModal employee={employee} type={rightType} navigationGuard={navigationGuard}
+      onClose={() => setRightType(null)} onSaved={refresh}/>}
 
     {creating && <LeaveRegistrationForm employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate}
       initialType={type} navigationGuard={navigationGuard} history={history} returnFocus={opener.current}
