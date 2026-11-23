@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { CircleHelp, CircleCheck, CircleX } from 'lucide-react'
 import type { EmployeeLeaveRight } from '../../../shared/leave'
-import type { LeaveType } from '../../../shared/leave'
 import { leaveOptions, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 import Alert from '../Alert'
@@ -17,7 +16,7 @@ const rightStates = [
   { value: 'has_right', label: rightLabels.has_right, Icon: CircleCheck },
   { value: 'no_right', label: rightLabels.no_right, Icon: CircleX },
 ] as const
-export default function LeaveRights({employeeId,navigationGuard,onSaved,type,onDirtyChange}: {employeeId:string;navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void;type?:LeaveType;onDirtyChange?:(dirty:boolean)=>void}) {
+export default function LeaveRights({employeeId,navigationGuard,onSaved}: {employeeId:string;navigationGuard:RefObject<NavigationGuard>;onSaved:()=>void}) {
   const radioId=useId()
   const [saved,setSaved]=useState<EmployeeLeaveRight[]>()
   const [draft,setDraft]=useState<Record<string,string>>({})
@@ -25,12 +24,11 @@ export default function LeaveRights({employeeId,navigationGuard,onSaved,type,onD
   const owner=useRef<HTMLElement>(null),pending=useRef(false),alive=useRef(false)
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[])
   useEffect(()=>{let active=true;void window.hromadaHR.leave.listRights(employeeId).then(result=>{if(!active)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])))}else setError(personnelMessage(result.error.code))}).catch(()=>{if(active)setError('Не вдалося завантажити права.')});return()=>{active=false}},[employeeId,retry])
-  const options=type?leaveOptions.filter(option=>option.value===type):leaveOptions
+  const options=leaveOptions
   const changes=saved?changedLeaveRights(options,draft,saved):[]
-  useEffect(()=>{onDirtyChange?.(changes.length>0)},[changes.length,onDirtyChange])
   useUnsavedChanges(changes.length>0,pending,navigationGuard,owner)
   async function save(){if(pending.current||!saved||!changes.length)return;pending.current=true;setBusy(true);setError('');try{const result=await window.hromadaHR.leave.saveRights(employeeId,changes);if(!alive.current)return;if(result.ok){setSaved(result.data);setDraft(Object.fromEntries(result.data.map(r=>[r.leaveType,r.status])));onSaved();notifySystemToast('success','Статуси права збережено','Дні та минулі реєстрації не змінено.')}else setError(personnelMessage(result.error.code))}catch{if(alive.current)setError('Результат не підтверджено. Повторне збереження тих самих статусів безпечне.')}finally{pending.current=false;if(alive.current)setBusy(false)}}
-  return <section ref={owner} className={'dashboard-panel leave-rights-panel' + (type ? ' leave-rights-focused' : '')}>{!type && <header className="employee-group-heading"><h2>Права на відпустки</h2></header>}
+  return <section ref={owner} className="dashboard-panel leave-rights-panel"><header className="employee-group-heading"><h2>Права на відпустки</h2></header>
     {error && !saved && <Alert variant="error" action={<button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Повторити</button>}>{error}</Alert>}
     {!saved&&!error&&<DataState kind="loading" compact message="Завантаження статусу права…"/>}
     {saved&&<div className="leave-rights-list">{options.map(option => {
@@ -57,7 +55,7 @@ export default function LeaveRights({employeeId,navigationGuard,onSaved,type,onD
     <footer className="leave-rights-footer">
       <span className="leave-muted" role="status">{changes.length > 0 ? 'Є незбережені зміни' : ''}</span>
       <button type="button" className="primary-button" disabled={!saved||!changes.length||busy} onClick={() => void save()}>
-        {busy ? 'Збереження…' : 'Зберегти перевірку'}
+        {busy ? 'Збереження…' : 'Зберегти права'}
       </button>
     </footer>
   </section>

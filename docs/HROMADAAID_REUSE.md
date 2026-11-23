@@ -271,3 +271,7 @@ Read-only перевірено `src/RecipientRegistry.tsx` HromadaAID за SHA `
 ## 9.11.2 – Цільова оцінка HromadaAID
 
 Переглянуто доступний read-only публічний репозиторій `Anatol1ch/HromadaAID` та його реєстрові/спільні форми; придатного кадрового редактора рангу й відповідної нормативної логіки не підтверджено. Перевірений раніше commit `33eca10733caaf73b1a99e75a24ff35e706a0afb` містить спільні modal/form-патерни, але не rank editor. Тому адаптовано чинний `IndicatorEditor` надбавки HromadaHR; код AID не переносився, залежностей немає. Інвентаризація цільова, не повний аудит.
+
+## 9.12.3 – Sidebar і навігація відпусток
+
+Read-only цільово перевірено `Anatol1ch/HromadaAID` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`: `src/App.tsx` (вертикальний Sidebar, `.nav-item`, бренд/допомога) і `src/styles.css` (геометрія/стани). Реальний патерн навігаційних пунктів уже адаптований у HromadaHR і повторно використаний. У перевірених джерелах немає кнопки compact або збереження її вибору; ці дві можливості реалізовані локально в HR через токени та `localStorage`. HromadaAID не змінювався й runtime-залежності немає. У перевірених шляхах AID не виявлено придатного leave-workbench; відпускні розділи зібрані з чинних HR `LeaveRights`, `LeaveBalances`, `LeaveJournal`, `LeaveRegistrationForm` і UI Design System.

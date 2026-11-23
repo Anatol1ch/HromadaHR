@@ -12,7 +12,8 @@ import EmployeesWorkspace from './components/employees/EmployeesWorkspace'
 import DictionariesWorkspace from './components/employees/DictionariesWorkspace'
 import DocumentsWorkspace from './components/documents/DocumentsWorkspace'
 import { useEffect, useRef, useState } from 'react'
-import { Activity, BookOpen, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, Settings, UsersRound } from 'lucide-react'
+import { Activity, BookOpen, ChevronRight, CircleHelp, Code2, ArrowUpRight, FileText, Home, PanelLeftClose, PanelLeftOpen, Settings, UsersRound } from 'lucide-react'
+import { isCompactSidebar, readCompactSidebar, writeCompactSidebar } from './lib/sidebar-preference'
 import Alert from './components/Alert'
 import communityCoat from '../assets/community-coat.png'
 import type { StorageErrorCode, StorageStatus } from '../shared/ipc'
@@ -115,6 +116,8 @@ function StorageNotice() {
 
 export default function App() {
   const [active, setActive] = useState<SectionId>('home')
+  const [preferredCompact, setPreferredCompact] = useState(() => readCompactSidebar({ getItem: key => window.localStorage.getItem(key) }))
+  const [narrowViewport, setNarrowViewport] = useState(() => window.matchMedia('(max-width: 1100px)').matches)
   const [documentIntent,setDocumentIntent]=useState<DocumentNavigationIntent>()
   const [employeeIntent,setEmployeeIntent]=useState<EmployeeNavigationIntent>()
   const [employeeProfileLabel,setEmployeeProfileLabel]=useState<string>()
@@ -134,6 +137,14 @@ export default function App() {
   const [startupReady, setStartupReady] = useState(false)
   const startedAt = useRef(Date.now())
   const [storage, setStorage] = useState<StorageStatus>({ state: 'initializing' })
+  useEffect(() => { writeCompactSidebar({ setItem: (key, value) => window.localStorage.setItem(key, value) }, preferredCompact) }, [preferredCompact])
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1100px)')
+    const update = () => setNarrowViewport(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
   const control=usePersonnelControl(startupReady&&storage.state==='ready')
   useEffect(()=>{if(active==='overview')void control.refresh()},[active,control.refresh])
   const openControlEmployee=(issue:PersonnelIssue,done:()=>void=()=>{})=>requestEmployeeNavigation(issue,++intentSequence.current,navigationGuard.current,intent=>{setEmployeeProfileLabel(undefined);setEmployeeIntent(intent);setActive('employees')},done)
@@ -162,20 +173,29 @@ export default function App() {
     return () => { alive = false; clearInterval(timer) }
   }, [])
   const current = sections.find(section => section.id === active)!
+  const compactSidebar = isCompactSidebar(narrowViewport, preferredCompact)
+  const sidebarToggleLabel = `${preferredCompact ? 'Розгорнути' : 'Згорнути'} бічне меню${narrowViewport ? ' на широкому вікні' : ''}`
 
   if (storage.state === 'error' || storage.state === 'closed') return <RecoveryScreen status={storage} />
   if (!startupReady) return <StartupScreen />
   if (storage.state !== 'ready') return <RecoveryScreen status={storage} />
 
-  return <div className="app-shell">
+  return <div className={`app-shell${compactSidebar ? ' sidebar-compact' : ''}`}>
     <a className="skip-link" href="#workspace-content">Перейти до вмісту</a>
     <aside className="sidebar" aria-label="Бічна панель HromadaHR">
-      <div className="brand">
-        <div className="brand-mark" title="HromadaHR"><UsersRound size={22} strokeWidth={2.1} aria-hidden="true" /></div>
-        <div className="brand-copy">
-          <div className="brand-name">Hromada<span>HR</span></div>
-          <div className="brand-caption">Автоматизована система кадрового обліку</div>
+      <div className="sidebar-header">
+        <div className="brand">
+          <div className="brand-mark" title="HromadaHR"><UsersRound size={22} strokeWidth={2.1} aria-hidden="true" /></div>
+          <div className="brand-copy">
+            <div className="brand-name">Hromada<span>HR</span></div>
+            <div className="brand-caption">Автоматизована система кадрового обліку</div>
+          </div>
         </div>
+        <button type="button" className="sidebar-toggle" aria-label={sidebarToggleLabel}
+          title={sidebarToggleLabel} aria-pressed={preferredCompact}
+          onClick={() => setPreferredCompact(value => !value)}>
+          {preferredCompact ? <PanelLeftOpen size={17} aria-hidden="true"/> : <PanelLeftClose size={17} aria-hidden="true"/>}
+        </button>
       </div>
       <div className="nav-label">РОБОЧИЙ ПРОСТІР</div>
       <nav className="nav-list" aria-label="Робочий простір">
@@ -183,7 +203,7 @@ export default function App() {
           <NavigationItem key={section.id} section={section} active={active} onNavigate={navigate} />)}
       </nav>
       <div className="sidebar-bottom">
-        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога?" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
+        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога? Зверніться до адміністратора системи" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
         <div className="nav-label">СИСТЕМА</div>
         <nav aria-label="Система">
           <NavigationItem section={settingsSection} active={active} onNavigate={navigate} />

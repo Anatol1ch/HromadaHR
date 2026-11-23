@@ -16,17 +16,26 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(formatLeaveDays(21),'21 день')
 })
 
-test('workbench opens period accounting directly and resumes history context', () => {
+test('workbench switches four sections and preserves selected balance and history return context', () => {
   const accounting = leaveWorkspaceNavigation(initialLeaveWorkspaceState, { type: 'open-balances', leaveType: 'annual_main' })
   assert.equal(accounting.view, 'balances')
   assert.equal(accounting.selectedType, 'annual_main')
-  const detail = leaveWorkspaceNavigation(accounting, { type: 'return-to-overview' })
+  const rights = leaveWorkspaceNavigation(accounting, { type: 'navigate', view: 'rights' })
+  assert.equal(rights.view, 'rights')
+  assert.equal(rights.selectedType, 'annual_main')
+  const detail = leaveWorkspaceNavigation(rights, { type: 'navigate', view: 'overview' })
   assert.equal(detail.view, 'overview')
   assert.equal(detail.selectedType, 'annual_main')
   const history = leaveWorkspaceNavigation(detail, { type: 'open-history', returnTo: detail.view })
   const resumed = leaveWorkspaceNavigation(history, { type: 'resume-history' })
   assert.equal(resumed.view, 'overview')
   assert.equal(resumed.selectedType, 'annual_main')
+  const balances = leaveWorkspaceNavigation(resumed, { type: 'open-balances', leaveType: 'children_social_additional' })
+  const historyFromBalances = leaveWorkspaceNavigation(balances, { type: 'open-history', returnTo: balances.view })
+  const resumedBalances = leaveWorkspaceNavigation(historyFromBalances, { type: 'resume-history' })
+  assert.equal(resumedBalances.view, balances.view)
+  assert.equal(resumedBalances.selectedType, balances.selectedType)
+  assert.equal(resumedBalances.historyReturn, 'balances')
 })
 
 test('focused right editor submits only its selected status and uses the agreed workspace labels', () => {

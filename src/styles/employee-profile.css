@@ -64,9 +64,26 @@
 }
 
 .profile-leave-workbench { display:grid; gap:var(--space-3); min-width:0; container:leave-workspace / inline-size; }
-.profile-leave-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); }
-.profile-leave-toolbar h3 { margin:0; font-size:18px; }
-.profile-leave-workbench .leave-accounting-actions { flex-wrap:wrap; }
+.profile-leave-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
+.profile-leave-toolbar h3 { display:flex; align-items:center; gap:var(--space-2); margin:0; font-size:18px; color:var(--accent-hover); }
+.profile-leave-toolbar h3 svg { flex:none; color:var(--accent); }
+.leave-workbench-layout { display:grid; grid-template-columns:185px minmax(0,1fr); gap:var(--space-3); align-items:start; min-width:0; }
+.leave-workbench-nav { display:grid; gap:var(--space-1); min-width:0; padding:var(--space-2); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
+.leave-workbench-nav > button { display:flex; align-items:center; gap:var(--space-2); min-width:0; min-height:42px; padding:var(--space-2) var(--space-3); border:1px solid transparent; border-radius:var(--radius-control); background:transparent; color:var(--color-text-secondary); font:inherit; text-align:left; cursor:pointer; }
+.leave-workbench-nav > button:hover { background:var(--surface-panel); color:var(--color-text); }
+.leave-workbench-nav > button.is-active { border-color:var(--border-accent); background:var(--accent-soft); color:var(--accent-hover); font-weight:650; }
+.leave-workbench-nav > button svg { flex:none; color:var(--accent); }
+.leave-workbench-nav > button:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+.leave-workbench-content { display:grid; gap:var(--space-3); min-width:0; }
+.leave-workbench-compact-select { display:none; min-width:0; }
+.leave-balance-selector { min-width:0; }
+.leave-overview-summary { min-width:0; background:var(--surface-card); }
+.leave-overview-summary .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
+.leave-summary-table { width:100%; }
+.leave-summary-type { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-summary-type > svg,.leave-summary-type .leave-type-icon { flex:none; }
+.leave-summary-accounting { overflow-wrap:anywhere; }
+.leave-workbench-content .leave-registry { min-width:0; }
 .profile-leave-workbench .leave-register-table { min-width:760px; }
 .profile-leave-workbench .leave-registry { min-width:0; }
 .profile-leave-toolbar:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
@@ -74,3 +91,13 @@
 .profile-leave-workbench .leave-register-table :is(th, td):nth-child(-n+4) { min-width:0; }
 .profile-leave-workbench .leave-register-table .leave-journal-date { min-width:6.5rem; }
 .profile-leave-toolbar .primary-button { height:auto; min-height:var(--control-height); white-space:normal; }
+@container leave-workspace (max-width:60rem) {
+ .leave-workbench-layout { grid-template-columns:minmax(0,1fr); }
+ .leave-workbench-nav { display:none; }
+ .leave-workbench-compact-select { display:block; }
+}
+@container leave-workspace (max-width:32rem) {
+ .profile-leave-toolbar { align-items:stretch; }
+ .profile-leave-toolbar .primary-button { width:100%; justify-content:center; }
+ .profile-leave-toolbar h3 { font-size:17px; }
+}

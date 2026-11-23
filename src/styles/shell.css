@@ -17,7 +17,12 @@
   z-index: 2;
 }
 .sidebar > * { flex-shrink: 0; }
+.sidebar-header { min-width:0; min-height:65px; display:flex; align-items:flex-start; gap:var(--space-2); }
+.sidebar-header .brand { flex:1; min-width:0; }
 .brand { min-height: 65px; display: flex; align-items: flex-start; gap: var(--space-3); padding: 0 7px 0 5px; }
+.sidebar-toggle { display:grid; flex:none; place-items:center; width:30px; height:30px; margin-top:5px; border:1px solid var(--border-surface); border-radius:var(--radius-control); background:var(--surface-card); color:var(--color-text-secondary); cursor:pointer; transition:background-color var(--motion-duration-fast),color var(--motion-duration-fast),border-color var(--motion-duration-fast); }
+.sidebar-toggle:hover { background:var(--accent-soft); border-color:var(--border-focus); color:var(--accent-hover); }
+.sidebar-toggle:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
 .brand-mark { width: 42px; height: 42px; background: var(--surface-panel); color: var(--surface-card); border-radius: var(--radius-card); display: grid; place-items: center; flex: none; }
 .brand-copy { min-width: 0; padding-top: 1px; }
 .brand-name { font-family: 'Segoe UI', Tahoma, sans-serif; color: var(--accent-hover); font-weight: 800; letter-spacing: -.6px; font-size: 21px; line-height: 25px; }
@@ -134,14 +139,19 @@
   .workspace-heading h1 > span { display: inline; white-space: normal; }
 }
 
-@media screen and (max-width: 1100px){
-  .sidebar { position: fixed; width: 68px; min-width: 68px; height: 100dvh; padding: 15px 7px; }
-  .brand { min-height: auto; padding: 0; justify-content: center; }
-  .brand-copy, .sidebar .nav-label, .nav-item span { display: none; }
-  .nav-list { margin-top: var(--space-6); gap: 7px; }
-  .nav-item { justify-content: center; padding: 0; }
-  .main-area { width: calc(100% - 68px); margin-left: 68px; min-width: 0; }
-}
+.sidebar-compact .sidebar { width:68px; min-width:68px; padding:15px 7px var(--space-4); }
+.sidebar-compact .main-area { width:calc(100% - 68px); margin-left:68px; min-width:0; }
+.sidebar-compact .sidebar-header { min-height:0; flex-direction:column; align-items:center; gap:var(--space-2); }
+.sidebar-compact .sidebar-toggle { order:-1; }
+.sidebar-compact .sidebar-header .brand { min-height:0; padding:0; justify-content:center; }
+.sidebar-compact .sidebar-toggle { margin:0; }
+.sidebar-compact .brand-copy, .sidebar-compact .sidebar .nav-label, .sidebar-compact .nav-item span,
+.sidebar-compact .help-copy, .sidebar-compact .help-card > svg { display:none; }
+.sidebar-compact .nav-list { margin-top:var(--space-6); gap:7px; }
+.sidebar-compact .nav-item { justify-content:center; padding:0; }
+.sidebar-compact .help-card { justify-content:center; padding:var(--space-2); }
+.sidebar-toggle:focus-visible,.nav-item:focus-visible,.help-card-button:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+@media (prefers-reduced-motion:reduce) { .sidebar-toggle { transition:none; } }
 
 /* Banner and footer composition from AID App.tsx/styles.css; HR identity uses theme tokens. */
 .workspace-coat-area { display: flex; align-items: center; justify-content: center; padding: 18px; background: var(--accent-soft); border-right: 1px solid var(--border-accent); }

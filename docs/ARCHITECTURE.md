@@ -589,6 +589,14 @@ SQLite v18, 0.1.0, IPC/Main/LeaveService/FIFO/календарі/межа реє
 
 Старий callback onOpenLeave від профілю через EmployeesWorkspace/App вилучено: усі профільні дії локальні. Глобальний LeaveWorkspace далі відкривається штатним sidebar. Для періодних видів LeaveRegistrationForm має компактну дію перегляду історії через той самий history.open з порожнім роком; наявний річний контекст спеціальних видів збережено.
 
+## Етап 9.12.3 – Вертикальний leave-workbench і Sidebar preference
+
+`ProfileLeaveWorkbench` має чотири локальні розділи: `overview`, `rights`, `balances`, `history`. Навігаційний reducer зберігає обраний `PeriodLeaveType` і контекст повернення з `LeaveJournal`. Перехід між розділами та типами обліку проходить `NavigationGuard`; періоди/права/реєстрація продовжують використовувати відповідні наявні компоненти. `LeaveRights` показує всі шість прав і зберігає через чинний `saveRights`; `LeaveOverview` є лише читаним зведенням. Зведення не підмінює відсутні підтверджені дані нулем і не вигадує баланс для подієвих видів. Реєстрація доступна з усіх розділів; контекстне відкриття історії зберігає змонтовану форму і повертає до неї.
+
+Глобальний sidebar compact preference зберігається у `localStorage` через `src/lib/sidebar-preference.ts`, без IPC/SQLite. `matchMedia('(max-width: 1100px)')` примусово застосовує компактний вигляд на вузькому вікні, не перезаписуючи вибір для широкого; після розширення viewport він відновлюється. CSS клас `.sidebar-compact` узгоджено задає ширину sidebar та компенсацію `.main-area`.
+
+SQLite, IPC, Main, права, FIFO, періоди й реєстрації не змінювалися.
+
 ## 6.4 – Консолідована навігація та глобальний журнал
 
 App.sections/SectionId тепер містять home, overview, employees, documents, dictionaries, settings у цьому порядку; settings лишається в системній частині sidebar. Home має лише два активні переходи: Працівники й Документи. Breadcrumbs використовують той самий масив; заглушку documents та застарілі описи вилучено. Глобальні leave/service більше не мають імпортів, монтування або переходів у App. Кадровий контроль зберігає чинні employee navigation intents general/service/rank/leave й один navigationGuard.

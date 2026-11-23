@@ -12,7 +12,7 @@ const modules = {
   leaves: ['leave', 'leave-ipc', 'leave-rights', 'leave-registration', 'leave-corrections', 'special-leaves', 'service-leave-calculations', 'service-leave-projection', 'leave-draft', 'leave-confirmation', 'leave-presentation', 'leave-usage'],
   documents: ['documents-core', 'document-numbering', 'document-leave-links', 'documents-ui', 'document-leave-links-ui'],
   control: ['personnel-control', 'personnel-control-calculations'],
-  ui: ['ui-foundation', 'ui-contracts', 'employee-form-modes'],
+  ui: ['ui-foundation', 'ui-contracts', 'employee-form-modes', 'sidebar-preference'],
 }
 
 // Every existing test file must belong to exactly one module. New/unmapped files
