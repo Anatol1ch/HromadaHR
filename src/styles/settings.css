@@ -1,13 +1,4 @@
-/* Selected HromadaAID 33eca107 styles; HR contact rows group separate open/copy buttons. */
-.help-card { margin: 19px 2px 18px; background: var(--surface-panel); border: 1px solid var(--border-surface); border-radius: 9px; display: flex; align-items: flex-start; gap: 10px; padding: 14px 10px; color: var(--color-text-secondary); }
-.help-icon { width: 30px; height: 30px; border-radius: var(--radius-control); background: var(--surface-card); display: grid; place-items: center; color: var(--accent-hover); flex: none; }
-.help-card strong { font-size: 12px; color: var(--color-text); display: block; margin-top: 1px; }
-.help-card p { font-size: 11px; line-height: 1.45; margin: 5px 0 0; color: var(--color-text-secondary); }
-.help-card > svg { margin: 5px 0 0 auto; flex: none; }
-.help-card-button { width: calc(100% - 4px); border-style: solid; text-align: left; font: inherit; cursor: pointer; }
-.help-card-button:hover, .help-card-button:focus-visible { border-color: var(--border-focus); background: var(--surface-panel); outline-color: var(--border-focus); }
-.help-card-button .help-copy { display: block; min-width: 0; }
-.help-card-button .help-copy span { display: block; margin-top: 5px; color: var(--color-text-secondary); font-size: 11px; line-height: 1.45; }
+/* HromadaHR help is a standard Sidebar nav item; this file styles only Settings content. */
 .support-modal .app-modal-content { container: support-content / inline-size; }
 .support-contact-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .support-contact-owner { grid-column: 1 / -1; display: grid; gap: 5px; margin-bottom: 3px; padding: 13px 14px; border: 1px solid var(--border-surface); border-radius: var(--radius-card); background: var(--surface-panel); }
@@ -86,10 +77,6 @@
 .backup-restore-modal .recipient-form-actions { justify-content:flex-end; }
 @container backup-settings (max-width:640px) {
   .backup-target-grid { grid-template-columns:minmax(0,1fr); }
-}
-@media (max-width: 1100px) {
-  .sidebar-bottom .help-card { justify-content: center; padding: 10px 0; margin-inline: 0; width: 100%; }
-  .help-card .help-copy, .help-card > svg { display: none; }
 }
 @media (max-width: 600px) {
   .settings-about-grid, .settings-origin-grid { grid-template-columns: minmax(0, 1fr); }

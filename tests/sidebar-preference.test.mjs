@@ -14,7 +14,12 @@ test('sidebar preference persists the desktop choice while narrow viewports rema
   assert.equal(isCompactSidebar(false, false), false)
   writeCompactSidebar(storage, false)
   assert.equal(isCompactSidebar(false, readCompactSidebar(storage)), false)
+})
+
+test('forced compact mode names the saved wide-window action without implying an immediate expansion', () => {
+  assert.equal(isCompactSidebar(true, false), true)
   assert.equal(getSidebarToggleLabel(false, true), 'Згорнути бічне меню на широкому вікні')
+  assert.equal(isCompactSidebar(true, true), true)
   assert.equal(getSidebarToggleLabel(true, true), 'Розгорнути бічне меню на широкому вікні')
   assert.equal(getSidebarToggleLabel(true, false), 'Розгорнути бічне меню')
 })

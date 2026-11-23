@@ -44,7 +44,7 @@ function NavigationItem({ section, active, onNavigate }: {
     aria-label={section.label} title={section.label}
     aria-current={active === section.id ? 'page' : undefined}
     onClick={() => onNavigate(section.id)}>
-    <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+    <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
     <span>{section.label}</span>
   </button>
 }
@@ -191,21 +191,25 @@ export default function App() {
             <div className="brand-caption">Автоматизована система кадрового обліку</div>
           </div>
         </div>
+      </div>
+      <div className="sidebar-control-row">
         <button type="button" className="sidebar-toggle" aria-label={sidebarToggleLabel}
           title={sidebarToggleLabel} aria-pressed={preferredCompact}
           onClick={() => setPreferredCompact(value => !value)}>
-          {preferredCompact ? <PanelLeftOpen size={17} aria-hidden="true"/> : <PanelLeftClose size={17} aria-hidden="true"/>}
+          {preferredCompact ? <PanelLeftOpen size={18} aria-hidden="true"/> : <PanelLeftClose size={18} aria-hidden="true"/>}
         </button>
       </div>
-      <div className="nav-label">РОБОЧИЙ ПРОСТІР</div>
       <nav className="nav-list" aria-label="Робочий простір">
         {sections.filter(section => section.id !== 'settings').map(section =>
           <NavigationItem key={section.id} section={section} active={active} onNavigate={navigate} />)}
       </nav>
+      <div className="sidebar-spacer" aria-hidden="true" />
       <div className="sidebar-bottom">
-        <button type="button" className="help-card help-card-button" aria-label="Потрібна допомога? Зверніться до адміністратора системи" title="Потрібна допомога?" onClick={() => setHelpOpen(true)}><span className="help-icon"><CircleHelp size={18} aria-hidden="true"/></span><span className="help-copy"><strong>Потрібна допомога?</strong><span>Зверніться до адміністратора системи</span></span><ChevronRight size={17} aria-hidden="true"/></button>
-        <div className="nav-label">СИСТЕМА</div>
-        <nav aria-label="Система">
+        <button type="button" className="nav-item sidebar-help" aria-label="Допомога та підтримка"
+          title="Допомога та підтримка" onClick={() => setHelpOpen(true)}>
+          <CircleHelp size={20} strokeWidth={1.8} aria-hidden="true"/><span>Допомога та підтримка</span>
+        </button>
+        <nav className="sidebar-system-nav" aria-label="Системні налаштування">
           <NavigationItem section={settingsSection} active={active} onNavigate={navigate} />
         </nav>
       </div>
