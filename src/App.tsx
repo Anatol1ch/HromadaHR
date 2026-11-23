@@ -208,27 +208,27 @@ export default function App() {
     </aside>
     <div className="main-area">
       <header className="topbar">
-        <div className={`topbar-inner${active === 'employees' || active === 'documents' ? ' topbar-inner-workspace' : ''}`}>
-          <button type="button" className="secondary-button sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
+        <div className="topbar-inner">
+          <button type="button" className="sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
             title={sidebarToggleLabel} aria-pressed={preferredCompact}
             onClick={() => setPreferredCompact(value => !value)}>
             {preferredCompact ? <PanelLeftOpen size={20} aria-hidden="true"/> : <PanelLeftClose size={20} aria-hidden="true"/>}
           </button>
           <nav className="crumb" aria-label="Навігаційні крихти">
             <ol>
-              <li>{active === 'home' ? <span>Робочий простір</span> :
+              <li className={active === 'home' ? 'crumb-current' : undefined}>{active === 'home' ? <span>Робочий простір</span> :
                 <button type="button" onClick={() => navigate('home')}>Робочий простір</button>}</li>
               {active==='employees'&&employeeProfileLabel?<>
                 <li><ChevronRight size={15} aria-hidden="true"/><button type="button" onClick={returnToRegistry}>Працівники</button></li>
-                <li className="crumb-profile-current"><ChevronRight size={15} aria-hidden="true"/><span aria-current="page" title={employeeProfileLabel}>Особова картка ({employeeProfileLabel})</span></li>
-              </>:<li><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>}
+                <li className="crumb-profile-current crumb-current"><ChevronRight size={15} aria-hidden="true"/><span aria-current="page" title={employeeProfileLabel}>Особова картка ({employeeProfileLabel})</span></li>
+              </>:<li className="crumb-current"><ChevronRight size={15} aria-hidden="true" /><span aria-current="page">{current.label}</span></li>}
             </ol>
           </nav>
           <PersonnelControlBell model={control} onOpen={openControlEmployee} onOverview={done=>navigationGuard.current(()=>{done();setEmployeeProfileLabel(undefined);setActive('overview');void control.refresh()})}/>
         </div>
       </header>
       <DocumentNavigationContext.Provider value={openDocument}><main id="workspace-content" tabIndex={-1}
-        className={`content home-content${active === 'employees' || active === 'documents' ? ' content-workspace' : ''}`}>
+        className="content home-content">
         <StorageNotice />
         {active === 'home' ? <HomePage onNavigate={navigate} /> : active === 'employees' ?
           <EmployeesWorkspace initialIntent={employeeIntent} onIntentHandled={()=>setEmployeeIntent(undefined)} navigationGuard={navigationGuard}
