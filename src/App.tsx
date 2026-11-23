@@ -209,11 +209,12 @@ export default function App() {
     <div className="main-area">
       <header className="topbar">
         <div className="topbar-inner">
-          <button type="button" className="sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
+          <button type="button" className="employee-profile-return sidebar-toggle topbar-sidebar-toggle" aria-label={sidebarToggleLabel}
             title={sidebarToggleLabel} aria-pressed={preferredCompact}
             onClick={() => setPreferredCompact(value => !value)}>
-            {preferredCompact ? <PanelLeftOpen size={20} aria-hidden="true"/> : <PanelLeftClose size={20} aria-hidden="true"/>}
+            {preferredCompact ? <PanelLeftOpen size={22} aria-hidden="true"/> : <PanelLeftClose size={22} aria-hidden="true"/>}
           </button>
+          <span className="employee-profile-return-separator" aria-hidden="true" />
           <nav className="crumb" aria-label="Навігаційні крихти">
             <ol>
               <li className={active === 'home' ? 'crumb-current' : undefined}>{active === 'home' ? <span>Робочий простір</span> :
