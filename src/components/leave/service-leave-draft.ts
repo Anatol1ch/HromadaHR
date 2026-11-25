@@ -7,7 +7,7 @@ export function serviceDraftIdentity(row:Draft):string {
  return 'period' in row?`${row.period.periodStart}/${row.period.periodEnd}`:`manual:${row.id}`
 }
 export function serviceLeaveSuggestion(row:Draft,projection:OmsServiceLeaveProjection|null,today:string):number|null {
- if(!projection||projection.status!=='calculated'||projection.calculation.status!=='calculated'||projection.calculation.calculatedOn!==today||projection.rightStatus!=='has_right'||projection.recommendedDays===null||row.days.trim())return null
+ if(row.suggestionDismissed||!projection||projection.status!=='calculated'||projection.calculation.status!=='calculated'||projection.calculation.calculatedOn!==today||projection.rightStatus!=='has_right'||projection.recommendedDays===null||row.days.trim())return null
  if('period' in row&&(row.period.status!=='proposed'||row.period.leaveType!=='oms_service_additional'))return null
  const start='period' in row?row.period.periodStart:parseDateInput(row.start)
  const end='period' in row?row.period.periodEnd:parseDateInput(row.end)
@@ -23,4 +23,16 @@ export function applyServiceLeaveSuggestion(rows:Draft[],identity:string,project
  const days=serviceLeaveSuggestion(rows[index],projection,today)
  if(days===null)return rows
  return rows.map((row,i)=>i===index?{...row,days:String(days),suggestedFromProjection:true}:row)
+}
+
+/** Populate all currently eligible blank rows in the local draft; no persistence occurs here. */
+export function applyAvailableServiceLeaveSuggestions(rows:Draft[],projection:OmsServiceLeaveProjection|null,today:string):Draft[] {
+ let changed = false
+ const next = rows.map(row => {
+  const days = serviceLeaveSuggestion(row,projection,today)
+  if (days === null) return row
+  changed = true
+  return {...row,days:String(days),suggestedFromProjection:true}
+ })
+ return changed ? next : rows
 }

@@ -1,6 +1,7 @@
 import type { LeaveAccountingBasis, PeriodLeaveType, ProposedLeavePeriod } from './leave.js'
 
 export const ELECTRONIC_ACCOUNTING_START = '2027-01-01'
+export const ANNUAL_MAIN_STANDARD_SUGGESTION_DAYS = 30
 
 export function isCalendarDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.slice(0, 4) === '0000') return false
@@ -54,14 +55,22 @@ export function proposedPeriods(leaveType: PeriodLeaveType, hireDate: string, th
     if (result.length === 200) return result
     const nextStart = addCalendarYear(start)
     if (!nextStart) break
+    const accountingBasis = accountingBasisForPeriod(start)
     result.push({ leaveType, periodStart: start, periodEnd: previousDate(nextStart),
-      accountingBasis: accountingBasisForPeriod(start), status: 'proposed' })
+      accountingBasis, status: 'proposed',
+      ...(leaveType === 'annual_main' && accountingBasis === 'confirmed_entitlement' && previousDate(nextStart) >= throughDate
+        ? { suggestedDays: ANNUAL_MAIN_STANDARD_SUGGESTION_DAYS } : {}) })
     start = nextStart
   }
   // One unconfirmed next working year; the anniversary policy stays unchanged.
   const futureEnd = addCalendarYear(start)
-  if (futureEnd) result.push({ leaveType, periodStart: start, periodEnd: previousDate(futureEnd),
-    accountingBasis: accountingBasisForPeriod(start), status: 'proposed' })
+  if (futureEnd) {
+    const accountingBasis = accountingBasisForPeriod(start)
+    result.push({ leaveType, periodStart: start, periodEnd: previousDate(futureEnd),
+      accountingBasis, status: 'proposed',
+      ...(leaveType === 'annual_main' && accountingBasis === 'confirmed_entitlement'
+        ? { suggestedDays: ANNUAL_MAIN_STANDARD_SUGGESTION_DAYS } : {}) })
+  }
   return result
 }
 

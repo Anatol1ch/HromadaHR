@@ -1,4 +1,4 @@
-import type { ConfirmedLeavePeriod, LeaveApi, LeavePeriodInput, ProposedLeavePeriod } from '../../../shared/leave'
+import type { ConfirmedLeavePeriod, LeaveApi, LeavePeriodInput, PeriodLeaveType, ProposedLeavePeriod } from '../../../shared/leave'
 import { formatDateInput, parseDateInput } from '../../lib/dates.ts'
 import { shiftDays, shiftMonths } from '../../lib/calendar.ts'
 import { serviceLeaveProposals } from '../../../shared/leave-periods.ts'
@@ -6,9 +6,23 @@ import { serviceLeaveProposals } from '../../../shared/leave-periods.ts'
 export const cutoff = '2027-01-01'
 export type Period = ConfirmedLeavePeriod | ProposedLeavePeriod
 type ManualDraft = { id: number; start: string; end: string; startIso: string; endIso: string; days: string; endEdited?: boolean }
-export type Draft = ({ period: Period; days: string } | ManualDraft) & { suggestedFromProjection?: boolean }
+export type Draft = ({ period: Period; days: string } | ManualDraft) & {
+  suggestedFromProjection?: boolean
+  suggestedAnnual?: boolean
+  suggestionDismissed?: boolean
+}
 
 const periodKey = (period: Period) => period.periodStart + '/' + period.periodEnd
+
+export function initialBalanceDrafts(periods: Period[], type: PeriodLeaveType): Draft[] {
+  return periods.filter(period => type === 'annual_main' || period.status === 'confirmed').map(period => ({
+    period,
+    days: period.status === 'confirmed' ? String(period.confirmedDays) :
+      period.status === 'proposed' && type === 'annual_main' && period.accountingBasis === 'confirmed_entitlement' && period.suggestedDays !== undefined
+        ? String(period.suggestedDays) : '',
+    suggestedAnnual: period.status === 'proposed' && type === 'annual_main' && period.accountingBasis === 'confirmed_entitlement' && period.suggestedDays !== undefined,
+  }))
+}
 
 export function serviceDraftRows(rows: Draft[], start: string | null, throughDate: string, manual: ProposedLeavePeriod[], historicalOnly: boolean) {
   const confirmed = rows.flatMap(row => 'period' in row && row.period.status === 'confirmed' ? [row.period] : [])

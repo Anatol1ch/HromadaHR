@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildChanges, hasNewEntitlement, historicalBalancePeriods, saveBalanceDraft, serviceDraftRows, setManualStart } from '../src/components/leave/draft.ts'
+import { buildChanges, hasNewEntitlement, historicalBalancePeriods, initialBalanceDrafts, saveBalanceDraft, serviceDraftRows, setManualStart } from '../src/components/leave/draft.ts'
 
 test('manual service dates suggest a clamped anniversary and preserve an edited end', () => {
   const row = { id: 1, start: '29.02.2024', startIso: '', end: '', endIso: '', days: '' }
@@ -21,6 +21,16 @@ test('confirmation is limited to new entitlements, including explicit zero and m
   assert.equal(hasNewEntitlement(buildChanges([historical, correction]), [initial, confirmed]), false)
   assert.equal(hasNewEntitlement(buildChanges([historical, correction, { period: next, days: '0' }]), [initial, confirmed, next]), true)
   assert.equal(hasNewEntitlement(buildChanges([{ period: next, days: '' }]), [next]), false)
+})
+
+test('annual draft displays a suggestion while preserving confirmed values on reopen', () => {
+  const proposed={leaveType:'annual_main',periodStart:'2027-06-15',periodEnd:'2028-06-14',accountingBasis:'confirmed_entitlement',status:'proposed',suggestedDays:30}
+  const saved={...proposed,status:'confirmed',confirmedDays:23,referenceEntitlementDays:null,id:'period',employeeId:'employee',suggestedDays:undefined}
+  const suggestion=initialBalanceDrafts([proposed],'annual_main')[0]
+  assert.equal(suggestion.days,'30');assert.equal(suggestion.suggestedAnnual,true)
+  const reopened=initialBalanceDrafts([saved],'annual_main')
+  assert.equal(reopened[0].days,'23');assert.equal(reopened[0].suggestedAnnual,false)
+  assert.deepEqual(buildChanges(reopened),[])
 })
 
 const proposal = { status: 'proposed', leaveType: 'annual_main', accountingBasis: 'initial_balance',

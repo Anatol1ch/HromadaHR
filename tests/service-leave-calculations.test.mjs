@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { projectOmsServiceLeave,serviceLeaveDays,nextServiceLeaveThreshold,serviceLeaveThresholds } from '../dist-electron/shared/service-leave-calculations.js'
 import { calculateService } from '../dist-electron/shared/service-calculations.js'
-import { serviceLeaveSuggestion,applyServiceLeaveSuggestion,serviceDraftIdentity } from '../src/components/leave/service-leave-draft.ts'
+import { serviceLeaveSuggestion,applyServiceLeaveSuggestion,applyAvailableServiceLeaveSuggestions,serviceDraftIdentity } from '../src/components/leave/service-leave-draft.ts'
 import { buildChanges } from '../src/components/leave/draft.ts'
 const baseline={mode:'snapshot',years:12,months:0,days:1,asOfDate:'2028-01-01'}
 const facts={acquiredOn:null,rightStatus:'has_right',periods:[]}
@@ -84,4 +84,13 @@ test('explicit suggestion changes one eligible blank draft and preserves IPC con
   assert.equal(applyServiceLeaveSuggestion(rows,serviceDraftIdentity(row),bad,'2028-01-01'),rows)
  }
  assert.equal(serviceLeaveSuggestion(row,p,'2028-01-02'),null)
+})
+test('automatic service suggestions fill eligible blank draft rows once and respect manual clearing',()=>{
+ const proposed={...period,status:'proposed'},first={period:proposed,days:''},second={period:{...proposed,periodStart:'2029-01-01',periodEnd:'2029-12-31'},days:''}
+ const projection=project()
+ const filled=applyAvailableServiceLeaveSuggestions([first,second],projection,'2028-01-01')
+ assert.equal(filled[0].days,'9');assert.equal(filled[0].suggestedFromProjection,true)
+ assert.equal(filled[1].days,'');assert.deepEqual(applyAvailableServiceLeaveSuggestions(filled,projection,'2028-01-01'),filled)
+ const cleared={...filled[0],days:'',suggestedFromProjection:undefined,suggestionDismissed:true},clearedRows=[cleared]
+ assert.equal(applyAvailableServiceLeaveSuggestions(clearedRows,projection,'2028-01-01'),clearedRows)
 })

@@ -264,6 +264,7 @@ test('exactly one next annual proposal is canonical and only confirmed days can 
   const proposals=leave.proposePeriods(person.id,'2027-01-01','annual_main')
   const future=proposals.at(-1)
   assert.equal(future.periodStart,'2027-06-15')
+  assert.equal(future.suggestedDays,30)
   assert.equal(proposals.filter(p=>p.periodStart>'2027-01-01').length,1)
   assert.equal(Object.hasOwn(future,'confirmedDays'),false)
   assert.deepEqual(leave.listPeriods(person.id),[])
@@ -275,6 +276,24 @@ test('exactly one next annual proposal is canonical and only confirmed days can 
   assert.equal(leave.getBalances(person.id)[0].availableDays,18)
   leave.cancelLeave(record.id,record.revision,'Тест')
   assert.equal(leave.getBalances(person.id)[0].availableDays,20)
+})
+
+test('annual suggestions apply only to new electronic accounting periods, not initial balances',async t=>{
+  const f=fixture(t),connection=await f.open()
+  const {employee:person}=await employee(connection,'2026-06-15')
+  const leave=new LeaveService({getDatabase:()=>connection.database},()=>false)
+  const proposals=leave.proposePeriods(person.id,'2027-01-01','annual_main')
+  const initial=proposals.find(p=>p.periodStart==='2026-06-15')
+  const next=proposals.find(p=>p.periodStart==='2027-06-15')
+  assert.equal(initial.accountingBasis,'initial_balance')
+  assert.equal(Object.hasOwn(initial,'suggestedDays'),false)
+  assert.equal(next.accountingBasis,'confirmed_entitlement')
+  assert.equal(next.suggestedDays,30)
+  assert.deepEqual(leave.listPeriods(person.id),[])
+  leave.savePeriods(person.id,[annual(next.periodStart,next.periodEnd,23)])
+  const reopened=leave.proposePeriods(person.id,'2027-01-01','annual_main')
+  assert.equal(reopened.find(p=>p.periodStart===next.periodStart).suggestedDays,30)
+  assert.equal(leave.listPeriods(person.id)[0].confirmedDays,23)
 })
 
 test('next-year proposals preserve anniversary, leap-day clamp and nonannual policies',()=>{

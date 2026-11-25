@@ -18,7 +18,8 @@ export const periodInput = z.strictObject({
 export const periodsInput = z.array(periodInput).min(1).max(200)
 export const confirmedPeriod = periodInput.extend({ id, employeeId: id, status: z.literal('confirmed') })
 export const proposedPeriod = z.strictObject({ leaveType: periodLeaveType, periodStart: calendarDate, periodEnd: calendarDate,
-  accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']), status: z.literal('proposed') })
+  accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']), status: z.literal('proposed'),
+  suggestedDays: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional() })
 export const allocation = z.strictObject({ periodId: id, days: z.number().int().positive().max(3652059) })
 export const registration = z.strictObject({
   requestId: id, employeeId: id, leaveType, startDate: calendarDate, endDate: calendarDate,
