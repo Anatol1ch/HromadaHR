@@ -1,4 +1,4 @@
-import type { ConfirmedLeavePeriod, PeriodBalance, PeriodLeaveType, ProposedLeavePeriod } from '../../../shared/leave'
+import { isPeriodLeave, type ConfirmedLeavePeriod, type LeaveRecord, type LeaveType, type PeriodBalance, type PeriodLeaveType, type ProposedLeavePeriod } from '../../../shared/leave.ts'
 export function balanceSummary(type: PeriodLeaveType, balances: PeriodBalance[], proposals: ProposedLeavePeriod[]) {
   const saved = balances.filter(period => period.leaveType === type)
   const incomplete = proposals.some(period => period.leaveType === type && !saved.some(row => row.periodStart === period.periodStart))
@@ -10,11 +10,24 @@ export function balanceSummary(type: PeriodLeaveType, balances: PeriodBalance[],
     accounted: saved.reduce((n, p) => n + BigInt(p.usedDays), 0n), remaining: saved.reduce((n, p) => n + BigInt(p.availableDays), 0n) }
 }
 
+export function leaveOverviewAccounting(type: LeaveType, balances: PeriodBalance[], proposals: ProposedLeavePeriod[], records: LeaveRecord[]) {
+  if (isPeriodLeave(type)) return { kind: 'period' as const, summary: balanceSummary(type, balances, proposals) }
+  const activeRecords = records.filter(record => record.leaveType === type && record.status === 'active')
+  return { kind: 'event' as const, registeredCount: activeRecords.length,
+    usedDays: activeRecords.reduce((sum, record) => sum + BigInt(record.usedDays), 0n) }
+}
+
 const dayPlural = new Intl.PluralRules('uk-UA')
 export function formatLeaveDays(days: number | bigint) {
   const category = dayPlural.select(Number(BigInt(days) % 100n))
   const unit = category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
   return `${days.toLocaleString('uk-UA')} ${unit}`
+}
+
+const leaveCountPlural = new Intl.PluralRules('uk-UA')
+export function formatLeaveCount(count: number) {
+  const label = leaveCountPlural.select(count) === 'one' ? 'відпустка' : leaveCountPlural.select(count) === 'few' ? 'відпустки' : 'відпусток'
+  return `${count.toLocaleString('uk-UA')} ${label}`
 }
 
 export function allocationDraft(available: PeriodBalance[], drafts: Record<string, string>, days: number, requireAvailableDrafts = false) {

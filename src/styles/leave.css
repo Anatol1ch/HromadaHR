@@ -166,7 +166,8 @@
 
 /* 4.6.6: shared employee search, compact rights, and distinct accounting modes. */
 .leave-type-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 2.125rem; width:2.125rem; height:2.125rem; border-radius:var(--radius-control); color:var(--accent-hover); background:var(--tab-active-background); }
-.leave-right-status { display:block; width:fit-content; font-size:.75rem; line-height:1.5; padding:2px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); }
+.leave-right-status { display:inline-flex; align-items:center; gap:5px; width:fit-content; max-width:100%; font-size:.75rem; line-height:1.5; padding:3px 7px; border-radius:var(--radius-control); color:var(--color-text-secondary); background:var(--surface-panel); white-space:normal; }
+.leave-right-status svg { flex:none; }
 .leave-right-status.is-has_right { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
 .leave-right-status.is-no_right { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
 .app-select-action-popup .app-select-option > span { min-width:0; overflow-wrap:anywhere; }

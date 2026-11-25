@@ -1,10 +1,58 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveCount, leaveOverviewAccounting } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
-import { leaveWorkspaceLabels } from '../src/components/leave/presentation.ts'
+import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
+test('overview period rows distinguish empty, confirmed zero, complete, partial and historical balances', () => {
+  const proposals = [
+    { leaveType: 'annual_main', periodStart: '2025-01-01' },
+    { leaveType: 'annual_main', periodStart: '2026-01-01' },
+  ]
+  const empty = leaveOverviewAccounting('annual_main', [], proposals, [])
+  assert.equal(empty.kind, 'period')
+  assert.equal(empty.summary.count, 0)
+  assert.equal(empty.summary.incomplete, true)
+  assert.equal(rightLabels.has_right, 'Право підтверджено')
+  assert.equal(rightLabels.unknown, 'Право не перевірено')
+  assert.equal(rightLabels.no_right, 'Права немає')
+
+  const complete = leaveOverviewAccounting('annual_main', [
+    { leaveType: 'annual_main', periodStart: '2025-01-01', confirmedDays: 30, usedDays: 10, availableDays: 20 },
+    { leaveType: 'annual_main', periodStart: '2026-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
+  ], proposals, [])
+  assert.deepEqual([complete.summary.count, complete.summary.incomplete, complete.summary.entered, complete.summary.accounted, complete.summary.remaining], [2, false, 30n, 10n, 20n])
+
+  const historical = leaveOverviewAccounting('annual_main', [
+    { leaveType: 'annual_main', periodStart: '2025-01-01', confirmedDays: 12, usedDays: 2, availableDays: 10 },
+  ], proposals, [])
+  assert.deepEqual([historical.summary.count, historical.summary.incomplete, historical.summary.remaining], [1, true, 10n])
+
+  const confirmedZero = leaveOverviewAccounting('children_social_additional', [
+    { leaveType: 'children_social_additional', periodStart: '2025-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
+  ], [], [])
+  assert.deepEqual([confirmedZero.summary.count, confirmedZero.summary.entered, confirmedZero.summary.accounted, confirmedZero.summary.remaining], [1, 0n, 0n, 0n])
+  assert.equal(leaveOverviewAccounting('oms_service_additional', [], [], []).summary.count, 0)
+})
+
+test('overview event rows show only active registered use and never invent a balance', () => {
+  const empty = leaveOverviewAccounting('study_leave', [], [], [])
+  assert.deepEqual([empty.kind, empty.registeredCount, empty.usedDays], ['event', 0, 0n])
+  const records = [
+    { leaveType: 'study_leave', status: 'active', usedDays: 5 },
+    { leaveType: 'study_leave', status: 'active', usedDays: 2 },
+    { leaveType: 'study_leave', status: 'cancelled', usedDays: 14 },
+    { leaveType: 'veteran_special_leave', status: 'active', usedDays: 3 },
+  ]
+  const active = leaveOverviewAccounting('study_leave', [], [], records)
+  assert.deepEqual([active.registeredCount, active.usedDays], [2, 7n])
+  assert.deepEqual(leaveOverviewAccounting('chernobyl_special_leave', [], [], records), { kind: 'event', registeredCount: 0, usedDays: 0n })
+  assert.equal(formatLeaveCount(1), '1 відпустка')
+  assert.equal(formatLeaveCount(3), '3 відпустки')
+  assert.equal(formatLeaveCount(5), '5 відпусток')
+})
+
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
   const rows = [{leaveType:'annual_main',periodStart:'2024-01-01',confirmedDays:40,usedDays:14,availableDays:26}, {leaveType:'children_social_additional',periodStart:'2024-01-01',confirmedDays:0,usedDays:0,availableDays:0}]
   const proposals = [{leaveType:'annual_main',periodStart:'2024-01-01'}, {leaveType:'annual_main',periodStart:'2025-01-01'}]

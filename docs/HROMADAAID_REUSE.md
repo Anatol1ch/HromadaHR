@@ -275,3 +275,7 @@ Read-only перевірено `src/RecipientRegistry.tsx` HromadaAID за SHA `
 ## 9.12.3 – Sidebar і навігація відпусток
 
 Read-only цільово перевірено `Anatol1ch/HromadaAID` за SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb`: `src/App.tsx` (вертикальний Sidebar, `.nav-item`, бренд/допомога) і `src/styles.css` (геометрія/стани). Реальний патерн навігаційних пунктів уже адаптований у HromadaHR і повторно використаний. У перевірених джерелах немає кнопки compact або збереження її вибору; ці дві можливості реалізовані локально в HR через токени та `localStorage`. HromadaAID не змінювався й runtime-залежності немає. У перевірених шляхах AID не виявлено придатного leave-workbench; відпускні розділи зібрані з чинних HR `LeaveRights`, `LeaveBalances`, `LeaveJournal`, `LeaveRegistrationForm` і UI Design System.
+
+## 9.12.4 – Зведення відпусток
+
+Цільово переглянуто попередньо перевірений read-only `Anatol1ch/HromadaAID` `src/RecipientRegistry.tsx` і висновок щодо відсутності leave-workbench у SHA `33eca10733caaf73b1a99e75a24ff35e706a0afb` (див. 9.12.3). Підходящого балансового зведення відпусток там не виявлено; нову UI-логіку від AID не переносили. У HromadaHR адаптовано `InfoSection`, `DictionaryTable`, `LeaveTypeIcon`, `balanceSummary` та чинні токени; розрахунки/контракти залишилися локальними HR і не змінювалися. Фактичне: зведення шести видів, лише активне подієве використання, явне розрізнення порожніх/нульових/часткових значень.
