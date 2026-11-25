@@ -1,8 +1,10 @@
 # Проєкт автоматизації обліку залишків відпусток
 
-**Статус:** технічний проєкт для погодження; функціональні зміни не розпочаті.
-**Стан коду для аналізу:** HromadaHR SQLite v24, гілка етапу 9.12.4.5.
+**Статус:** оптимізована архітектурна рекомендація для погодження; реалізація не розпочата.
+**Стан коду для аналізу:** HromadaHR SQLite v24, контрольний стан етапу 9.12.4.5.
 **Межа:** документ не є юридичним висновком і не затверджує застосовність конкретної норми до працівника.
+
+> Розділ 8 є актуальною рекомендацією після архітектурного перегляду 9.12.5 і замінює три окремі таблиці з попереднього варіанта розділу 3. До окремого затвердження це не є рішенням до реалізації.
 
 ## 1. Поточний стан
 
@@ -154,3 +156,106 @@ IPC типізований і проходить через preload/Main із Zo
 Для виявлення обмежень ЧАЕС під час цього проєктування переглянуті офіційні матеріали [Пенсійного фонду про право/категорії](https://www.pfu.gov.ua/cv/420284-chornobylska-vidpustka-i-hto-maye-na-neyi-pravo/) та [порядок надання і фінансування](https://www.pfu.gov.ua/mk/169286-sotsialni-vyplaty-ta-dodatkova-vidpustka-osobam-postrazhdalym-vnaslidok-chornobylskoyi-katastrofy-poryadok-pryznachennya-ta-finansuvannya/). Це вказує, що модель 16 днів може мати окремі категоріальні, процедурні й фінансові умови; вона не дорівнює загальному статусу `has_right`. Матеріали не замінюють юридичного затвердження всієї матриці.
 
 Перед реалізацією ще потрібно погодити: точний перелік статусів УБД та інших осіб для 14 днів; категорії та процедури ЧАЕС; допустимість поділу/межі року; зв'язок між загальним `LeaveRights` та спеціальною доказовою підставою; нормативний алгоритм 10/17 і строки перенесення дитячого залишку; правила ручних винятків; чи входить фінансування ЧАЕС до системи; формат і строк нагадувань. До цього рішення параметри не можна перетворювати на автоматичні юридичні висновки.
+
+
+## 8. Перегляд архітектури 9.12.5 і рекомендований варіант
+
+Розділ 3 вище є початковим варіантом. Після аналізу SQLite v24, Main, IPC і правил року його три окремі таблиці не рекомендуються. Висновок нижче — пропозиція, ще не погоджене рішення і не дозвіл створювати v25.
+
+### 8.1 Порівняння варіантів
+
+| Критерій | A. Без змін схеми | B. Компактне розширення — рекомендується | C. Початкова модель із трьох таблиць |
+|---|---|---|---|
+| Нові сутності | 0 | До 2 невеликих: налаштування політики та підтвердження спеціального права за рік; плюс кілька полів у наявних period rows | 3 окремі сутності: підтвердження підстав, річні entitlement, allocations |
+| Міграція | Найпростіша, але не дає підтвердження категорії/року | Additive v25; старі періоди й записи не переписуються | Найскладніша; потрібно звіряти три джерела й переносити зв’язки |
+| Main/IPC | Невелике UI-розширення, але Main не має надійних фактів | Один типізований річний API; чинні balance/record APIs зберігаються | Окремі операції та синхронізація трьох нових моделей |
+| Renderer | Загальний статус маскує категорію та зовнішнє використання | Кадровик підтверджує конкретний рік/підставу; usage читається зі збережених записів | Найбільше станів і повторних дій у Rights/Balances/Registration |
+| Ручні дії | Підстава щоразу лишається в довільному тексті | Одне річне підтвердження спеціального права; стандартні period values лише перевіряються | Окреме підтвердження eligibility, entitlement і розподілу |
+| Цілісність | Періодний FIFO захищений, але special category і право в іншого роботодавця не перевіряються | Period FIFO незмінний; одна активна special подія за типом/роком уже захищена унікальним індексом | Можна захистити, але special allocation дублює неподільний leave record |
+| Старі дані | Старе has_right не містить року/категорії | Не робити старий статус автоматичним правом; попросити перепідтвердження, старий запис зберегти | Потрібні backfill і reconciliation між трьома таблицями |
+| Складність для локальної установи до 30 працівників | Мала, але автоматизація небезпечна | Низька/середня, явні джерела правди | Невиправдано висока без поділу відпусток між entitlement |
+
+Варіант A недостатній: одна загальна ознака has_right не визначає категорію, чинний рік, використання в іншого роботодавця або 10/17-денну підставу. Запис grant_basis вводиться лише з реєстрацією й не може керувати доступністю до реєстрації. Варіант C коректний лише якщо одна спеціальна відпустка законно списуватиметься з кількох річних bucket; поточні офіційні роз'яснення натомість описують одну неподільну подію. Тому allocations-таблиця для неї зайва.
+
+### 8.2 Рекомендована схема
+
+1. Періодні суми трьох типів лишаються в leave_period_balances, використання — у leave_allocations. Не створювати окремий annual entitlement для цих рядків: період уже має працівника, вид, часовий інтервал і confirmed_days.
+2. За потреби інституційного налаштування додати одну таблицю leave_policy_settings із єдиним локальним default для рекомендації щорічної основної відпустки та версією політики. Це лише джерело пропозиції; воно не записує confirmed_days. Якщо погоджено фіксований versioned default без UI-налаштування, таблицю не створювати. Не перевантажувати personnel_control_settings параметрами відпустки.
+3. Для щорічної спеціальної відпустки додати одну таблицю leave_special_year_rights: employee_id, тип (allowlist лише УБД/інші коди за затвердженим законом або ЧАЕС), calendar_year, basis_code, decision (review_required/eligible/not_eligible), other_employer_use (unknown/no/yes), optional reference to existing proof document, rule_version, checked_at, revision. Унікальний ключ — працівник/тип/рік.
+4. Нормативна кількість для підтвердженої категорії обчислюється за versioned rules, а не дублюється в таблиці. При unknown, review_required чи використанні в іншого роботодавця доступні дні не обчислюються. Старі employee_leave_rights для спеціальних типів лишаються збереженими, але самі собою не авторизують річну автоматизацію.
+5. У наявному leave_period_balances для дитячого періоду додати компактне nullable підтвердження: число перевірених підстав one/multiple або manual_exception, плюс за потреби документ/коротку причину. Не записувати дані дітей. Main пропонує 10 або максимум 17, але кадровик явно зберігає підтверджену кількість у наявному confirmed_days.
+6. Не створювати окремі annual allocations. Для спеціальних неподільних подій local usage береться з active leave_records за типом і роком; скасовані не споживають право. Існуючий partial unique index already allows не більш як один active record за типом та роком початку.
+
+За нинішньої редакції в коді є лише загальне personnel_control_settings.horizon_days; dedicated leave policy setting відсутній. Якщо індивідуальний default annual-main не потрібен, рекомендований мінімум — одна special-year table плюс nullable child basis metadata, без singleton налаштувань.
+
+### 8.3 Правила за видом відпустки
+
+**Щорічна основна.** Зберегти hire-date робочі роки й shared/leave-periods. Для актуального та наступного року Main створює read-only proposal, зіставляє зі збереженими періодами й виявляє незаповнені. Default duration є пропозицією, а не правом чи підтвердженим балансом; 24 дні — базова загальна норма, але особливі категорії, колективні умови й тимчасові обмеження можуть вимагати перегляду. Невідомі факти дають стан «Перевірити». Кадровик підтверджує тільки після перевірки; автоматично нічого не додається.
+
+**Додаткова за стаж ОМС.** Періоди й рекомендовану тривалість отримувати лише через чинний proposePeriods/service projection та shared/service-leave-calculations. Не дублювати service алгоритм. За відсутності підтвердженого права/дати/стажу показати review; projection заповнює чернетку, а не confirmed_days. Reminder похідний із proposal і period rows.
+
+**Додаткова на дітей.** Окремий календарний період уже є. Кадровик на цей рік підтверджує підставу, кількість підстав та умову про невикористання іншим із батьків, якщо застосовна. Main пропонує 10 для однієї й до 17 для кількох підтверджених підстав. Стандартні дні підтверджуються разом із періодом; виняткова кількість — вручну з причиною. Не аналізувати склад сім'ї автоматично. Залишки попередніх років лишати окремими period rows і списувати чинним FIFO лише після затвердження строків/умов їх використання; не обнуляти при втраті поточного права.
+
+**УБД та інші спеціальні ветеранські категорії.** Тільки allowlisted basis_code може створити review/eligible state для конкретного року. Для категорій, яким застосовується норма 14 днів, розрахувати норму після посвідчення/документального підтвердження і підтвердження, що право не реалізоване в іншого роботодавця цього року. Не дозволяти partial/multiple active records для однієї річної пільги. Для повної спеціальної події валідація Main та SQLite має бути сильнішою за нинішній CHECK, який допускає пояснені partial days. Не змінювати/не конвертувати старі partial records автоматично.
+
+**Чорнобильська.** Загальний has_right недостатній: кадровик підтверджує конкретну допустиму категорію, документ, основне місце роботи та відсутність використання в іншого роботодавця. Після цього розрахункова річна норма — 16 днів. За перевіреним роз'ясненням ПФУ перехідна відпустка належить до року початку; вона неподільна, не переноситься й не накопичується. Використовувати start-year, але блокувати непогоджені часткові/повторні події. Фінансування через ПФУ не автоматизувати.
+
+**Навчальна.** Подієва реєстрація, конкретна тривалість за документом, без накопичуваного річного залишку.
+
+### 8.4 API та робочий процес
+
+Зберегти існуючі list/propose/save periods, getBalances, allocation proposals, listRecords, register/update/cancel. Period proposals мають повертати додатково лише read-only suggestion/reason, а не збережений баланс.
+
+Для special-year підтвердження достатньо listSpecialYearRights(employeeId, year), saveSpecialYearRight(input, expectedRevision) і read-only proposeSpecialLeave(employeeId,type,year). Main у IMMEDIATE transaction повторно перевіряє рік, basis allowlist, документ/перевірку, external use, правило й повну допустиму тривалість під час register/update. Використати існуючі Zod/preload/sender guards/idempotency. Renderer ніколи не визначає доступність самостійно.
+
+Порядок кадровика: відкрити поточний рік → підтвердити підставу/документ/зовнішнє використання → побачити відокремлену пропозицію норми → за потреби зареєструвати повну подію → usage оновився з leave_records. Для періодів: відкрити незаповнений proposal → перевірити факт/документ → прийняти або змінити рекомендовані дні → save підтверджених періодів. Перехід року створює тільки нову пропозицію і reminder, не автоматичний запис.
+
+### 8.5 Списання, право, скасування та подання в «Зведенні»
+
+- Period use й далі рахується як SUM active leave_allocations, FIFO не змінювати. Cancel лишає історію та звільняє дні рівно раз; Update атомарно замінює allocations із revision guard.
+- Special use для року рахується як SUM active leave_records.used_days за типом і стартовим календарним роком. Наявні унікальний active index і IMMEDIATE transaction — базові guards; для норм 14/16 потрібні перевірки повного неподільного запису після правового підтвердження.
+- Unknown/not eligible не створюють новий автоматичний entitlement. Збережені періодні баланси/реєстрації не видаляти й не переписувати після зміни rights.
+- У зведенні показувати окремо «Пропозиція», «Підтверджено», «Використано», «Доступно». Пропозиція ніколи не входить у числа підтвердження. Невідоме — не нуль; підтверджений нуль — число 0; не застосовується — прочерк.
+- Для period types показати суми за підтвердженими періодами; частковість позначити й не видавати частковий залишок за повний. Для дітей за потреби показати розклад по роках, бо підсумок без років приховує строк/умови використання.
+- Для special types показувати поточний рік, підтверджену категорію/перевірку, норму, active usage та розрахунковий доступний залишок лише після позитивної річної перевірки. Минулі роки не підсумовувати; cancelled рядки не входять.
+
+### 8.6 Міграція та сумісність без втрати
+
+1. До v25 зробити захищений backup; міграція лише additive, old migration checksums не змінювати; перевірити foreign_key_check, integrity_check і rollback.
+2. Існуючі period rows, confirmed/available sums, allocations, leave records, canceled entries, IDs, document links та revisions лишити без змін. Не дублювати children periods у special-year table.
+3. Не backfill-ити старе has_right у нову категоріальну підставу. Відобразити його як legacy status, що потребує перевірки. Старі права не видаляти.
+4. Старі active special records зберігати. Якщо нова модель запускається, сформувати список reconciliation employee/type/year. Existing records враховувати як зафіксоване local use; поки підстава/рік не підтверджені, не давати другий record чи доступний баланс. Старі записи не мігрувати в allocations.
+5. Відокремити стани: proposal (розрахункова), right confirmation (кадровий факт), confirmed period days (збережені дні), active records (використання), available (похідний баланс). Жодне з них не є дублем іншого.
+6. Special transaction computes available = rule-days only when annual eligibility is confirmed, external use is no, and no active record exists. Unique active index + transaction prevents double award; Cancel retains record but excludes it once; Edit releases/revalidates in one transaction. For periods, existing triggers/FIFO remain the authority.
+7. If eligibility absent/unknown, no new suggestion is presented as available; existing historical period balances and records remain readable and unchanged.
+
+### 8.7 Матриця юридичного статусу
+
+Sources were checked on 25.11.2026. «Попередньо підтверджено» means an official source supports the rule, not a legal determination for a particular employer/employee.
+
+| Topic | Supported by current official source review | Still needs approval for this institution |
+|---|---|---|
+| Veteran category | Law 504 art.16-2 and State Labour Service support 14 calendar days per year for listed/document-confirmed categories; State Labour Service says this is not annual leave and not transferable/divisible as annual leave | Exact allowlist for this employee population, required proof, basis validity/change in-year, cross-year date and outside-employer evidence |
+| Chornobyl | PFU identifies category 1/2 and a parent of a child with Chornobyl-related disability, 16 days, no split/carry, start-year attribution and main-place/one-employer constraints | Fit for this institution/personnel, proof list, link to PФУ funding procedure/reporting and whether HR app stores any of that process |
+| Children | Law art.19 is annual social leave; State Labour Service states 10 days, up to 17 for multiple grounds, co-parent non-use confirmation and transfer/extension | Minimum basis codes, proof, calculation of multiple grounds, period retention and employer-change/year rules |
+| Annual main | General statutory minimum 24 days per worked year | Employee categories, collective terms, wartime limits, actual configured default and proposal safety |
+| OMS additional | Existing app already has service projection and period proposal; laws/decrees are identified in architecture docs | Current employee applicability and transition/effective dates, whether projection fully determines individual entitlement |
+| Study | Event-based approach does not need a balance bucket | Specific document, legal rule and per-case duration remain manual |
+
+Primary sources: [Law 504/96-VR](https://zakon.rada.gov.ua/go/504/96-%D0%B2%D1%80), [Law 3551-XII](https://zakon.rada.gov.ua/go/3551-12), [Law 796-XII](https://zakon.rada.gov.ua/go/796-12), [Law 2493-III](https://zakon.rada.gov.ua/go/2493-14), [Law 3077-IX](https://zakon.rada.gov.ua/go/3077-20), [Cabinet Resolution 229](https://zakon.rada.gov.ua/go/229-2016-%D0%BF). Official guidance reviewed: [State Labour Service: 14 days and document-confirmed veteran status](https://dsp.gov.ua/faq/na-iaku-tryvalist-kalendarnykh-dniv-dodatkovoi-vidpustky-maiut-pravo-uchasnyky-boiovykh-dii-ta-invalidy-viiny/), [State Labour Service: veteran benefit not divided/transferred](https://dsp.gov.ua/faq/chy-mozhe-dodatkova-vidpustka-iaka-nadaietsia-uchasnykam-boiovykh-dii-buty-perenesena-na-inshyi-period-prodovzhena-abo-podilena-na-chastyny/), [PFU: Chornobyl year, indivisibility and transfer](https://www.pfu.gov.ua/vn/415310-dodatkova-chornobylska-vidpustka-poryadok-nadannya-ta-finansuvannya/), [PFU: Chornobyl categories/funding](https://www.pfu.gov.ua/cv/422155-kompensatsiya-vytrat-robotodavtsyam-za-nadannya-dodatkovoyi-vidpustky-gromadyanam-shho-postrazhdaly-vnaslidok-chornobylskoyi-katastrofy/), [State Labour Service: children bases, 17-day maximum and co-parent check](https://pd.dsp.gov.ua/zapytannia-vidpovidi/). Recheck effective legal editions before coding; this review is not a legal opinion.
+
+### 8.8 Послідовність реалізації та приймання
+
+| Phase | Work | Acceptance |
+|---|---|---|
+| 0. Legal/HR approval | Confirm categories, proof, outside-employer use, year crossing, children carry/conditions, OMS applicability, annual-main default | Signed matrix for this institution; unknown cases stay manual |
+| 1. v25 storage | Add only approved settings/year confirmation and children basis fields | Protected v24 migration/restore, FK/integrity and rollback; counts and balances unchanged |
+| 2. Main/IPC | Typed read-only proposals, explicit save, transaction validation | Stale/duplicate/concurrent requests, wrong year, unsupported basis, overdraw and cancel/edit are safe |
+| 3. UI/reminders | Show proposal vs confirmation vs use vs available; derived reminders | No automatic credit; reminder is read-only; explicit save required |
+| 4. Legacy review/rollout | Reconcile old rights and special records; verify operational PFU workflow separately | Every record accounted for; no double use; before/after totals match; HR acceptance |
+
+Target tests: proposal never persisted as confirmed; child 10/17 and prior-year periods; exact category required despite generic has_right; unknown/external use blocks special availability; no carry for approved annual special rights; Chornobyl start-year attribution; UBD cross-year behavior follows approved policy; full-duration one event/year; partial unique/transaction and cancellation; revision-guarded update; no double-count; reminder does not write; v24 periods/records/allocations/doc links survive unchanged.
+
+## 9. Погодження
+
+Рекомендований напрям — компактний варіант B: чинні періодні баланси й allocations для щорічної/ОМС/дитячої відпусток, одна річна таблиця перевірки для УБД/ЧАЕС та прямий підрахунок їх активних leave_records. Leave_annual_allocations не потрібна за умови, що законодавчо підтверджено неподільність і одну подію на рік. До реалізації треба вирішити: чи потрібне конфігуроване налаштування annual-main default; точний allowlist категорій; перелік документів та спосіб підтвердження використання в іншого роботодавця; child basis/17-day counting/retention; межі року для UBD; обсяг зовнішнього ПФУ процесу. v25 не створювати до окремого схвалення.
