@@ -7,7 +7,7 @@ import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
 import { leaveTypes } from '../shared/leave.ts'
 import { readFileSync } from 'node:fs'
-test('overview period rows distinguish empty, confirmed zero, complete, partial and historical balances', () => {
+test('overview period accounting combines confirmed days and does not present partial remaining as total', () => {
   const proposals = [
     { leaveType: 'annual_main', periodStart: '2025-01-01' },
     { leaveType: 'annual_main', periodStart: '2026-01-01' },
@@ -16,9 +16,7 @@ test('overview period rows distinguish empty, confirmed zero, complete, partial 
   assert.equal(empty.kind, 'period')
   assert.equal(empty.summary.count, 0)
   assert.equal(empty.summary.incomplete, true)
-  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [
-    ['Не внесено', 'missing'], ['Не визначено', 'unknown'], ['Не визначено', 'unknown'],
-  ])
+  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [['Дані неповні', 'missing'], ['—', 'unknown']])
   assert.equal(rightLabels.has_right, 'Право підтверджено')
   assert.equal(rightLabels.unknown, 'Право не перевірено')
   assert.equal(rightLabels.no_right, 'Права немає')
@@ -28,29 +26,28 @@ test('overview period rows distinguish empty, confirmed zero, complete, partial 
     { leaveType: 'annual_main', periodStart: '2026-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
   ], proposals, [])
   assert.deepEqual([complete.summary.count, complete.summary.incomplete, complete.summary.entered, complete.summary.accounted, complete.summary.remaining], [2, false, 30n, 10n, 20n])
-  assert.deepEqual(leaveOverviewMetrics(complete).map(metric => metric.value), ['30', '10', '20'])
+  assert.deepEqual(leaveOverviewMetrics(complete).map(metric => metric.value), ['30 / 10', '20'])
 
   const historical = leaveOverviewAccounting('annual_main', [
     { leaveType: 'annual_main', periodStart: '2025-01-01', confirmedDays: 12, usedDays: 2, availableDays: 10 },
   ], proposals, [])
   assert.deepEqual([historical.summary.count, historical.summary.incomplete, historical.summary.remaining], [1, true, 10n])
-  assert.deepEqual(leaveOverviewMetrics(historical, true).map(metric => metric.value), ['12', '2', '10'])
-  assert.equal(leaveOverviewMetrics(historical, true)[2]?.detail?.join(' · '), 'Частковий залишок · Історичний залишок')
+  assert.deepEqual(leaveOverviewMetrics(historical).map(metric => metric.value), ['12 / 2', '—'])
+  assert.equal(leaveOverviewMetrics(historical)[0]?.detail?.join(' · '), 'Дані неповні')
 
   const confirmedZero = leaveOverviewAccounting('children_social_additional', [
     { leaveType: 'children_social_additional', periodStart: '2025-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
   ], [], [])
   assert.deepEqual([confirmedZero.summary.count, confirmedZero.summary.entered, confirmedZero.summary.accounted, confirmedZero.summary.remaining], [1, 0n, 0n, 0n])
-  assert.deepEqual(leaveOverviewMetrics(confirmedZero).map(metric => metric.value), ['0', '0', '0'])
+  assert.deepEqual(leaveOverviewMetrics(confirmedZero).map(metric => metric.value), ['0 / 0', '0'])
   assert.equal(leaveOverviewAccounting('oms_service_additional', [], [], []).summary.count, 0)
 })
 
-test('overview event rows show only active registered use and never invent a balance', () => {
+test('overview event rows show actual use, including zero, and never invent an accumulated balance', () => {
   const empty = leaveOverviewAccounting('study_leave', [], [], [])
   assert.deepEqual([empty.kind, empty.registeredCount, empty.usedDays], ['event', 0, 0n])
-  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [
-    ['—', 'not-applicable'], ['0', 'value'], ['—', 'not-applicable'],
-  ])
+  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [['0', 'value'], ['—', 'not-applicable']])
+  assert.deepEqual(leaveOverviewMetrics(empty)[0]?.detail, ['Використано'])
   const records = [
     { leaveType: 'study_leave', status: 'active', usedDays: 5 },
     { leaveType: 'study_leave', status: 'active', usedDays: 2 },
@@ -59,6 +56,8 @@ test('overview event rows show only active registered use and never invent a bal
   ]
   const active = leaveOverviewAccounting('study_leave', [], [], records)
   assert.deepEqual([active.registeredCount, active.usedDays], [2, 7n])
+  assert.deepEqual(leaveOverviewMetrics(active).map(metric => metric.value), ['7', '—'])
+  assert.deepEqual(leaveOverviewMetrics(active)[0]?.detail, ['Використано'])
   assert.deepEqual(leaveOverviewAccounting('chernobyl_special_leave', [], [], records), { kind: 'event', registeredCount: 0, usedDays: 0n })
   assert.equal(formatLeaveCount(1), '1 відпустка')
   assert.equal(formatLeaveCount(3), '3 відпустки')
@@ -85,40 +84,41 @@ test('overview compacts only no-right rows without periods or active usage', () 
     { leaveType: 'annual_main', status: 'active', usedDays: 4 },
   ])
   assert.equal(leaveOverviewCompactNoRight('no_right', periodUsage), false)
-  assert.deepEqual(leaveOverviewMetrics(periodUsage).map(metric => metric.value), ['Не внесено', '4', 'Не визначено'])
+  assert.deepEqual(leaveOverviewMetrics(periodUsage).map(metric => metric.value), ['— / 4', '—'])
 })
 
 test('overview does not infer entitlement from balances or the initial-period reference field', () => {
   const reference = { leaveType: 'annual_main', confirmedDays: 8, usedDays: 2, availableDays: 6, referenceEntitlementDays: 30 }
   const initial = leaveOverviewAccounting('annual_main', [{ ...reference, accountingBasis: 'initial_balance', periodStart: '2026-01-01' }], [], [])
   const confirmed = leaveOverviewAccounting('annual_main', [{ ...reference, referenceEntitlementDays: null, accountingBasis: 'confirmed_entitlement', periodStart: '2027-01-01' }], [], [])
-  assert.equal(leaveOverviewMetrics(initial)[0]?.value, '8')
-  assert.equal(leaveOverviewMetrics(confirmed)[0]?.value, '8')
+  assert.equal(leaveOverviewMetrics(initial)[0]?.value, '8 / 2')
+  assert.equal(leaveOverviewMetrics(confirmed)[0]?.value, '8 / 2')
 
   const schema = readFileSync(new URL('../electron/storage/migrations.ts', import.meta.url), 'utf8')
   assert.match(schema, /CHECK \(accounting_basis = 'initial_balance' OR reference_entitlement_days IS NULL\)/)
 })
 
-test('overview table keeps one five-cell row per leave type and styles cells without changing table display', () => {
+test('overview table has four columns for all leave types and preserves native table-cell display', () => {
   const component = readFileSync(new URL('../src/components/leave/LeaveOverview.tsx', import.meta.url), 'utf8')
   const styles = [
     'employee-profile.css', 'leave.css', 'components.css',
   ].map(file => readFileSync(new URL(`../src/styles/${file}`, import.meta.url), 'utf8')).join('\n')
   assert.equal(leaveTypes.length, 6)
   assert.match(component, /leaveTypes\.map\(type =>/)
-  for (const heading of ['Вид відпустки', 'Право', 'Внесено', 'Використано', 'Залишок']) assert.ok(component.includes(heading))
-  assert.match(component, /width: '30%'/)
+  for (const heading of ['Вид відпустки', 'Право', 'Облік днів', 'Внесено / Використано, к. дн.', 'Залишок']) assert.ok(component.includes(heading))
+  assert.match(component, /width: '33%'/)
   assert.match(component, /width: '22%'/)
-  assert.equal([...component.matchAll(/width: '16%'/g)].length, 3)
+  assert.match(component, /width: '27%'/)
+  assert.match(component, /width: '18%'/)
+  assert.equal([...component.matchAll(/width: '\d+%'/g)].length, 4)
   assert.match(component, /<td><LeaveRightStatus status=\{status\}\/>/)
-  assert.match(component, /metrics\.map\(\(metric, index\) => <td key=\{index\}>/)
-  assert.match(component, /<td colSpan=\{5\} className="leave-overview-compact-no-right">Права на відпустку немає<\/td>/)
-  assert.match(component, /<td colSpan=\{3\} className="leave-overview-no-periods">/)
+  assert.match(component, /<td><DayMetric value=\{compactNoRight \? '—' : metrics\[0\]!\.value\}/)
+  assert.match(component, /<td><DayMetric value=\{compactNoRight \? '—' : metrics\[1\]!\.value\}/)
+  assert.doesNotMatch(component, /colSpan\s*=/)
   assert.match(component, /leaveOverviewCompactNoRight\(status, accounting\)/)
   assert.doesNotMatch(component, /label:\s*['"]Належить['"]/)
-  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('annual_main', [], [], [])).length, 3)
-  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('study_leave', [], [], [])).length, 3)
-  assert.match(component, /accounting\.summary\.incomplete \? 'Не всі періоди внесено' : 'Дні не внесено'/)
+  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('annual_main', [], [], [])).length, 2)
+  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('study_leave', [], [], [])).length, 2)
 
   const tableElementRules = [...styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter(([, selectorList]) => selectorList.split(',').some(selector => /(?:^|[\s>+~])(?:table|thead|tbody|tr|th|td)(?:[.#][\w-]+|\[[^\]]+\]|:[\w-]+(?:\([^)]*\))?)*\s*$/.test(selector.trim())))

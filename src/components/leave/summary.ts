@@ -30,25 +30,28 @@ export function leaveOverviewCompactNoRight(status: 'has_right' | 'no_right' | '
   return status === 'no_right' && !leaveOverviewHasAccountedData(accounting)
 }
 
-export function leaveOverviewMetrics(accounting: ReturnType<typeof leaveOverviewAccounting>, historicalBalance = false): LeaveOverviewMetric[] {
+export function leaveOverviewMetrics(accounting: ReturnType<typeof leaveOverviewAccounting>): LeaveOverviewMetric[] {
   if (accounting.kind === 'period') {
-    if (!accounting.summary.count) return [
-      { value: 'Не внесено', kind: 'missing' },
-      accounting.registeredCount || accounting.recordedUsage > 0n
-        ? { value: formatLeaveDayCount(accounting.recordedUsage), kind: 'value', detail: [accounting.registeredCount ? `${formatLeaveCount(accounting.registeredCount)} · за весь час` : 'За весь час'] }
-        : { value: 'Не визначено', kind: 'unknown' },
-      { value: 'Не визначено', kind: 'unknown', emphasis: true },
-    ]
+    if (!accounting.summary.count) {
+      const hasRecordedUsage = accounting.registeredCount > 0
+      const value = hasRecordedUsage
+        ? `— / ${formatLeaveDayCount(accounting.recordedUsage)}`
+        : accounting.summary.incomplete ? 'Дані неповні' : 'Періоди не внесено'
+      return [
+        { value, kind: hasRecordedUsage ? 'value' : 'missing', detail: hasRecordedUsage ? ['Використано'] : undefined },
+        { value: '—', kind: 'unknown' },
+      ]
+    }
     return [
-      { value: formatLeaveDayCount(accounting.summary.entered), kind: 'value' },
-      { value: formatLeaveDayCount(accounting.summary.accounted), kind: 'value' },
-      { value: formatLeaveDayCount(accounting.summary.remaining), kind: 'value', emphasis: true,
-        detail: [...(accounting.summary.incomplete ? ['Частковий залишок'] : []), ...(historicalBalance ? ['Історичний залишок'] : [])] },
+      { value: `${formatLeaveDayCount(accounting.summary.entered)} / ${formatLeaveDayCount(accounting.summary.accounted)}`, kind: 'value',
+        detail: accounting.summary.incomplete ? ['Дані неповні'] : undefined },
+      accounting.summary.incomplete
+        ? { value: '—', kind: 'unknown' }
+        : { value: formatLeaveDayCount(accounting.summary.remaining), kind: 'value', emphasis: true },
     ]
   }
   return [
-    { value: '—', kind: 'not-applicable' },
-    { value: formatLeaveDayCount(accounting.usedDays), kind: 'value', detail: [accounting.registeredCount ? `${formatLeaveCount(accounting.registeredCount)} · за весь час` : 'За весь час'] },
+    { value: formatLeaveDayCount(accounting.usedDays), kind: 'value', detail: ['Використано'] },
     { value: '—', kind: 'not-applicable' },
   ]
 }

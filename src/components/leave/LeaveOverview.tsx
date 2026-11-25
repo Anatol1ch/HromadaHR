@@ -18,11 +18,10 @@ export type LeaveOverviewData = {
 }
 
 const columns = [
-  { label: 'Вид відпустки', width: '30%' },
+  { label: 'Вид відпустки', width: '33%' },
   { label: 'Право', width: '22%' },
-  { label: <>Внесено <small>к. дн.</small></>, width: '16%' },
-  { label: <>Використано <small>к. дн.</small></>, width: '16%' },
-  { label: <>Залишок <small>к. дн.</small></>, width: '16%' },
+  { label: <>Облік днів <small>Внесено / Використано, к. дн.</small></>, width: '27%' },
+  { label: <>Залишок <small>к. дн.</small></>, width: '18%' },
 ]
 
 const rightIcons = {
@@ -58,30 +57,15 @@ export default function LeaveOverview({ data, throughDate, error, loading, onRet
         const status = data.rights.find(right => right.leaveType === type)?.status ?? 'unknown'
         const proposals = type === 'children_social_additional' ? [] : data.proposals.filter(period => period.leaveType === type && period.periodStart <= throughDate)
         const accounting = leaveOverviewAccounting(type, data.balances, proposals, data.records)
-        const historicalBalance = accounting.kind === 'period' && status === 'no_right' && accounting.summary.count > 0 && accounting.summary.remaining > 0n
         const compactNoRight = leaveOverviewCompactNoRight(status, accounting)
-        const emptyPeriodAccounting = accounting.kind === 'period' && accounting.summary.count === 0 && accounting.registeredCount === 0
-        const metrics = leaveOverviewMetrics(accounting, historicalBalance)
-        const periodStatus = accounting.kind === 'period'
-          ? accounting.summary.incomplete && accounting.summary.count ? 'Не всі періоди внесено' : undefined
-          : undefined
-
-        if (compactNoRight) return <tr key={type}>
-          <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
-          <td colSpan={5} className="leave-overview-compact-no-right">Права на відпустку немає</td>
-        </tr>
-
+        const metrics = leaveOverviewMetrics(accounting)
         return <tr key={type}>
-          <th scope="row"><div className="leave-overview-leave-type"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span>{periodStatus && <small>{periodStatus}</small>}</div></th>
+          <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
           <td><LeaveRightStatus status={status}/></td>
-          {emptyPeriodAccounting && accounting.kind === 'period' && accounting.recordedUsage === 0n
-            ? <td colSpan={3} className="leave-overview-no-periods">{accounting.summary.incomplete ? 'Не всі періоди внесено' : 'Дні не внесено'}</td>
-            : metrics.map((metric, index) => <td key={index}>
-              <DayMetric value={metric.value} kind={metric.kind} emphasis={metric.emphasis} detail={metric.detail?.map(detail => <small key={detail}>{detail}</small>)}/>
-            </td>)}
+          <td><DayMetric value={compactNoRight ? '—' : metrics[0]!.value} kind={compactNoRight ? 'unknown' : metrics[0]!.kind} detail={!compactNoRight ? metrics[0]!.detail?.map(detail => <small key={detail}>{detail}</small>) : undefined}/></td>
+          <td><DayMetric value={compactNoRight ? '—' : metrics[1]!.value} kind={compactNoRight ? 'unknown' : metrics[1]!.kind} emphasis={!compactNoRight && metrics[1]!.emphasis} detail={!compactNoRight ? metrics[1]!.detail?.map(detail => <small key={detail}>{detail}</small>) : undefined}/></td>
         </tr>
       })}
     </DictionaryTable>
-    <p className="leave-overview-footnote">Для навчальної, УБД та Чорнобильської відпусток накопичуваний залишок не ведеться.</p>
   </InfoSection>
 }
