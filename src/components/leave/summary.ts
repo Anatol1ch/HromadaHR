@@ -17,11 +17,38 @@ export function leaveOverviewAccounting(type: LeaveType, balances: PeriodBalance
     usedDays: activeRecords.reduce((sum, record) => sum + BigInt(record.usedDays), 0n) }
 }
 
+export type LeaveOverviewMetric = { value: string; kind: 'value' | 'missing' | 'unknown' | 'not-applicable'; emphasis?: boolean; detail?: string[] }
+
+export function leaveOverviewMetrics(accounting: ReturnType<typeof leaveOverviewAccounting>, historicalBalance = false): LeaveOverviewMetric[] {
+  if (accounting.kind === 'period') {
+    if (!accounting.summary.count) return [
+      { value: 'Не внесено', kind: 'missing' },
+      { value: 'Не визначено', kind: 'unknown' },
+      { value: 'Не визначено', kind: 'unknown', emphasis: true },
+    ]
+    return [
+      { value: formatLeaveDayCount(accounting.summary.entered), kind: 'value' },
+      { value: formatLeaveDayCount(accounting.summary.accounted), kind: 'value' },
+      { value: formatLeaveDayCount(accounting.summary.remaining), kind: 'value', emphasis: true,
+        detail: [...(accounting.summary.incomplete ? ['За внесеними періодами'] : []), ...(historicalBalance ? ['Історичний залишок збережено'] : [])] },
+    ]
+  }
+  return [
+    { value: '—', kind: 'not-applicable' },
+    { value: formatLeaveDayCount(accounting.usedDays), kind: 'value', detail: [accounting.registeredCount ? `${formatLeaveCount(accounting.registeredCount)} · за весь час` : 'За весь час'] },
+    { value: '—', kind: 'not-applicable' },
+  ]
+}
+
 const dayPlural = new Intl.PluralRules('uk-UA')
 export function formatLeaveDays(days: number | bigint) {
   const category = dayPlural.select(Number(BigInt(days) % 100n))
   const unit = category === 'one' ? 'день' : category === 'few' ? 'дні' : 'днів'
   return `${days.toLocaleString('uk-UA')} ${unit}`
+}
+
+export function formatLeaveDayCount(days: number | bigint) {
+  return BigInt(days).toLocaleString('uk-UA')
 }
 
 const leaveCountPlural = new Intl.PluralRules('uk-UA')

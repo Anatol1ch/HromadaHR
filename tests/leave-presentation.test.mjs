@@ -1,7 +1,7 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveCount, leaveOverviewAccounting } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewMetrics } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
@@ -16,6 +16,9 @@ test('overview period rows distinguish empty, confirmed zero, complete, partial 
   assert.equal(empty.kind, 'period')
   assert.equal(empty.summary.count, 0)
   assert.equal(empty.summary.incomplete, true)
+  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [
+    ['Не внесено', 'missing'], ['Не визначено', 'unknown'], ['Не визначено', 'unknown'],
+  ])
   assert.equal(rightLabels.has_right, 'Право підтверджено')
   assert.equal(rightLabels.unknown, 'Право не перевірено')
   assert.equal(rightLabels.no_right, 'Права немає')
@@ -25,22 +28,29 @@ test('overview period rows distinguish empty, confirmed zero, complete, partial 
     { leaveType: 'annual_main', periodStart: '2026-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
   ], proposals, [])
   assert.deepEqual([complete.summary.count, complete.summary.incomplete, complete.summary.entered, complete.summary.accounted, complete.summary.remaining], [2, false, 30n, 10n, 20n])
+  assert.deepEqual(leaveOverviewMetrics(complete).map(metric => metric.value), ['30', '10', '20'])
 
   const historical = leaveOverviewAccounting('annual_main', [
     { leaveType: 'annual_main', periodStart: '2025-01-01', confirmedDays: 12, usedDays: 2, availableDays: 10 },
   ], proposals, [])
   assert.deepEqual([historical.summary.count, historical.summary.incomplete, historical.summary.remaining], [1, true, 10n])
+  assert.deepEqual(leaveOverviewMetrics(historical, true).map(metric => metric.value), ['12', '2', '10'])
+  assert.equal(leaveOverviewMetrics(historical, true)[2]?.detail?.join(' · '), 'За внесеними періодами · Історичний залишок збережено')
 
   const confirmedZero = leaveOverviewAccounting('children_social_additional', [
     { leaveType: 'children_social_additional', periodStart: '2025-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
   ], [], [])
   assert.deepEqual([confirmedZero.summary.count, confirmedZero.summary.entered, confirmedZero.summary.accounted, confirmedZero.summary.remaining], [1, 0n, 0n, 0n])
+  assert.deepEqual(leaveOverviewMetrics(confirmedZero).map(metric => metric.value), ['0', '0', '0'])
   assert.equal(leaveOverviewAccounting('oms_service_additional', [], [], []).summary.count, 0)
 })
 
 test('overview event rows show only active registered use and never invent a balance', () => {
   const empty = leaveOverviewAccounting('study_leave', [], [], [])
   assert.deepEqual([empty.kind, empty.registeredCount, empty.usedDays], ['event', 0, 0n])
+  assert.deepEqual(leaveOverviewMetrics(empty).map(metric => [metric.value, metric.kind]), [
+    ['—', 'not-applicable'], ['0', 'value'], ['—', 'not-applicable'],
+  ])
   const records = [
     { leaveType: 'study_leave', status: 'active', usedDays: 5 },
     { leaveType: 'study_leave', status: 'active', usedDays: 2 },
@@ -55,23 +65,32 @@ test('overview event rows show only active registered use and never invent a bal
   assert.equal(formatLeaveCount(5), '5 відпусток')
 })
 
-test('overview table preserves five logical columns and keeps layout styles off table cells', () => {
+test('overview table keeps one five-cell row per leave type and styles cells without changing table display', () => {
   const component = readFileSync(new URL('../src/components/leave/LeaveOverview.tsx', import.meta.url), 'utf8')
-  const styles = readFileSync(new URL('../src/styles/employee-profile.css', import.meta.url), 'utf8')
+  const styles = [
+    'employee-profile.css', 'leave.css', 'components.css',
+  ].map(file => readFileSync(new URL(`../src/styles/${file}`, import.meta.url), 'utf8')).join('\n')
   assert.equal(leaveTypes.length, 6)
   assert.match(component, /leaveTypes\.map\(type =>/)
-  assert.deepEqual([...component.matchAll(/label: '(?:Вид відпустки|Право|Внесено|Використано|Залишок)'/g)].map(match => match[0]), [
-    "label: 'Вид відпустки'", "label: 'Право'", "label: 'Внесено'", "label: 'Використано'", "label: 'Залишок'",
-  ])
-  assert.match(component, /<td colSpan=\{3\} className="leave-overview-no-periods">\s*<div className="leave-overview-no-periods-content">/)
-  assert.match(component, /<tr className="leave-overview-explanation-row">\s*<td colSpan=\{5\}>/)
+  for (const heading of ['Вид відпустки', 'Право', 'Внесено', 'Використано', 'Залишок']) assert.ok(component.includes(heading))
+  assert.match(component, /width: '30%'/)
+  assert.match(component, /width: '22%'/)
+  assert.equal([...component.matchAll(/width: '16%'/g)].length, 3)
+  assert.match(component, /return <tr key=\{type\}>[\s\S]*?<th scope="row">[\s\S]*?<td><LeaveRightStatus[\s\S]*?\{metrics\.map\(\(metric, index\) => <td key=\{index\}>/)
+  assert.doesNotMatch(component, /colSpan\s*=/)
+  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('annual_main', [], [], [])).length, 3)
+  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('study_leave', [], [], [])).length, 3)
+  assert.match(component, /accounting\.summary\.incomplete \? accounting\.summary\.count \? 'Не всі періоди заповнено' : 'Облік неповний'/)
+  assert.match(component, /accounting\.summary\.count \? undefined : 'Дні не внесено'/)
 
-  const noPeriodCellRule = styles.match(/\.leave-overview-no-periods\s*\{([^}]*)\}/)?.[1] ?? ''
-  assert.doesNotMatch(noPeriodCellRule, /\bdisplay\s*:/)
-  const localTableCellRules = [...styles.matchAll(/\.leave-summary-table[^{}]*\b(?:th|td)\b[^{}]*\{([^}]*)\}/g)]
-  assert.ok(localTableCellRules.length > 0)
-  for (const [, declarations] of localTableCellRules) assert.doesNotMatch(declarations, /display\s*:\s*(?:grid|flex|block)/)
-  assert.match(styles, /\.leave-overview-no-periods-content\s*\{[^}]*display:\s*grid/)
+  const tableElementRules = [...styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, selectorList]) => selectorList.split(',').some(selector => /(?:^|[\s>+~])(?:table|thead|tbody|tr|th|td)(?:[.#][\w-]+|\[[^\]]+\]|:[\w-]+(?:\([^)]*\))?)*\s*$/.test(selector.trim())))
+  assert.ok(tableElementRules.length > 0)
+  for (const [, , declarations] of tableElementRules) assert.doesNotMatch(declarations, /display\s*:\s*(?:grid|flex|block)/)
+  assert.match(styles, /\.leave-summary-table thead th \{[^}]*text-align:center/)
+  assert.match(styles, /\.leave-summary-table tbody td \{[^}]*text-align:center[^}]*vertical-align:middle/)
+  assert.match(styles, /\.leave-summary-table \.leave-right-status \{[^}]*justify-content:center/)
+  assert.match(styles, /\.leave-overview-metric \{[^}]*justify-items:center[^}]*text-align:center/)
 })
 
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
@@ -83,6 +102,7 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(balanceSummary('oms_service_additional',rows,proposals).count,0)
   assert.equal(formatLeaveDays(0n),'0 днів')
   assert.equal(formatLeaveDays(21),'21 день')
+  assert.equal(formatLeaveDayCount(0n), '0')
 })
 
 test('workbench switches four sections and preserves selected balance and history return context', () => {
