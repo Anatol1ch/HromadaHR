@@ -5,6 +5,8 @@ import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveCount, lea
 import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
+import { leaveTypes } from '../shared/leave.ts'
+import { readFileSync } from 'node:fs'
 test('overview period rows distinguish empty, confirmed zero, complete, partial and historical balances', () => {
   const proposals = [
     { leaveType: 'annual_main', periodStart: '2025-01-01' },
@@ -51,6 +53,25 @@ test('overview event rows show only active registered use and never invent a bal
   assert.equal(formatLeaveCount(1), '1 відпустка')
   assert.equal(formatLeaveCount(3), '3 відпустки')
   assert.equal(formatLeaveCount(5), '5 відпусток')
+})
+
+test('overview table preserves five logical columns and keeps layout styles off table cells', () => {
+  const component = readFileSync(new URL('../src/components/leave/LeaveOverview.tsx', import.meta.url), 'utf8')
+  const styles = readFileSync(new URL('../src/styles/employee-profile.css', import.meta.url), 'utf8')
+  assert.equal(leaveTypes.length, 6)
+  assert.match(component, /leaveTypes\.map\(type =>/)
+  assert.deepEqual([...component.matchAll(/label: '(?:Вид відпустки|Право|Внесено|Використано|Залишок)'/g)].map(match => match[0]), [
+    "label: 'Вид відпустки'", "label: 'Право'", "label: 'Внесено'", "label: 'Використано'", "label: 'Залишок'",
+  ])
+  assert.match(component, /<td colSpan=\{3\} className="leave-overview-no-periods">\s*<div className="leave-overview-no-periods-content">/)
+  assert.match(component, /<tr className="leave-overview-explanation-row">\s*<td colSpan=\{5\}>/)
+
+  const noPeriodCellRule = styles.match(/\.leave-overview-no-periods\s*\{([^}]*)\}/)?.[1] ?? ''
+  assert.doesNotMatch(noPeriodCellRule, /\bdisplay\s*:/)
+  const localTableCellRules = [...styles.matchAll(/\.leave-summary-table[^{}]*\b(?:th|td)\b[^{}]*\{([^}]*)\}/g)]
+  assert.ok(localTableCellRules.length > 0)
+  for (const [, declarations] of localTableCellRules) assert.doesNotMatch(declarations, /display\s*:\s*(?:grid|flex|block)/)
+  assert.match(styles, /\.leave-overview-no-periods-content\s*\{[^}]*display:\s*grid/)
 })
 
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {

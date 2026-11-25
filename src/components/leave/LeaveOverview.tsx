@@ -1,5 +1,5 @@
 import { CircleCheck, CircleHelp, CircleMinus, FileCheck2 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import type { EmployeeLeaveRight, LeaveRecord, PeriodBalance, ProposedLeavePeriod } from '../../../shared/leave'
 import { leaveTypes } from '../../../shared/leave'
 import Alert from '../Alert'
@@ -60,27 +60,31 @@ export default function LeaveOverview({ data, throughDate, error, loading, onRet
         const accounting = leaveOverviewAccounting(type, data.balances, proposals, data.records)
         const historicalBalance = accounting.kind === 'period' && status === 'no_right' && accounting.summary.count > 0 && accounting.summary.remaining > 0n
 
-        return <tr key={type}>
-          <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
-          <td><LeaveRightStatus status={status}/></td>
-          {accounting.kind === 'period' ? accounting.summary.count > 0 ? <>
-            <td><DayMetric value={formatLeaveDays(accounting.summary.entered)}/></td>
-            <td><DayMetric value={formatLeaveDays(accounting.summary.accounted)}/></td>
-            <td><DayMetric value={formatLeaveDays(accounting.summary.remaining)} emphasis detail={<>
-              {accounting.summary.incomplete && <small>За внесеними періодами · не всі періоди заповнено</small>}
-              {historicalBalance && <small>Історичний залишок збережено</small>}
-            </>}/></td>
-          </> : <td colSpan={3} className="leave-overview-no-periods">
-            <strong>{accounting.summary.incomplete ? 'Не всі періоди заповнено' : 'Дні не внесено'}</strong>
-            {accounting.summary.incomplete && <small>Підтверджених днів за внесеними періодами поки немає.</small>}
-          </td> : <>
-            <td><span className="leave-overview-not-applicable">—</span></td>
-            <td>{accounting.registeredCount > 0
-              ? <DayMetric value={formatLeaveDays(accounting.usedDays)} detail={<small>{formatLeaveCount(accounting.registeredCount)} · за весь час</small>}/>
-              : <span className="leave-overview-event-empty">Відпусток не зареєстровано</span>}</td>
-            <td><span className="leave-overview-not-applicable">—</span></td>
-          </>}
-        </tr>
+        return <Fragment key={type}>
+          <tr>
+            <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
+            <td><LeaveRightStatus status={status}/></td>
+            {accounting.kind === 'period' ? accounting.summary.count > 0 ? <>
+              <td><DayMetric value={formatLeaveDays(accounting.summary.entered)}/></td>
+              <td><DayMetric value={formatLeaveDays(accounting.summary.accounted)}/></td>
+              <td><DayMetric value={formatLeaveDays(accounting.summary.remaining)} emphasis detail={historicalBalance ? <small>Історичний залишок збережено</small> : undefined}/></td>
+            </> : <td colSpan={3} className="leave-overview-no-periods">
+              <div className="leave-overview-no-periods-content">
+                <strong>{accounting.summary.incomplete ? 'Не всі періоди заповнено' : 'Дні не внесено'}</strong>
+                {accounting.summary.incomplete && <small>Підтверджених днів за внесеними періодами поки немає.</small>}
+              </div>
+            </td> : <>
+              <td><span className="leave-overview-not-applicable">—</span></td>
+              <td>{accounting.registeredCount > 0
+                ? <DayMetric value={formatLeaveDays(accounting.usedDays)} detail={<small>{formatLeaveCount(accounting.registeredCount)} · за весь час</small>}/>
+                : <span className="leave-overview-event-empty">Відпусток не зареєстровано</span>}</td>
+              <td><span className="leave-overview-not-applicable">—</span></td>
+            </>}
+          </tr>
+          {accounting.kind === 'period' && accounting.summary.incomplete && accounting.summary.count > 0 && <tr className="leave-overview-explanation-row">
+            <td colSpan={5}>Показано дані за внесеними періодами; не всі періоди заповнено.</td>
+          </tr>}
+        </Fragment>
       })}
     </DictionaryTable>
     <p className="leave-overview-footnote">Для навчальної та інших подієвих відпусток накопичуваний залишок не ведеться; тире в колонках «Внесено» й «Залишок» означає, що ці показники не застосовуються.</p>
