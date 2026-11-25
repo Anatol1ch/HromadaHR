@@ -81,10 +81,11 @@
 .leave-overview-summary .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
 .leave-summary-table { width:100%; min-width:760px; font-variant-numeric:tabular-nums; }
 .leave-summary-table thead th { height:auto; padding:12px 10px; border-bottom:1px solid var(--border-surface); text-align:center; vertical-align:middle; }
-.leave-summary-table thead th:first-child { text-align:left; }
+.leave-summary-table thead th:first-child { text-align:center; }
 .leave-summary-table thead th small { display:block; color:var(--color-text-hint); font-size:10px; font-weight:500; letter-spacing:normal; text-transform:none; }
-.leave-summary-table tbody th[scope="row"] { min-width:0; padding:12px 10px 12px 20px; border-top:1px solid var(--border-surface); color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; vertical-align:middle; white-space:normal; }
+.leave-summary-table tbody th[scope="row"] { min-width:0; padding:12px 10px 12px 20px; border-top:1px solid var(--border-surface); background:var(--surface-card); color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; vertical-align:middle; white-space:normal; }
 .leave-summary-table tbody td { height:auto; padding:12px 10px; text-align:center; vertical-align:middle; white-space:normal; }
+.leave-summary-table tbody tr:hover { background:var(--surface-card); }
 .leave-summary-table .leave-right-status { justify-content:center; margin-inline:auto; }
 .leave-summary-type { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
 .leave-summary-type > svg,.leave-summary-type .leave-type-icon { flex:none; }
