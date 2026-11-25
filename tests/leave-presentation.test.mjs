@@ -1,7 +1,7 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewMetrics } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
@@ -35,7 +35,7 @@ test('overview period rows distinguish empty, confirmed zero, complete, partial 
   ], proposals, [])
   assert.deepEqual([historical.summary.count, historical.summary.incomplete, historical.summary.remaining], [1, true, 10n])
   assert.deepEqual(leaveOverviewMetrics(historical, true).map(metric => metric.value), ['12', '2', '10'])
-  assert.equal(leaveOverviewMetrics(historical, true)[2]?.detail?.join(' · '), 'За внесеними періодами · Історичний залишок збережено')
+  assert.equal(leaveOverviewMetrics(historical, true)[2]?.detail?.join(' · '), 'Частковий залишок · Історичний залишок')
 
   const confirmedZero = leaveOverviewAccounting('children_social_additional', [
     { leaveType: 'children_social_additional', periodStart: '2025-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 },
@@ -65,6 +65,40 @@ test('overview event rows show only active registered use and never invent a bal
   assert.equal(formatLeaveCount(5), '5 відпусток')
 })
 
+test('overview compacts only no-right rows without periods or active usage', () => {
+  const emptyPeriod = leaveOverviewAccounting('annual_main', [], [], [])
+  assert.equal(leaveOverviewCompactNoRight('no_right', emptyPeriod), true)
+  assert.equal(leaveOverviewCompactNoRight('unknown', emptyPeriod), false)
+  assert.equal(leaveOverviewCompactNoRight('has_right', emptyPeriod), false)
+
+  const historical = leaveOverviewAccounting('annual_main', [
+    { leaveType: 'annual_main', periodStart: '2025-01-01', confirmedDays: 12, usedDays: 4, availableDays: 8 },
+  ], [], [])
+  assert.equal(leaveOverviewCompactNoRight('no_right', historical), false)
+
+  const eventUsage = leaveOverviewAccounting('study_leave', [], [], [
+    { leaveType: 'study_leave', status: 'active', usedDays: 4 },
+  ])
+  assert.equal(leaveOverviewCompactNoRight('no_right', eventUsage), false)
+
+  const periodUsage = leaveOverviewAccounting('annual_main', [], [], [
+    { leaveType: 'annual_main', status: 'active', usedDays: 4 },
+  ])
+  assert.equal(leaveOverviewCompactNoRight('no_right', periodUsage), false)
+  assert.deepEqual(leaveOverviewMetrics(periodUsage).map(metric => metric.value), ['Не внесено', '4', 'Не визначено'])
+})
+
+test('overview does not infer entitlement from balances or the initial-period reference field', () => {
+  const reference = { leaveType: 'annual_main', confirmedDays: 8, usedDays: 2, availableDays: 6, referenceEntitlementDays: 30 }
+  const initial = leaveOverviewAccounting('annual_main', [{ ...reference, accountingBasis: 'initial_balance', periodStart: '2026-01-01' }], [], [])
+  const confirmed = leaveOverviewAccounting('annual_main', [{ ...reference, referenceEntitlementDays: null, accountingBasis: 'confirmed_entitlement', periodStart: '2027-01-01' }], [], [])
+  assert.equal(leaveOverviewMetrics(initial)[0]?.value, '8')
+  assert.equal(leaveOverviewMetrics(confirmed)[0]?.value, '8')
+
+  const schema = readFileSync(new URL('../electron/storage/migrations.ts', import.meta.url), 'utf8')
+  assert.match(schema, /CHECK \(accounting_basis = 'initial_balance' OR reference_entitlement_days IS NULL\)/)
+})
+
 test('overview table keeps one five-cell row per leave type and styles cells without changing table display', () => {
   const component = readFileSync(new URL('../src/components/leave/LeaveOverview.tsx', import.meta.url), 'utf8')
   const styles = [
@@ -76,12 +110,15 @@ test('overview table keeps one five-cell row per leave type and styles cells wit
   assert.match(component, /width: '30%'/)
   assert.match(component, /width: '22%'/)
   assert.equal([...component.matchAll(/width: '16%'/g)].length, 3)
-  assert.match(component, /return <tr key=\{type\}>[\s\S]*?<th scope="row">[\s\S]*?<td><LeaveRightStatus[\s\S]*?\{metrics\.map\(\(metric, index\) => <td key=\{index\}>/)
-  assert.doesNotMatch(component, /colSpan\s*=/)
+  assert.match(component, /<td><LeaveRightStatus status=\{status\}\/>/)
+  assert.match(component, /metrics\.map\(\(metric, index\) => <td key=\{index\}>/)
+  assert.match(component, /<td colSpan=\{5\} className="leave-overview-compact-no-right">Права на відпустку немає<\/td>/)
+  assert.match(component, /<td colSpan=\{3\} className="leave-overview-no-periods">/)
+  assert.match(component, /leaveOverviewCompactNoRight\(status, accounting\)/)
+  assert.doesNotMatch(component, /label:\s*['"]Належить['"]/)
   assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('annual_main', [], [], [])).length, 3)
   assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('study_leave', [], [], [])).length, 3)
-  assert.match(component, /accounting\.summary\.incomplete \? accounting\.summary\.count \? 'Не всі періоди заповнено' : 'Облік неповний'/)
-  assert.match(component, /accounting\.summary\.count \? undefined : 'Дні не внесено'/)
+  assert.match(component, /accounting\.summary\.incomplete \? 'Не всі періоди внесено' : 'Дні не внесено'/)
 
   const tableElementRules = [...styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter(([, selectorList]) => selectorList.split(',').some(selector => /(?:^|[\s>+~])(?:table|thead|tbody|tr|th|td)(?:[.#][\w-]+|\[[^\]]+\]|:[\w-]+(?:\([^)]*\))?)*\s*$/.test(selector.trim())))

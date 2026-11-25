@@ -220,6 +220,10 @@ test('SQLite constraints independently reject malformed, negative and overlappin
   assert.throws(() => insert.run(...row('2024-06-15', '2025-06-14', -1)), /CHECK constraint/)
   assert.throws(() => insert.run(...row('2025-06-15', '2026-06-14').map((value, index) => index === 3 ? '2025-02-30' : value)), /CHECK constraint/)
   assert.throws(() => insert.run(...row('2025-06-15', '2024-12-31')), /CHECK constraint/)
+  const confirmedWithReference = row('2027-01-01', '2027-12-31')
+  confirmedWithReference[5] = 'confirmed_entitlement'
+  confirmedWithReference[7] = 30
+  assert.throws(() => insert.run(...confirmedWithReference), /CHECK constraint/)
   assert.equal(db.prepare('SELECT count(*) n FROM leave_period_balances').get().n, 1)
 })
 

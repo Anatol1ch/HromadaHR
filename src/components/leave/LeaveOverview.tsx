@@ -6,7 +6,7 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import InfoSection from '../InfoSection'
 import DictionaryTable from '../DictionaryTable'
-import { leaveOverviewAccounting, leaveOverviewMetrics, type LeaveOverviewMetric } from './summary'
+import { leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, type LeaveOverviewMetric } from './summary'
 import { leaveWorkspaceLabels, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 
@@ -59,17 +59,26 @@ export default function LeaveOverview({ data, throughDate, error, loading, onRet
         const proposals = type === 'children_social_additional' ? [] : data.proposals.filter(period => period.leaveType === type && period.periodStart <= throughDate)
         const accounting = leaveOverviewAccounting(type, data.balances, proposals, data.records)
         const historicalBalance = accounting.kind === 'period' && status === 'no_right' && accounting.summary.count > 0 && accounting.summary.remaining > 0n
+        const compactNoRight = leaveOverviewCompactNoRight(status, accounting)
+        const emptyPeriodAccounting = accounting.kind === 'period' && accounting.summary.count === 0 && accounting.registeredCount === 0
         const metrics = leaveOverviewMetrics(accounting, historicalBalance)
         const periodStatus = accounting.kind === 'period'
-          ? accounting.summary.incomplete ? accounting.summary.count ? 'Не всі періоди заповнено' : 'Облік неповний' : accounting.summary.count ? undefined : 'Дні не внесено'
+          ? accounting.summary.incomplete && accounting.summary.count ? 'Не всі періоди внесено' : undefined
           : undefined
+
+        if (compactNoRight) return <tr key={type}>
+          <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
+          <td colSpan={5} className="leave-overview-compact-no-right">Права на відпустку немає</td>
+        </tr>
 
         return <tr key={type}>
           <th scope="row"><div className="leave-overview-leave-type"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span>{periodStatus && <small>{periodStatus}</small>}</div></th>
           <td><LeaveRightStatus status={status}/></td>
-          {metrics.map((metric, index) => <td key={index}>
-            <DayMetric value={metric.value} kind={metric.kind} emphasis={metric.emphasis} detail={metric.detail?.map(detail => <small key={detail}>{detail}</small>)}/>
-          </td>)}
+          {emptyPeriodAccounting && accounting.kind === 'period' && accounting.recordedUsage === 0n
+            ? <td colSpan={3} className="leave-overview-no-periods">{accounting.summary.incomplete ? 'Не всі періоди внесено' : 'Дні не внесено'}</td>
+            : metrics.map((metric, index) => <td key={index}>
+              <DayMetric value={metric.value} kind={metric.kind} emphasis={metric.emphasis} detail={metric.detail?.map(detail => <small key={detail}>{detail}</small>)}/>
+            </td>)}
         </tr>
       })}
     </DictionaryTable>
