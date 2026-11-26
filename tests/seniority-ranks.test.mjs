@@ -28,7 +28,7 @@ async function fixture(t) {
   const ledger = connection.database.prepare('SELECT * FROM schema_migrations ORDER BY version').all()
   connection.close()
   connection = await openStorageSafely(file)
-  assert.equal(connection.schemaVersion,24)
+  assert.equal(connection.schemaVersion,25)
   assert.deepEqual(connection.database.prepare('SELECT * FROM schema_migrations WHERE version<=12 ORDER BY version').all(),ledger)
   const storage = { getDatabase: () => connection.database }
   const personnel = new PersonnelService(storage, () => false)
@@ -141,7 +141,7 @@ test('v23→v24 removes only retired rank fields and preserves legacy origin and
  connection.close();connection=await openStorageSafely(file)
  t.after(()=>{connection.close();assert.ok(resolve(root).startsWith(resolve(tmpdir())+sep));rmSync(root,{recursive:true,force:true,maxRetries:5})})
  const db=connection.database
- assert.equal(connection.schemaVersion,24)
+ assert.equal(connection.schemaVersion,25)
  assert.deepEqual(db.prepare('SELECT employee_id,rank,assigned_on,document_type,document_number,document_date,origin,review_anchor_on FROM employee_current_ranks WHERE employee_id=?').get(employee.id),{employee_id:employee.id,rank:15,assigned_on:'2020-01-01',document_type:'Рішення ради',document_number:'9-р',document_date:'2020-01-02',origin:'oms_early',review_anchor_on:'2021-02-03'})
  assert.deepEqual(db.prepare('SELECT * FROM employees WHERE id=?').get(employee.id),beforeEmployee)
  assert.equal(db.prepare('SELECT percentage FROM employee_seniority_allowances WHERE employee_id=?').get(employee.id).percentage,15)

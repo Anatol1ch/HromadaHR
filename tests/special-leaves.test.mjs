@@ -80,25 +80,62 @@ test('study events share the journal, allow repeated nonoverlapping events and n
 test('special limits, explanations, annual uniqueness, start-year attribution and cancellation',async t=>{
   const f=await fixture(t)
   for(const [type,limit,month] of [['veteran_special_leave',14,'06'],['chernobyl_special_leave',16,'08']]) {
+    assert.throws(()=>f.service.registerLeave(event(f,type,{startDate:`2027-${month}-01`,endDate:`2027-${month}-${limit}`})),code('SPECIAL_RIGHT_REQUIRED'))
+    f.service.saveRights(f.employee.id,[{leaveType:type,status:'has_right'}])
     assert.throws(()=>f.service.registerLeave(event(f,type,{startDate:`2027-${month}-01`,endDate:`2027-${month}-20`,usedDays:limit+1,durationExplanation:'Уточнення'})),code('SPECIAL_DURATION'))
     assert.throws(()=>f.service.registerLeave(event(f,type,{startDate:`2027-${month}-01`,endDate:`2027-${month}-10`,usedDays:10})),code('SPECIAL_DURATION'))
+    assert.throws(()=>f.service.registerLeave(event(f,type,{startDate:`2027-${month}-01`,endDate:`2027-${month}-${limit+1}`,usedDays:limit})),code('SPECIAL_DURATION'))
     const input=event(f,type,{startDate:`2027-${month}-01`,endDate:`2027-${month}-${limit}`,usedDays:limit})
     const first=f.service.registerLeave(input)
+    assert.equal(f.service.registerLeave(input).id,first.id)
+    assert.throws(()=>f.connection.database.prepare('UPDATE leave_records SET used_days=? WHERE id=?').run(limit-1,first.id))
     assert.throws(()=>f.service.registerLeave(event(f,type,{startDate:'2027-10-01',endDate:`2027-10-${limit}`,usedDays:limit})),code('SPECIAL_YEAR_CONFLICT'))
+    f.service.saveRights(f.employee.id,[{leaveType:type,status:'no_right'}])
+    assert.equal(f.service.getRecord(first.id).status,'active')
     const cancelled=f.service.cancelLeave(first.id,first.revision,'Помилкове надання')
     assert.equal(cancelled.status,'cancelled')
-    const next=f.service.registerLeave({...input,requestId:randomUUID(),usedDays:limit-1,durationExplanation:'Підтверджена менша тривалість'})
-    assert.equal(next.usedDays,limit-1)
+    assert.throws(()=>f.service.registerLeave({...input,requestId:randomUUID()}),code('SPECIAL_RIGHT_REQUIRED'))
+    f.service.saveRights(f.employee.id,[{leaveType:type,status:'has_right'}])
+    const next=f.service.registerLeave({...input,requestId:randomUUID()})
+    assert.equal(next.usedDays,limit)
   }
+  f.service.saveRights(f.employee.id,[{leaveType:'veteran_special_leave',status:'has_right'}])
   const cross=f.service.registerLeave(event(f,'veteran_special_leave',{startDate:'2028-12-25',endDate:'2029-01-07'}))
   assert.equal(cross.startDate.slice(0,4),'2028')
   assert.equal(overlapsYear(cross,'2028'),true);assert.equal(overlapsYear(cross,'2029'),true);assert.equal(overlapsYear(cross,'2027'),false)
   const nextYear=f.service.registerLeave(event(f,'veteran_special_leave',{startDate:'2029-03-01',endDate:'2029-03-14'}))
   assert.throws(()=>f.service.updateLeave(f.update(nextYear,{startDate:'2028-03-01',endDate:'2028-03-14',grantBasis:nextYear.grantBasis})),code('SPECIAL_YEAR_CONFLICT'))
   assert.equal(f.service.getRecord(nextYear.id).revision,1)
+  f.service.cancelLeave(cross.id,cross.revision,'Тест переходу календарного року завершено')
+  f.service.saveRights(f.employee.id,[{leaveType:'chernobyl_special_leave',status:'has_right'}])
+  const chCross=f.service.registerLeave(event(f,'chernobyl_special_leave',{startDate:'2028-12-17',endDate:'2029-01-01',usedDays:16}))
+  assert.equal(chCross.startDate.slice(0,4),'2028')
+  const chNextYear=f.service.registerLeave(event(f,'chernobyl_special_leave',{startDate:'2029-02-01',endDate:'2029-02-16',usedDays:16}))
+  assert.equal(chNextYear.startDate.slice(0,4),'2029')
   assert.deepEqual(f.service.getBalances(f.employee.id),[])
   assert.deepEqual(f.service.listPeriods(f.employee.id),[])
   integrity(f.connection.database)
+})
+
+test('v25 preserves legacy partial special records and allows cancellation without permitting new partial use',async t=>{
+  const f=await fixture(t,migrations.slice(0,24)),db=f.connection.database
+  const requestId=randomUUID(),id=randomUUID()
+  db.prepare(`INSERT INTO leave_records(id,request_id,request_json,employee_id,leave_type,start_date,end_date,used_days,
+    duration_explanation,created_at,grant_basis) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+    id,requestId,'{}',f.employee.id,'veteran_special_leave','2027-06-01','2027-06-10',10,'Legacy exception','2026-11-01T00:00:00.000Z','Legacy order')
+  const before=db.prepare('SELECT * FROM leave_records WHERE id=?').get(id)
+  f.connection.close()
+  const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
+  const current=upgraded.database.prepare('SELECT * FROM leave_records WHERE id=?').get(id)
+  assert.deepEqual(current,before)
+  const service=new LeaveService({getDatabase:()=>upgraded.database},()=>false)
+  assert.throws(()=>service.registerLeave(event(f,'veteran_special_leave',{requestId:randomUUID(),startDate:'2027-07-01',endDate:'2027-07-10',usedDays:10})),code('SPECIAL_RIGHT_REQUIRED'))
+  const cancelled=service.cancelLeave(id,1,'Скасовано кадровиком')
+  assert.equal(cancelled.status,'cancelled')
+  assert.throws(()=>upgraded.database.prepare(`INSERT INTO leave_records(id,request_id,request_json,employee_id,leave_type,start_date,end_date,
+    used_days,duration_explanation,created_at,grant_basis) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
+    randomUUID(),randomUUID(),'{}',f.employee.id,'veteran_special_leave','2027-07-01','2027-07-10',10,'Partial','2026-11-01T00:00:00.000Z','Order'))
+  integrity(upgraded.database)
 })
 
 test('type changes atomically release and restore period consumption with immutable creation identity',async t=>{
@@ -119,8 +156,10 @@ test('type changes atomically release and restore period consumption with immuta
   const replay=f.service.registerLeave(JSON.parse(identity.request_json))
   assert.equal(replay.revision,record.revision)
   assert.throws(()=>f.service.updateLeave(f.update(record,{leaveType:'chernobyl_special_leave',allocations:[],grantBasis:null})),code('GRANT_BASIS_REQUIRED'))
+  f.service.saveRights(f.employee.id,[{leaveType:'chernobyl_special_leave',status:'has_right'}])
   record=f.service.updateLeave(f.update(record,{leaveType:'chernobyl_special_leave',allocations:[],grantBasis:'Категорію перевірено'}))
-  record=f.service.updateLeave(f.update(record,{leaveType:'veteran_special_leave',usedDays:14,durationExplanation:'Уточнення',allocations:[],grantBasis:'Статус перевірено'}))
+  f.service.saveRights(f.employee.id,[{leaveType:'veteran_special_leave',status:'has_right'}])
+  record=f.service.updateLeave(f.update(record,{leaveType:'veteran_special_leave',startDate:'2027-04-05',endDate:'2027-04-18',usedDays:14,durationExplanation:null,allocations:[],grantBasis:'Статус перевірено'}))
   assert.equal(record.leaveType,'veteran_special_leave')
   assert.equal(f.service.getBalances(f.employee.id)[0].availableDays,30)
   integrity(f.connection.database)
@@ -198,7 +237,7 @@ async function legacyV8(t,version=8) {
 test('v8 rebuild preserves every row, relation, trigger, cancellation and legacy idempotency',async t=>{
   const f=await legacyV8(t)
   const upgraded=await openStorageSafely(f.file);f.handles.push(upgraded)
-  assert.equal(upgraded.schemaVersion,24)
+  assert.equal(upgraded.schemaVersion,25)
   const db=upgraded.database,service=new LeaveService({getDatabase:()=>db},()=>false)
   assert.deepEqual(db.prepare('SELECT * FROM leave_records ORDER BY id').all().map(({grant_basis,...row})=>{assert.equal(grant_basis,null);return row}),f.rows)
   assert.deepEqual(db.prepare('SELECT * FROM leave_allocations ORDER BY record_id').all(),f.allocations)
@@ -210,7 +249,8 @@ test('v8 rebuild preserves every row, relation, trigger, cancellation and legacy
   assert.throws(()=>service.registerLeave({...f.input,grantBasis:'Нова підстава'}),code('CONFLICT'))
   const names=db.prepare("SELECT name FROM sqlite_schema WHERE type='trigger' AND name LIKE 'leave_%' ORDER BY name").all().map(x=>x.name)
   assert.deepEqual(names,['leave_allocation_insert','leave_allocation_no_update','leave_employee_delete','leave_period_balances_no_overlap_insert',
-    'leave_period_balances_no_overlap_update','leave_period_protect_update','leave_record_allocation_mode_update','leave_record_identity_update','leave_record_no_overlap','leave_record_no_overlap_update'])
+    'leave_period_balances_no_overlap_update','leave_period_protect_update','leave_record_allocation_mode_update','leave_record_identity_update','leave_record_no_overlap','leave_record_no_overlap_update',
+    'leave_special_full_duration_insert','leave_special_full_duration_update'])
   assert.equal(db.pragma('foreign_key_list(leave_allocations)').find(x=>x.from==='record_id').table,'leave_records')
   assert.equal(db.pragma('foreign_key_list(leave_allocations)').find(x=>x.from==='period_id').on_delete,'RESTRICT')
   assert.equal(db.pragma('foreign_key_list(leave_records)').find(x=>x.from==='employee_id').on_delete,'CASCADE')
@@ -252,7 +292,7 @@ test('restore v7 and v8 migrates immutable sources, including edited/cancelled r
     assert.equal(selection.schemaVersion,version)
     await backup.confirmRestore(selection.token,async()=>true)
     assert.deepEqual(readFileSync(f.file),before)
-    assert.equal(storage.getStatus().schemaVersion,24)
+    assert.equal(storage.getStatus().schemaVersion,25)
     const service=new LeaveService(storage,()=>backup.isBusy())
     assert.equal(service.registerLeave(f.input).id,f.activeId)
     assert.equal(service.getRecord(f.cancelledId).status,'cancelled')
@@ -265,6 +305,7 @@ test('restore v7 and v8 migrates immutable sources, including edited/cancelled r
 test('v9 SQL guards, cancellation and employee cascade preserve all accounting modes atomically',async t=>{
   const f=await fixture(t),db=f.connection.database
   const [p]=f.service.savePeriods(f.employee.id,[f.period(2024,30)])
+  f.service.saveRights(f.employee.id,[{leaveType:'veteran_special_leave',status:'has_right'}])
   const annual=f.register([{periodId:p.id,days:16}])
   const special=f.service.registerLeave(event(f,'veteran_special_leave'))
   const study=f.service.registerLeave(event(f,'study_leave',{startDate:'2027-08-01',endDate:'2027-08-14'}))

@@ -70,6 +70,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         const failedProposal = proposals.find(result => !result.ok)
         if (failedProposal && !failedProposal.ok) { setLoaded({ key: readKey, error: personnelMessage(failedProposal.error.code) }); return }
         setLoaded({ key: readKey, data: {
+          employeeId,
           balances: balances.data,
           records: records.data.filter(record => leaveRecordBelongsToEmployee(record, employeeId)),
           rights: rights.data,

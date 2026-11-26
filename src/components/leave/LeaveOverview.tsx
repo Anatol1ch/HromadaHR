@@ -6,11 +6,12 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import InfoSection from '../InfoSection'
 import DictionaryTable from '../DictionaryTable'
-import { leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, type LeaveOverviewMetric } from './summary'
+import { leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, specialLeaveAnnualMetrics, type LeaveOverviewMetric } from './summary'
 import { leaveWorkspaceLabels, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 
 export type LeaveOverviewData = {
+  employeeId: string
   balances: PeriodBalance[]
   proposals: ProposedLeavePeriod[]
   records: LeaveRecord[]
@@ -58,7 +59,9 @@ export default function LeaveOverview({ data, throughDate, error, loading, onRet
         const proposals = type === 'children_social_additional' ? [] : data.proposals.filter(period => period.leaveType === type && period.periodStart <= throughDate)
         const accounting = leaveOverviewAccounting(type, data.balances, proposals, data.records)
         const compactNoRight = leaveOverviewCompactNoRight(status, accounting)
-        const metrics = leaveOverviewMetrics(accounting)
+        const metrics = type === 'veteran_special_leave' || type === 'chernobyl_special_leave'
+          ? specialLeaveAnnualMetrics(type, status, data.records, data.employeeId, throughDate.slice(0, 4))
+          : leaveOverviewMetrics(accounting)
         return <tr key={type}>
           <th scope="row"><span className="leave-summary-type"><LeaveTypeIcon type={type}/><span>{leaveWorkspaceLabels[type]}</span></span></th>
           <td><LeaveRightStatus status={status}/></td>

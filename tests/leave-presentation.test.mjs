@@ -1,7 +1,7 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
@@ -62,6 +62,19 @@ test('overview event rows show actual use, including zero, and never invent an a
   assert.equal(formatLeaveCount(1), '1 відпустка')
   assert.equal(formatLeaveCount(3), '3 відпустки')
   assert.equal(formatLeaveCount(5), '5 відпусток')
+})
+
+test('special leave overview distinguishes current annual access, use, no right, unknown and legacy conflicts', () => {
+  const records = [{id:'r',employeeId:'e',leaveType:'veteran_special_leave',startDate:'2027-12-25',endDate:'2028-01-07',usedDays:14,status:'active'}]
+  assert.deepEqual(specialLeaveAnnualMetrics('veteran_special_leave','has_right',[], 'e','2027').map(metric=>metric.value), ['14','Доступно 14'])
+  assert.deepEqual(specialLeaveAnnualMetrics('veteran_special_leave','unknown',[], 'e','2027').map(metric=>metric.value), ['—','—'])
+  assert.deepEqual(specialLeaveAnnualMetrics('veteran_special_leave','no_right',[], 'e','2027').map(metric=>metric.value), ['—','—'])
+  assert.deepEqual(specialLeaveAnnualMetrics('veteran_special_leave','has_right',records, 'e','2027').map(metric=>metric.value), ['Використано 14','Використано'])
+  assert.deepEqual(specialLeaveAnnualMetrics('veteran_special_leave','has_right',records, 'e','2028').map(metric=>metric.value), ['14','Доступно 14'])
+  const partial=[{...records[0],endDate:'2028-01-05',usedDays:12}]
+  assert.equal(specialLeaveAnnualAvailability('veteran_special_leave','has_right',partial,'e','2027').kind,'review')
+  assert.equal(specialLeaveAnnualAvailability('veteran_special_leave','has_right',[{...records[0],status:'cancelled'}],'e','2027').kind,'available')
+  assert.deepEqual(specialLeaveAnnualMetrics('chernobyl_special_leave','has_right',[], 'e','2027').map(metric=>metric.value), ['16','Доступно 16'])
 })
 
 test('overview compacts only no-right rows without periods or active usage', () => {

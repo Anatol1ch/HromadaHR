@@ -284,6 +284,10 @@ Read-only цільово перевірено `Anatol1ch/HromadaAID` за SHA `3
 
 Для цього етапу повторно використано раніше перевірений read-only HromadaAID snapshot `33eca10733caaf73b1a99e75a24ff35e706a0afb` та цільовий висновок 9.12.4: придатного аналога leave-balance automation/workbench не виявлено у перевірених джерелах. Новий дизайн системи залишків спирається на HromadaHR LeaveService, SQLite v24, підтверджені періоди й allocations; код AID не переносився. Це аналіз і проєкт для погодження, не дозвіл на реалізацію.
 
+## Етап 9.12.9 – Спеціальні відпустки
+
+Джерело: read-only AID remote HEAD `364f547200ebd63f9a2fe6592fae0768e77e9eb9`; цільовий пошук leave/vacation/period/balance у перевіреному дереві не виявив leave registration, annual availability або balance аналога (попередні цільові результати наведені в записах 9.12.7–9.12.8 вище). Рішення: використати чинні компоненти HromadaHR `LeaveRegistrationForm`, `LeaveOverview`, `Alert`, `DataState` і типізований leave API; нового UI-патерна з AID для цієї предметної задачі немає. Обґрунтування: AID не містить відповідного відпускного процесу, а його код не є джерелом кадрових правил. Фактичний стан: аналог не перенесено; тільки чинний HR UI підказує/показує 14/16 і актуальний статус. SQLite v25 додає лише локальні leave-record guards; runtime-залежності чи нових спільних компонентів немає.
+
 ### Етап 9.12.6 – Пропозиції тривалості періодів
 
 Цільово перевірено доступне дерево `Anatol1ch/HromadaAID` на remote HEAD `364f547200ebd63f9a2fe6592fae0768e77e9eb9` (read-only); придатного leave-period editor або service projection не виявлено. Збережено наявні HromadaHR `BalanceEditor`, `ServiceProjection`, `Modal`, `DateField`, `ValidatedInput` та стилі. Нова поведінка змінює тільки локальну чернетку й не створює окремого UI-компонента або облікового механізму.

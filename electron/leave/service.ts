@@ -340,16 +340,28 @@ export class LeaveService {
     const employee = this.employee(db, value.employeeId)
     this.checkDates(employee.hireDate, value.startDate, value.endDate)
     const length = calendarDays(value.startDate, value.endDate)
-    if (length < 1 || value.usedDays > length ||
-      (value.usedDays !== length && !value.durationExplanation)) throw new LeaveError('INVALID_ARGUMENTS')
+    const limit = specialLeaveLimit(value.leaveType)
+    if (length < 1 || (limit === null && (value.usedDays > length ||
+      (value.usedDays !== length && !value.durationExplanation)))) throw new LeaveError('INVALID_ARGUMENTS')
     if (db.prepare(`SELECT 1 FROM leave_records WHERE employee_id=? AND status='active'
       AND start_date<=? AND end_date>=? AND (? IS NULL OR id!=?) LIMIT 1`).get(value.employeeId, value.endDate, value.startDate, excludeId, excludeId)) throw new LeaveError('LEAVE_OVERLAP')
     if (!isPeriodLeave(value.leaveType)) {
       if (!value.grantBasis?.trim()) throw new LeaveError('GRANT_BASIS_REQUIRED')
       if (value.allocations.length) throw new LeaveError('INVALID_ARGUMENTS')
-      const limit = specialLeaveLimit(value.leaveType)
       if (limit !== null) {
-        if (value.usedDays > limit || (value.usedDays < limit && !value.durationExplanation)) throw new LeaveError('SPECIAL_DURATION')
+        const original = excludeId ? db.prepare<[string], {leaveType:string;startDate:string;endDate:string;usedDays:number;status:string}>(
+          'SELECT leave_type AS leaveType,start_date AS startDate,end_date AS endDate,used_days AS usedDays,status FROM leave_records WHERE id=?').get(excludeId) : undefined
+        const unchangedLegacyUse = original?.status === 'active' && original.leaveType === value.leaveType &&
+          original.startDate.slice(0,4) === value.startDate.slice(0,4) && original.startDate === value.startDate &&
+          original.endDate === value.endDate && original.usedDays === value.usedDays
+        const sameSavedYear = original?.leaveType === value.leaveType && original.startDate.slice(0,4) === value.startDate.slice(0,4)
+        if (!sameSavedYear) {
+          if (value.startDate.slice(0,4) < this.getToday().slice(0,4)) throw new LeaveError('SPECIAL_YEAR_NOT_CURRENT')
+          const right = db.prepare<[string,string], {status:string}>(
+            'SELECT status FROM employee_leave_rights WHERE employee_id=? AND leave_type=?').get(value.employeeId, value.leaveType)
+          if (right?.status !== 'has_right') throw new LeaveError('SPECIAL_RIGHT_REQUIRED')
+        }
+        if (!unchangedLegacyUse && (value.usedDays !== limit || length !== limit)) throw new LeaveError('SPECIAL_DURATION')
         if (db.prepare(`SELECT 1 FROM leave_records WHERE employee_id=? AND leave_type=? AND status='active'
           AND substr(start_date,1,4)=? AND (? IS NULL OR id!=?) LIMIT 1`)
           .get(value.employeeId, value.leaveType, value.startDate.slice(0,4), excludeId, excludeId)) throw new LeaveError('SPECIAL_YEAR_CONFLICT')

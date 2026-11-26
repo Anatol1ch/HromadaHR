@@ -1,4 +1,5 @@
 import { isPeriodLeave, type ConfirmedLeavePeriod, type LeaveRecord, type LeaveType, type PeriodBalance, type PeriodLeaveType, type ProposedLeavePeriod } from '../../../shared/leave.ts'
+import { calendarDays } from '../../../shared/leave-calculations.ts'
 export function balanceSummary(type: PeriodLeaveType, balances: PeriodBalance[], proposals: ProposedLeavePeriod[]) {
   const saved = balances.filter(period => period.leaveType === type)
   const incomplete = proposals.some(period => period.leaveType === type && !saved.some(row => row.periodStart === period.periodStart))
@@ -53,6 +54,45 @@ export function leaveOverviewMetrics(accounting: ReturnType<typeof leaveOverview
   return [
     { value: formatLeaveDayCount(accounting.usedDays), kind: 'value', detail: ['Використано'] },
     { value: '—', kind: 'not-applicable' },
+  ]
+}
+
+export function specialLeaveAnnualAvailability(type: 'veteran_special_leave' | 'chernobyl_special_leave',
+  status: 'has_right' | 'no_right' | 'unknown', records: LeaveRecord[], employeeId: string, year: string, excludeRecordId?: string) {
+  const limit = type === 'veteran_special_leave' ? 14 : 16
+  const active = records.filter(record => record.employeeId === employeeId && record.leaveType === type &&
+    record.status === 'active' && record.startDate.slice(0, 4) === year && record.id !== excludeRecordId)
+  if (active.length > 1) return { kind: 'review' as const, limit, usedDays: null }
+  if (active.length === 1) {
+    const record = active[0]!
+    if (record.usedDays !== limit || calendarDays(record.startDate, record.endDate) !== limit) {
+      return { kind: 'review' as const, limit, usedDays: null }
+    }
+    return { kind: 'used' as const, limit, usedDays: record.usedDays }
+  }
+  return status === 'has_right' ? { kind: 'available' as const, limit, usedDays: 0 }
+    : status === 'no_right' ? { kind: 'no_right' as const, limit, usedDays: null }
+      : { kind: 'unknown' as const, limit, usedDays: null }
+}
+
+export function specialLeaveAnnualMetrics(type: 'veteran_special_leave' | 'chernobyl_special_leave',
+  status: 'has_right' | 'no_right' | 'unknown', records: LeaveRecord[], employeeId: string, year: string): LeaveOverviewMetric[] {
+  const availability = specialLeaveAnnualAvailability(type, status, records, employeeId, year)
+  if (availability.kind === 'available') return [
+    { value: String(availability.limit), kind: 'value', detail: [`Норматив за ${year} рік`] },
+    { value: `Доступно ${availability.limit}`, kind: 'value', emphasis: true },
+  ]
+  if (availability.kind === 'used') return [
+    { value: `Використано ${availability.usedDays}`, kind: 'value', detail: [`За ${year} рік`] },
+    { value: 'Використано', kind: 'value' },
+  ]
+  if (availability.kind === 'review') return [
+    { value: 'Потребує перевірки', kind: 'unknown' },
+    { value: '—', kind: 'unknown' },
+  ]
+  return [
+    { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' },
+    { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' },
   ]
 }
 

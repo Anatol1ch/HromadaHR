@@ -1,4 +1,4 @@
-import { allocationDraft, formatLeaveDays, futureAllocationPeriod } from './summary'
+import { allocationDraft, formatLeaveDays, futureAllocationPeriod, specialLeaveAnnualAvailability } from './summary'
 import useAccountingDate from './useAccountingDate'
 import HelpTip from './HelpTip'
 import InfoSection from '../InfoSection'
@@ -68,6 +68,7 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   const [balanceEditor, setBalanceEditor] = useState<PeriodLeaveType | null>(null)
   const [balancesUpdated, setBalancesUpdated] = useState(false)
   const [resumedType, setResumedType] = useState<PeriodLeaveType | null>(null)
+  const [specialRight, setSpecialRight] = useState<{ key: string; status: 'loading' | 'error' | 'unknown' | 'has_right' | 'no_right' }>()
   const opener = useRef(returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null))
   const owner = useRef<HTMLFormElement>(null)
   const pending = useRef(false)
@@ -77,12 +78,26 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
   const start = parseDateInput(dates.start)
   const eventYear = !periodic && (group !== 'other' || subtypeChosen) && employeeId && start ? start.slice(0, 4) : null
   const eventUsage = eventYear && !history.error && !history.loading ? annualUsage(history.records, employeeId, type, eventYear) : null
+  const specialRightKey = employeeId && limit !== null ? `${employeeId}:${type}` : ''
+  const selectedSpecialRight = specialRight?.key === specialRightKey ? specialRight.status : limit !== null ? 'loading' : 'unknown'
+  const specialYearState = limit !== null && eventYear && !history.loading && !history.error
+    ? specialLeaveAnnualAvailability(type as 'veteran_special_leave' | 'chernobyl_special_leave',
+      selectedSpecialRight === 'loading' || selectedSpecialRight === 'error' ? 'unknown' : selectedSpecialRight,
+      history.records, employeeId, eventYear, record?.id)
+    : null
   const end = parseDateInput(dates.end)
   const range = JSON.stringify([start, end])
   const length = start && end && end >= start ? calendarDays(start, end) : 0
   const daysText = override.range === range ? override.text : length > 0 ? String(length) : ''
   const days = /^\d+$/.test(daysText) && Number.isSafeInteger(Number(daysText)) ? Number(daysText) : 0
-  const needsExplanation = days !== length || (limit !== null && days < limit)
+  const unchangedLegacySpecial = !!record && limit !== null && record.leaveType === type && record.startDate === start && record.endDate === end && record.usedDays === days &&
+    (record.usedDays !== limit || calendarDays(record.startDate, record.endDate) !== limit)
+  const sameSavedSpecialYear = !!record && record.leaveType === type && !!eventYear && record.startDate.slice(0,4) === eventYear
+  const specialRegistrationAllowed = limit === null || (!!eventYear && !!specialYearState && !history.loading && !history.error &&
+    (sameSavedSpecialYear
+      ? specialYearState.kind !== 'used' && specialYearState.kind !== 'review'
+      : eventYear >= today.slice(0,4) && selectedSpecialRight === 'has_right' && specialYearState.kind === 'available'))
+  const needsExplanation = limit === null && days !== length
   const key = JSON.stringify([type, days, start, end, retry])
   const current = proposal?.key === key ? proposal : undefined
   const futureKey = JSON.stringify([employeeId, throughDate, retry])
@@ -123,6 +138,18 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
     return () => { active = false }
   }, [employeeId, type, throughDate, futureKey, balanceEditor])
 
+  useEffect(() => {
+    if (!specialRightKey) { setSpecialRight(undefined); return }
+    let active = true
+    setSpecialRight({ key: specialRightKey, status: 'loading' })
+    void window.hromadaHR.leave.listRights(employeeId).then(result => {
+      if (!active) return
+      if (!result.ok) { setSpecialRight({ key: specialRightKey, status: 'error' }); return }
+      setSpecialRight({ key: specialRightKey, status: result.data.find(right => right.leaveType === type)?.status ?? 'unknown' })
+    }).catch(() => { if (active) setSpecialRight({ key: specialRightKey, status: 'error' }) })
+    return () => { active = false }
+  }, [employeeId, type, specialRightKey, retry])
+
   const available = current?.value?.balances.filter(period => period.availableDays > 0) ?? []
   const allocation = allocationDraft(available, allocations, days, resumedType === type)
   const unavailableDraft = resumedType === type && allocation.ignored
@@ -134,11 +161,21 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
     setEditedAllocation(false)
   }
   const canSave = !!employeeId && (group !== 'other' || subtypeChosen) && !!start && start >= '2027-01-01' && start >= hireDate && !!end && length > 0 && days > 0 && days <= length &&
+    (limit === null || (days === limit && length === limit) || unchangedLegacySpecial) && specialRegistrationAllowed &&
     (!needsExplanation || !!explanation.trim()) && (limit === null || days <= limit) &&
     (periodic ? !!current?.value && allocation.complete : !!grantBasis.trim()) && (!dates.order || !!parseDateInput(dates.order))
 
   const blockedReason = !employeeId ? 'Оберіть працівника.' : group === 'other' && !subtypeChosen ? 'Оберіть підвид відпустки.' : !start || !end ? 'Вкажіть коректні дати початку й завершення.' :
     start < '2027-01-01' ? 'Початок має бути від 01.01.2027.' : start < hireDate ? 'Початок раніше дати прийняття.' : end < start ? 'Завершення не може передувати початку.' :
+    limit !== null && selectedSpecialRight === 'loading' ? 'Дочекайтеся перевірки права на відпустку.' :
+    limit !== null && selectedSpecialRight === 'error' ? 'Не вдалося перевірити право. Повторіть спробу.' :
+    limit !== null && !sameSavedSpecialYear && eventYear && eventYear < today.slice(0,4) ? 'Поточний статус права не підтверджує доступність за минулий рік.' :
+    limit !== null && !sameSavedSpecialYear && selectedSpecialRight !== 'has_right' ? selectedSpecialRight === 'no_right' ? 'Для реєстрації потрібно підтверджене право на цей вид відпустки.' : 'Перевірте право на цей вид відпустки в розділі «Права».' :
+    limit !== null && !specialYearState && (history.loading || history.error) ? 'Дочекайтеся перевірки відпусток за цей рік.' :
+    limit !== null && specialYearState?.kind === 'used' ? 'Спеціальну відпустку за цей рік уже використано.' :
+    limit !== null && specialYearState?.kind === 'review' ? 'Активний запис за цей рік потребує перевірки.' :
+    limit !== null && !unchangedLegacySpecial && length !== limit ? `Оберіть суцільний період тривалістю ${limit} календарних днів.` :
+    limit !== null && !unchangedLegacySpecial && days !== limit ? `Для цього виду потрібно зареєструвати рівно ${limit} календарних днів.` :
     days < 1 || days > length ? 'Перевірте кількість календарних днів.' : limit !== null && days > limit ? 'Перевищено тривалість обраного виду.' :
     needsExplanation && !explanation.trim() ? 'Додайте пояснення уточненої тривалості.' : !periodic && !grantBasis.trim() ? 'Вкажіть документальну підставу.' :
     periodic && !current?.value ? 'Дочекайтеся доступних періодів або повторіть завантаження.' : periodic && !allocation.complete ? 'Перевірте розподіл днів між періодами.' :
@@ -268,16 +305,26 @@ export default function LeaveRegistrationForm({ employeeId, employeeName, hireDa
         <label className="recipient-field">Завершення<DateField required disabled={busy || !!uncertain} value={dates.endIso} initialDraft={dates.end}
           onChange={endIso => setDates(current => ({ ...current, endIso }))} onDraftChange={end => setDates(current => ({ ...current, end }))} />{attempted && (!end || (!!start && end < start)) && <small className="recipient-field-error">Завершення має бути не раніше початку.</small>}</label>
         <label className="recipient-field">Кількість днів<ValidatedInput inputMode="numeric" required disabled={busy || !!uncertain} value={daysText}
-          onChange={event => setOverride({ range, text: event.target.value })} />{attempted && (days < 1 || days > length) && <small className="recipient-field-error">Введіть ціле число в межах інтервалу.</small>}</label>
+          readOnly={limit !== null} onChange={event => setOverride({ range, text: event.target.value })} />{attempted && (days < 1 || days > length) && <small className="recipient-field-error">Введіть ціле число в межах інтервалу.</small>}</label>
       </div>
+      {limit !== null && <>
+        {selectedSpecialRight === 'loading' && <DataState kind="loading" compact message="Перевірка права на відпустку…"/>}
+        {selectedSpecialRight === 'error' && <Alert variant="error" action={<button type="button" disabled={busy || !!uncertain} onClick={() => setRetry(value => value + 1)}>Повторити</button>}>Не вдалося перевірити право на цей вид відпустки.</Alert>}
+        {selectedSpecialRight === 'unknown' && <Alert variant="info">Право не перевірено. Підтвердьте його в розділі «Права» перед реєстрацією.</Alert>}
+        {selectedSpecialRight === 'no_right' && !sameSavedSpecialYear && <Alert variant="info">Права на цей вид відпустки немає. Нову реєстрацію створити не можна.</Alert>}
+        {eventYear && eventYear < today.slice(0,4) && !sameSavedSpecialYear && <Alert variant="info">Поточний статус права не підтверджує доступність за минулий рік.</Alert>}
+        {specialYearState?.kind === 'used' && !sameSavedSpecialYear && <Alert variant="info">Спеціальну відпустку за {eventYear} рік уже використано.</Alert>}
+        {specialYearState?.kind === 'review' && <Alert variant="warning">Активний запис за цей рік не відповідає повній тривалості. Потрібна кадрова перевірка.</Alert>}
+        {unchangedLegacySpecial && <Alert variant="warning">Збережено стару нестандартну тривалість. Її можна переглянути та зберегти без зміни; нові часткові реєстрації недоступні.</Alert>}
+        {!unchangedLegacySpecial && length > 0 && length !== limit && <Alert variant="warning">Спеціальна відпустка реєструється одним суцільним періодом на {limit} календарних днів.</Alert>}
+      </>}
       {length > 0 && (days < 1 || days > length) && <Alert variant="warning">Введіть додатну цілу тривалість у межах календарного інтервалу.</Alert>}
       {days > 0 && needsExplanation && <label className="recipient-field">Пояснення уточненої тривалості<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
         value={explanation} onChange={event => setExplanation(event.target.value)} /></label>}
       {!periodic && <>
         <label className="recipient-field">Підстава надання<ValidatedTextarea required maxLength={1000} disabled={busy || !!uncertain}
           value={grantBasis} onChange={event => setGrantBasis(event.target.value)} /></label>
-        {limit !== null && <p className="leave-muted">До {limit} календарних днів, одне активне надання за рік початку.</p>}
-        {limit !== null && days > 0 && days < limit && <Alert variant="warning">Менша тривалість потребує пояснення. Система не встановлює права на використання решти окремою частиною.</Alert>}
+        {limit !== null && <p className="leave-muted">Повна тривалість — {limit} календарних днів; один активний запис за рік початку. Перехід через межу року відноситься до року початку.</p>}
         {limit !== null && days > limit && <Alert variant="warning">Для цього виду допустимо не більше {limit} календарних днів.</Alert>}
       </>}
       </InfoSection>

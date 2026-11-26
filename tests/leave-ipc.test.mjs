@@ -197,6 +197,8 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   for(const [type,days,month] of [['veteran_special_leave',14,'06'],['chernobyl_special_leave',16,'08']]) {
     const input={...studyInput,requestId:month==='06'?'33333333-3333-4333-8333-333333333333':'44444444-4444-4444-8444-444444444444',
       leaveType:type,startDate:`2027-${month}-01`,endDate:`2027-${month}-${days}`,usedDays:days}
+    assert.equal((await api.leave.registerLeave(input)).error.code,'SPECIAL_RIGHT_REQUIRED')
+    assert.equal((await api.leave.saveRights(employee.id,[{leaveType:type,status:'has_right'}])).ok,true)
     assert.equal((await api.leave.registerLeave(input)).ok,true)
     assert.equal((await api.leave.registerLeave({...input,requestId:'55555555-5555-4555-8555-555555555555',startDate:'2027-10-01',endDate:`2027-10-${days}`})).error.code,'SPECIAL_YEAR_CONFLICT')
   }
