@@ -20,11 +20,12 @@ import { BalanceDraftError, buildChanges, cutoff, hasNewEntitlement, initialBala
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly = false, closeLabel = 'Скасувати', serviceStart, manualProposals = [] }: {
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly = false, closeLabel = 'Скасувати', serviceStart, manualProposals = [], focusPeriodStart }: {
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: (dateWritten: boolean) => void; onSaved: (daysWritten: boolean) => void
   rightsReady?: boolean; historicalOnly?: boolean; closeLabel?: string
   serviceStart?: string | null; manualProposals?: ProposedLeavePeriod[]
+  focusPeriodStart?: string
 }) {
   const {today, throughDate}=useAccountingDate()
   const formId = useId()
@@ -51,6 +52,17 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   const nextRowId = useRef(0)
   const alive = useRef(false)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useEffect(() => {
+    if (!focusPeriodStart) return
+    const frame = requestAnimationFrame(() => {
+      const row = Array.from(form.current?.querySelectorAll<HTMLTableRowElement>('tbody tr') ?? [])
+        .find(candidate => candidate.dataset.periodStart === focusPeriodStart)
+      if (!row) return
+      row.scrollIntoView({ block: 'center' })
+      row.querySelector<HTMLInputElement>('input')?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focusPeriodStart, rows.length])
   useEffect(() => {
     if (!service || historicalOnly || !rightsReady || dateDirty || !projection.value) return
     setRows(current => {
@@ -168,7 +180,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         {rows.map((row, index) => {
           const manualStart = 'start' in row ? parseDateInput(row.start) : null
           const basis = 'period' in row ? row.period.accountingBasis : manualStart ? manualStart < cutoff ? 'initial_balance' : 'confirmed_entitlement' : null
-          return <tr key={'period' in row ? row.period.periodStart + '/' + row.period.periodEnd : row.id} className={'start' in row ? 'leave-manual-period' : undefined}>
+          return <tr key={'period' in row ? row.period.periodStart + '/' + row.period.periodEnd : row.id} data-period-start={'period' in row ? row.period.periodStart : undefined} className={'start' in row ? 'leave-manual-period' : undefined}>
             <td>{'period' in row ? <span className="leave-period">{type === 'children_social_additional' ? row.period.periodStart.slice(0, 4) + ' рік · ' + periodLabel(row.period) : periodLabel(row.period)}{row.period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</span> : <>
               {row.endEdited && suggestedPeriodEnd(row.startIso) && suggestedPeriodEnd(row.startIso) !== row.endIso &&
                 <button type="button" className="secondary-button leave-recalculate-end" disabled={busy}

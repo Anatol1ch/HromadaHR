@@ -13,6 +13,7 @@ import { Storage, openStorageSafely } from '../dist-electron/electron/storage/in
 import { BackupService } from '../dist-electron/electron/backup/service.js'
 import { inspectDatabase } from '../dist-electron/electron/storage/validation.js'
 import { migrations } from '../dist-electron/electron/storage/migrations.js'
+import { leavePeriodAttentionForEmployee } from '../dist-electron/shared/leave-attention.js'
 
 const code = value => error => error.code === value
 const annual = (start, end, days, basis = start < '2027-01-01' ? 'initial_balance' : 'confirmed_entitlement') => ({
@@ -294,6 +295,28 @@ test('annual suggestions apply only to new electronic accounting periods, not in
   const reopened=leave.proposePeriods(person.id,'2027-01-01','annual_main')
   assert.equal(reopened.find(p=>p.periodStart===next.periodStart).suggestedDays,30)
   assert.equal(leave.listPeriods(person.id)[0].confirmedDays,23)
+})
+
+test('period attention includes only current actionable entitlements and distinct OMS data review',()=>{
+  const annualFacts={employeeId:'employee',hireDate:'2027-01-01',employeeType:'staff',serviceLeaveStart:null,rights:[],periods:[],serviceProjection:null}
+  const current=leavePeriodAttentionForEmployee(annualFacts,'2027-02-01')
+  assert.equal(current.length,1);assert.equal(current[0].kind,'needs_confirmation');assert.equal(current[0].suggestedDays,30)
+  assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,hireDate:'2027-06-01'},'2027-02-01'),[])
+  assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,rights:[{leaveType:'annual_main',status:'no_right'}]},'2027-02-01'),[])
+  const initialBalance=leavePeriodAttentionForEmployee({...annualFacts,hireDate:'2026-01-01'},'2026-03-01')
+  assert.equal(initialBalance[0].kind,'review_data');assert.equal(initialBalance[0].reviewReason,'initial_balance');assert.equal(initialBalance[0].suggestedDays,null)
+  const saved={employeeId:'employee',leaveType:'annual_main',periodStart:'2027-01-01',periodEnd:'2027-12-31',accountingBasis:'confirmed_entitlement',confirmedDays:30,referenceEntitlementDays:null,status:'confirmed'}
+  assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,periods:[saved]},'2027-02-01'),[])
+
+  const oms={...annualFacts,hireDate:'2017-02-01',employeeType:'official',serviceLeaveStart:'2017-02-01',
+    rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'has_right'}],serviceProjection:{status:'calculated',calculation:{status:'calculated'},recommendedDays:9}}
+  const serviceTask=leavePeriodAttentionForEmployee(oms,'2027-02-01')
+  assert.equal(serviceTask.length,1);assert.equal(serviceTask[0].leaveType,'oms_service_additional');assert.equal(serviceTask[0].suggestedDays,9)
+  const unknown=leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'}]},'2027-02-01')
+  assert.equal(unknown[0].kind,'review_data');assert.equal(unknown[0].reviewReason,'right');assert.equal(unknown[0].suggestedDays,null)
+  const insufficient=leavePeriodAttentionForEmployee({...oms,serviceProjection:{status:'missing_service_data',calculation:{status:'missing_service_data'},recommendedDays:null}},'2027-02-01')
+  assert.equal(insufficient[0].kind,'review_data');assert.equal(insufficient[0].reviewReason,'service_data');assert.equal(insufficient[0].suggestedDays,null)
+  assert.deepEqual(leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'no_right'}]},'2027-02-01'),[])
 })
 
 test('next-year proposals preserve anniversary, leap-day clamp and nonannual policies',()=>{

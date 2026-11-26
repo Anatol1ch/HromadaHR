@@ -284,3 +284,13 @@
 .leave-accounting-year { display:grid; gap:var(--space-1); min-width:8rem; font-size:13px; }
 .leave-accounting-note { margin:0; overflow-wrap:anywhere; }
 .leave-projection-action { margin-top: var(--space-2); max-width: 100%; white-space: normal; text-align: left; }
+.leave-attention-content { display: grid; gap: var(--space-2); width: 100%; }
+.leave-attention-title { display: flex; align-items: center; gap: var(--space-2); }
+.leave-attention-aggregate { margin-left: 1.5rem; color: var(--color-text-secondary); }
+.leave-attention-content ul { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.leave-attention-content li, .leave-attention-review { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.leave-attention-content li > span, .leave-attention-review > span { flex: 1 1 16rem; }
+.leave-attention-content li > strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.leave-attention-action { min-height: 32px; padding: var(--space-1) var(--space-3); }
+.leave-attention-empty { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); color: var(--feedback-success-text); font-size: .8125rem; }
+.leave-attention-empty small { margin-left: auto; color: var(--color-text-secondary); }

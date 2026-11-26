@@ -40,11 +40,28 @@ export interface ProposedLeavePeriod {
   suggestedDays?: number
 }
 
+export interface LeavePeriodAttentionItem {
+  employeeId: string
+  leaveType: 'annual_main' | 'oms_service_additional'
+  periodStart: string | null
+  periodEnd: string | null
+  kind: 'needs_confirmation' | 'review_data'
+  reviewReason?: 'right' | 'service_data' | 'initial_balance'
+  suggestedDays: number | null
+}
+export interface LeavePeriodAttentionSummary {
+  items: LeavePeriodAttentionItem[]
+  employeesNeedingAttention: number
+  periodsNeedingConfirmation: number
+  dataReviews: number
+}
+
 export type LeaveErrorCode = 'LEAVE_DOCUMENT_REQUISITES_LOCKED' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED'
 
 export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
 export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }
 export interface LeaveApi {
+  getPeriodAttention: (throughDate: string) => Promise<IpcResult<LeavePeriodAttentionSummary>>
   getOmsServiceLeaveProjection: (employeeId: string) => Promise<IpcResult<import('./service-leave-calculations.js').OmsServiceLeaveProjection>>
   getServiceLeaveStart: (employeeId: string) => Promise<IpcResult<string | null>>
   saveServiceLeaveStart: (employeeId: string, date: string | null) => Promise<IpcResult<string | null>>

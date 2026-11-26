@@ -27,7 +27,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -37,6 +37,9 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   rightsReady: boolean
   historicalOnly: boolean
   rightBadge?: ReactNode
+  attentionTarget?: { periodStart: string; requestId: number } | null
+  onAttentionTargetHandled?: () => void
+  onChanged?: () => void
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -56,6 +59,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const editorPeriods = useRef<Period[] | null>(null)
   const editButton = useRef<HTMLButtonElement>(null)
   const focusAfterRefresh = useRef(false)
+  const openedAttentionRequest = useRef<number | null>(null)
   const pending = useRef(false)
   const alive = useRef(false)
   useUnsavedChanges(false, pending, navigationGuard, owner)
@@ -100,6 +104,15 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
   const refresh = () => setRevision(value => value + 1)
 
+  useEffect(() => {
+    if (!attentionTarget || editing || openedAttentionRequest.current === attentionTarget.requestId || !data || data.error || !editorCandidates) return
+    const target = editorCandidates.find(period => period.periodStart === attentionTarget.periodStart)
+    if (!target) return
+    openedAttentionRequest.current = attentionTarget.requestId
+    editorPeriods.current = editorCandidates
+    setEditing(true)
+  }, [attentionTarget?.requestId, data, editorCandidates, editing, onAttentionTargetHandled])
+
   async function remove(period: ConfirmedLeavePeriod) {
     if (pending.current) return
     pending.current = true
@@ -116,6 +129,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
       setDeleting(null)
       focusAfterRefresh.current = true
       refresh()
+      onChanged?.()
       notifySystemToast('success', 'Підтвердження вилучено', periodLabel(period))
     } catch {
       if (alive.current) setDeleteError('Не вдалося вилучити підтвердження. Повторіть спробу.')
@@ -178,16 +192,20 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     </DictionaryTable>}
     </section>}
     {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
+      focusPeriodStart={attentionTarget?.periodStart}
       serviceStart={data?.serviceStart} manualProposals={manualProposals}
       onClose={dateWritten => {
         setEditing(false)
         editorPeriods.current = null
-        if (dateWritten) { focusAfterRefresh.current = true; refresh() }
+        onAttentionTargetHandled?.()
+        if (dateWritten) { focusAfterRefresh.current = true; refresh(); onChanged?.() }
       }} onSaved={daysWritten => {
         setEditing(false)
         editorPeriods.current=null
+        onAttentionTargetHandled?.()
         focusAfterRefresh.current = true
         refresh()
+        onChanged?.()
         notifySystemToast('success', daysWritten ? 'Залишки збережено' : 'Дату набуття права збережено',
           daysWritten ? 'Підтверджені величини оновлено.' : 'Пропозиції періодів оновлено.')
       }} />}

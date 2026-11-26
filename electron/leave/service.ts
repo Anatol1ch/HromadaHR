@@ -1,8 +1,9 @@
 import { isPeriodLeave, specialLeaveLimit } from '../../shared/leave.js'
 import { calendarDays, fifoAllocation } from '../../shared/leave-calculations.js'
-import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance, EmployeeLeaveRight, LeaveRightInput } from '../../shared/leave.js'
+import type { LeaveRecord, LeaveRegistration, LeaveUpdate, PeriodBalance, EmployeeLeaveRight, LeaveRightInput, LeavePeriodAttentionSummary } from '../../shared/leave.js'
 import { randomUUID } from 'node:crypto'
 import { projectOmsServiceLeave } from '../../shared/service-leave-calculations.js'
+import { leavePeriodAttentionForEmployee } from '../../shared/leave-attention.js'
 import { readServiceAccounting } from '../storage/service-accounting.js'
 import { todayIsoDate } from '../../src/lib/dates.js'
 import type Database from 'better-sqlite3'
@@ -105,6 +106,39 @@ export class LeaveService {
       return projectOmsServiceLeave(accounting,todayIsoDate(),type,{
         acquiredOn:this.serviceLeaveStart(db,employeeId),rightStatus:this.rights(db,employeeId).find(r=>r.leaveType==='oms_service_additional')?.status??'unknown',periods,
       })
+    }).deferred())
+  }
+
+  getPeriodAttention = (throughDate: string): LeavePeriodAttentionSummary => {
+    const date = this.parse(schemas.calendarDate, throughDate)
+    return this.run(db => db.transaction(() => {
+      const employees = db.prepare<[], {id:string;hireDate:string;employeeType:'official'|'staff'}>(
+        'SELECT id,hire_date AS hireDate,employee_type AS employeeType FROM employees ORDER BY last_name,first_name,id').all()
+      const periods = db.prepare<[], LeaveRow>(`SELECT id,employee_id AS employeeId,leave_type AS leaveType,
+        period_start AS periodStart,period_end AS periodEnd,accounting_basis AS accountingBasis,
+        confirmed_days AS confirmedDays,reference_entitlement_days AS referenceEntitlementDays
+        FROM leave_period_balances ORDER BY employee_id,period_start,id`).all().map(toPeriod)
+      const rights = db.prepare<[], EmployeeLeaveRight>(
+        'SELECT employee_id AS employeeId,leave_type AS leaveType,status,checked_at AS checkedAt FROM employee_leave_rights').all()
+      const starts = new Map(db.prepare<[], {employeeId:string;acquiredOn:string}>(
+        'SELECT employee_id AS employeeId,acquired_on AS acquiredOn FROM employee_service_leave_start').all()
+        .map(row => [row.employeeId,row.acquiredOn]))
+      const items = employees.flatMap(employee => {
+        const employeePeriods = periods.filter(period => period.employeeId === employee.id)
+        const employeeRights = rights.filter(right => right.employeeId === employee.id)
+        const serviceLeaveStart = starts.get(employee.id) ?? null
+        const serviceProjection = employee.employeeType === 'official'
+          ? projectOmsServiceLeave(readServiceAccounting(db,employee.id),date,employee.employeeType,{
+            acquiredOn:serviceLeaveStart,
+            rightStatus:employeeRights.find(right => right.leaveType === 'oms_service_additional')?.status ?? 'unknown',
+            periods:employeePeriods.filter(period => period.leaveType === 'oms_service_additional'),
+          }) : null
+        return leavePeriodAttentionForEmployee({ employeeId:employee.id, hireDate:employee.hireDate, employeeType:employee.employeeType, serviceLeaveStart, rights:employeeRights,
+          periods:employeePeriods, serviceProjection },date)
+      })
+      const confirmationCount = items.filter(item => item.kind === 'needs_confirmation').length
+      return { items, employeesNeedingAttention:new Set(items.map(item => item.employeeId)).size,
+        periodsNeedingConfirmation:confirmationCount, dataReviews:items.length-confirmationCount }
     }).deferred())
   }
 

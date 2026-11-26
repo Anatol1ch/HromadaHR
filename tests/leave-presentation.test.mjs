@@ -2,7 +2,7 @@ import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextua
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics } from '../src/components/leave/summary.ts'
-import { initialLeaveWorkspaceState, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
+import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
 import { leaveTypes } from '../shared/leave.ts'
@@ -162,6 +162,14 @@ test('workbench switches four sections and preserves selected balance and histor
   assert.equal(resumedBalances.view, balances.view)
   assert.equal(resumedBalances.selectedType, balances.selectedType)
   assert.equal(resumedBalances.historyReturn, 'balances')
+})
+
+test('period attention routes to its specific balance type or rights review', () => {
+  const period={employeeId:'employee',leaveType:'oms_service_additional',periodStart:'2027-01-01',periodEnd:'2027-12-31',kind:'needs_confirmation',suggestedDays:9}
+  assert.deepEqual(leaveWorkspaceNavigation(initialLeaveWorkspaceState,leavePeriodAttentionAction(period)),
+    {view:'balances',selectedType:'oms_service_additional',historyReturn:'overview'})
+  const review={...period,kind:'review_data',reviewReason:'right',suggestedDays:null}
+  assert.equal(leaveWorkspaceNavigation(initialLeaveWorkspaceState,leavePeriodAttentionAction(review)).view,'rights')
 })
 
 test('focused right editor submits only its selected status and uses the agreed workspace labels', () => {

@@ -47,7 +47,12 @@ test('typed leave IPC validates sender and payloads and completes service roundt
       confirmRestore: () => ({}), retryStorage: () => ({}) }, () => {}, personnel, leave)
   const event = { sender: contents, senderFrame: contents.mainFrame }
   const api = preload(async (channel, ...args) => handlers.get(channel)(event, ...args))
-  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getOmsServiceLeaveProjection', 'getRecord', 'getServiceLeaveStart', 'listPeriods', 'listRecords', 'listRights', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'saveRights', 'saveServiceLeaveStart', 'updateLeave'])
+  assert.deepEqual(Object.keys(api.leave).sort(), ['cancelLeave', 'deletePeriod', 'getBalances', 'getOmsServiceLeaveProjection', 'getPeriodAttention', 'getRecord', 'getServiceLeaveStart', 'listPeriods', 'listRecords', 'listRights', 'proposeAllocation', 'proposeEditAllocation', 'proposePeriods', 'registerLeave', 'savePeriods', 'saveRights', 'saveServiceLeaveStart', 'updateLeave'])
+  const attention = await api.leave.getPeriodAttention('2028-01-01')
+  assert.equal(attention.ok, true)
+  assert.equal(attention.data.employeesNeedingAttention, 1)
+  assert.equal(attention.data.periodsNeedingConfirmation, 1)
+  assert.equal(attention.data.items[0].suggestedDays, 30)
   const proposal = await api.leave.proposePeriods(employee.id, '2028-01-01', 'annual_main')
   assert.equal(proposal.ok, true)
   assert.equal(proposal.data[0].status, 'proposed')
@@ -62,6 +67,12 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   assert.equal((await api.leave.listPeriods(employee.id)).data.length, 1)
   assert.equal((await api.leave.deletePeriod(saved.data[0].id)).ok, true)
   assert.equal((await api.leave.listPeriods(employee.id)).data.length, 0)
+  const annualPeriod = { leaveType:'annual_main',periodStart:'2027-06-01',periodEnd:'2028-05-31',accountingBasis:'confirmed_entitlement',confirmedDays:30,referenceEntitlementDays:null }
+  assert.equal((await api.leave.savePeriods(employee.id,[annualPeriod])).ok,true)
+  const clearedAttention = await api.leave.getPeriodAttention('2028-01-01')
+  assert.equal(clearedAttention.data.periodsNeedingConfirmation,0)
+  assert.equal(clearedAttention.data.employeesNeedingAttention,0)
+  assert.equal((await api.leave.deletePeriod((await api.leave.listPeriods(employee.id)).data[0].id)).ok,true)
 
   const save = handlers.get(ipcChannels.leaveSavePeriods)
   for (const args of [[employee.id], [employee.id, [value, value, { ...value, id: 'extra' }]],

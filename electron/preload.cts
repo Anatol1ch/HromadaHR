@@ -56,6 +56,7 @@ const api: HromadaHRApi = {
   },
   leave: {
     getOmsServiceLeaveProjection: id => call(ipcChannels.leaveOmsServiceProjection, id),
+    getPeriodAttention: date => call(ipcChannels.leavePeriodAttention, date),
     listRights: id => call(ipcChannels.leaveListRights,id),
     saveRights: (id,input) => call(ipcChannels.leaveSaveRights,id,input),
     getServiceLeaveStart: id => call(ipcChannels.leaveGetServiceLeaveStart, id),

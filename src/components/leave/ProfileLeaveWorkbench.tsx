@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type RefObject } from 'react'
-import { History, LayoutDashboard, Plus, ShieldCheck, Wallet } from 'lucide-react'
+import { CheckCircle2, History, Info, LayoutDashboard, Plus, ShieldCheck, Wallet } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import type { PeriodLeaveType } from '../../../shared/leave'
+import type { LeavePeriodAttentionItem, LeavePeriodAttentionSummary, PeriodLeaveType } from '../../../shared/leave'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import Alert from '../Alert'
@@ -12,13 +12,14 @@ import LeaveBalances from './LeaveBalances'
 import LeaveJournal from './LeaveJournal'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import LeaveRights from './LeaveRights'
-import { initialLeaveWorkspaceState, leaveWorkspaceNavigation, type LeaveWorkspaceView } from './workbench-navigation'
+import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation, type LeaveWorkspaceView } from './workbench-navigation'
 import useAccountingDate from './useAccountingDate'
 import { leaveWorkspaceLabels } from './presentation'
 import { leaveRecordBelongsToEmployee, type LeaveJournalContext, type RegistrationHistory } from './registry'
 import { notifySystemToast } from '../SystemToastHost'
+import { formatDate } from '../../lib/dates'
 
-type LoadedOverview = { key: string; data?: LeaveOverviewData; error?: string }
+type LoadedOverview = { key: string; data?: LeaveOverviewData; periodAttention?: LeavePeriodAttentionSummary; attentionError?: string; error?: string }
 const leaveSections: { id: LeaveWorkspaceView; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Зведення', icon: LayoutDashboard },
   { id: 'rights', label: 'Права', icon: ShieldCheck },
@@ -45,9 +46,11 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   const [context, setContext] = useState<LeaveJournalContext | null>(null)
   const opener = useRef<HTMLElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
-  const { throughDate } = useAccountingDate()
+  const { today, throughDate } = useAccountingDate()
   const [loaded, setLoaded] = useState<LoadedOverview>()
-  const readKey = JSON.stringify([employeeId, refreshRevision, throughDate])
+  const readKey = JSON.stringify([employeeId, refreshRevision, throughDate, today])
+  const [attentionTarget, setAttentionTarget] = useState<{ periodStart: string; requestId: number } | null>(null)
+  const attentionRequest = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -55,8 +58,9 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     async function load() {
       try {
         const api = window.hromadaHR.leave
-        const [balances, records, rights, ...proposals] = await Promise.all([
+        const [balances, records, rights, periodAttention, ...proposals] = await Promise.all([
           api.getBalances(employeeId), api.listRecords(employeeId), api.listRights(employeeId),
+          api.getPeriodAttention(today),
           ...(['annual_main', 'oms_service_additional', 'children_social_additional'] as const).map(type => api.proposePeriods(employeeId, throughDate, type)),
         ] as const)
         if (!active) return
@@ -70,7 +74,8 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
           records: records.data.filter(record => leaveRecordBelongsToEmployee(record, employeeId)),
           rights: rights.data,
           proposals: proposals.flatMap(result => result.ok ? result.data : []),
-        } })
+        }, periodAttention: periodAttention.ok ? periodAttention.data : undefined,
+        attentionError: periodAttention.ok ? undefined : personnelMessage(periodAttention.error.code) })
       } catch {
         if (active) setLoaded({ key: readKey, error: 'Не вдалося завантажити відомості про відпустки.' })
       }
@@ -103,6 +108,20 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     navigationGuard.current(() => {
       dispatchWorkspace({ type: 'open-balances', leaveType: next })
       setType(next)
+    })
+  }
+  function openAttention(item: LeavePeriodAttentionItem) {
+    navigationGuard.current(() => {
+      const action = leavePeriodAttentionAction(item)
+      if (action.type === 'navigate') {
+        dispatchWorkspace(action)
+        setAttentionTarget(null)
+      } else if (action.type === 'open-balances') {
+        dispatchWorkspace(action)
+        setType(action.leaveType)
+        setAttentionTarget(item.periodStart ? { periodStart: item.periodStart, requestId: ++attentionRequest.current } : null)
+      }
+      requestAnimationFrame(() => heading.current?.focus())
     })
   }
   function register() {
@@ -141,7 +160,11 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
           <Select label="Розділ відпусток" value={view} options={leaveSections.map(({ id, label }) => ({ value: id, label }))}
             onChange={value => navigate(value as LeaveWorkspaceView)} advanceOnSelect={false}/>
         </div>
-        {view === 'overview' && <LeaveOverview data={data} throughDate={throughDate} loading={!current} error={current?.error} onRetry={refresh}/>}
+        {view === 'overview' && <>
+          <LeavePeriodAttentionNotice loading={!current} error={current?.attentionError} summary={current?.periodAttention}
+            items={current?.periodAttention?.items.filter(item => item.employeeId === employeeId) ?? []} onOpen={openAttention} onRetry={refresh}/>
+          <LeaveOverview data={data} throughDate={throughDate} loading={!current} error={current?.error} onRetry={refresh}/>
+        </>}
         {view === 'rights' && <LeaveRights employeeId={employeeId} navigationGuard={navigationGuard} onSaved={refresh}/>}
         {view === 'balances' && <>
           <section className="dashboard-panel leave-balance-selector" aria-label="Вибір виду відпустки">
@@ -150,7 +173,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
           <LeaveBalances key={balanceType} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={balanceType}
             navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
-            historicalOnly={selectedStatus === 'no_right'}/>
+            historicalOnly={selectedStatus === 'no_right'} attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}/>
         </>}
         {view === 'history' && <>
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
@@ -168,4 +191,39 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         notifySystemToast('success', 'Відпустку зареєстровано', 'Історію та залишки оновлено.')
       }}/>}
   </div>
+}
+
+function LeavePeriodAttentionNotice({ loading, error, summary, items, onOpen, onRetry }: {
+  loading: boolean; error?: string; summary?: LeavePeriodAttentionSummary; items: LeavePeriodAttentionItem[]
+  onOpen: (item: LeavePeriodAttentionItem) => void; onRetry: () => void
+}) {
+  if (loading || (!summary && !error)) return null
+  if (error) return <Alert variant="info" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося перевірити періоди, що потребують уваги. {error}</Alert>
+  const confirmations = items.filter(item => item.kind === 'needs_confirmation')
+  const reviews = items.filter(item => item.kind === 'review_data')
+  const totalEmployees = summary?.employeesNeedingAttention ?? 0
+  const totalPeriods = summary?.periodsNeedingConfirmation ?? 0
+  const confirmationLabel = confirmations.length === 1 ? 'період' : confirmations.length >= 2 && confirmations.length <= 4 ? 'періоди' : 'періодів'
+  if (!confirmations.length && !reviews.length) return <div className="leave-attention-empty" role="status">
+    <CheckCircle2 size={16} aria-hidden="true"/><span>Непідтверджених актуальних періодів у цій картці немає.</span>
+    {totalEmployees > 0 && <small>По установі: {totalEmployees} працівників потребують уваги · {totalPeriods} періодів до підтвердження.</small>}
+  </div>
+  return <Alert variant="info">
+    <div className="leave-attention-content">
+      <div className="leave-attention-title"><Info size={16} aria-hidden="true"/><strong>{confirmations.length
+        ? `Потребують підтвердження: ${confirmations.length} ${confirmationLabel}` : 'Потрібна перевірка даних'}</strong></div>
+      {totalEmployees > 0 && <small className="leave-attention-aggregate">По установі: {totalEmployees} працівників потребують уваги · {totalPeriods} періодів до підтвердження.</small>}
+      {confirmations.length > 0 && <ul>{confirmations.map(item => <li key={item.leaveType + item.periodStart}>
+        <span>{item.leaveType === 'annual_main' ? 'Щорічна основна' : 'Додаткова за стаж ОМС'} · {formatDate(item.periodStart!)}–{formatDate(item.periodEnd!)}</span>
+        <strong>{item.suggestedDays} к. дн.</strong>
+        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>Перейти до періоду</button>
+      </li>)}</ul>}
+      {reviews.map(item => <div className="leave-attention-review" key={item.leaveType + item.reviewReason}>
+        <span>{item.reviewReason === 'right' ? 'Потрібно перевірити право на додаткову відпустку за стаж ОМС.' :
+          item.reviewReason === 'initial_balance' ? `Потрібно внести початковий залишок ${item.leaveType === 'annual_main' ? 'щорічної основної' : 'додаткової за стаж ОМС'} відпустки.` :
+            'Потрібно перевірити дані для додаткової відпустки за стаж ОМС.'}</span>
+        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>{item.reviewReason === 'right' ? 'Перевірити право' : item.reviewReason === 'initial_balance' ? 'Внести залишок' : 'Перевірити дані'}</button>
+      </div>)}
+    </div>
+  </Alert>
 }

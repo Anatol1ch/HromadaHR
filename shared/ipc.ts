@@ -1,7 +1,7 @@
 import type { DocumentNumberingSeries, DocumentSeriesInput, DocumentSeriesUpdateInput, AutoNumberedDocumentInput } from './documents.js'
 import type { DocumentLeaveLinkInput, DocumentLeaveLinks, LeaveDocumentLink, DocumentsApi, DocumentsErrorCode, PersonnelDocument, PersonnelDocumentSummary, PersonnelDocumentCreateInput, PersonnelDocumentUpdateInput } from './documents.js'
 import type { ServiceAccounting, ServiceAccountingInput, SeniorityOverview, SeniorityRanksApi, SeniorityRanksErrorCode, Allowance, AllowanceInput, CurrentRank, RankInput } from './seniority-ranks.js'
-import type { EmployeeLeaveRight, LeaveRightInput } from './leave.js'
+import type { EmployeeLeaveRight, LeaveRightInput, LeavePeriodAttentionSummary } from './leave.js'
 import type { LeaveRegistration, LeaveUpdate, LeaveRecord, PeriodBalance, AllocationProposal } from './leave.js'
 import type { ZoomPercent, ZoomStatus } from './zoom.js'
 import type { BackupHistory } from './backupHistory.js'
@@ -30,6 +30,7 @@ export const ipcChannels = {
   seniorityClearRank: 'seniorityRanks:clearRank',
 
   leaveOmsServiceProjection: 'leave:getOmsServiceLeaveProjection',
+  leavePeriodAttention: 'leave:getPeriodAttention',
   leaveListRights: 'leave:listRights', leaveSaveRights: 'leave:saveRights',
   leaveGetServiceLeaveStart: 'leave:getServiceLeaveStart', leaveSaveServiceLeaveStart: 'leave:saveServiceLeaveStart',
   leaveGetRecord: 'leave:getRecord', leaveUpdate: 'leave:updateLeave', leaveCancel: 'leave:cancelLeave',
@@ -112,6 +113,7 @@ export interface IpcOperations {
   [ipcChannels.seniorityClearRank]: { args: [string]; result: null }
 
   [ipcChannels.leaveOmsServiceProjection]: { args:[string]; result:import('./service-leave-calculations.js').OmsServiceLeaveProjection }
+  [ipcChannels.leavePeriodAttention]: { args:[string]; result:LeavePeriodAttentionSummary }
   [ipcChannels.leaveListRights]: { args: [string]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveSaveRights]: { args: [string, LeaveRightInput[]]; result: EmployeeLeaveRight[] }
   [ipcChannels.leaveGetServiceLeaveStart]: { args: [string]; result: string | null }

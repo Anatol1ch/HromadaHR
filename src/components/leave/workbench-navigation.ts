@@ -1,4 +1,4 @@
-import type { PeriodLeaveType } from '../../../shared/leave'
+import type { LeavePeriodAttentionItem, PeriodLeaveType } from '../../../shared/leave'
 
 export type LeaveWorkspaceView = 'overview' | 'rights' | 'balances' | 'history'
 export type LeaveWorkspaceState = { view: LeaveWorkspaceView; selectedType: PeriodLeaveType; historyReturn: LeaveWorkspaceView }
@@ -9,6 +9,12 @@ export type LeaveWorkspaceAction =
   | { type: 'resume-history' }
 
 export const initialLeaveWorkspaceState: LeaveWorkspaceState = { view: 'overview', selectedType: 'annual_main', historyReturn: 'overview' }
+
+export function leavePeriodAttentionAction(item: LeavePeriodAttentionItem): LeaveWorkspaceAction {
+  return item.kind === 'review_data' && item.reviewReason === 'right'
+    ? { type: 'navigate', view: 'rights' }
+    : { type: 'open-balances', leaveType: item.leaveType }
+}
 
 export function leaveWorkspaceNavigation(state: LeaveWorkspaceState, action: LeaveWorkspaceAction): LeaveWorkspaceState {
   switch (action.type) {

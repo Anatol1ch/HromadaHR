@@ -287,3 +287,7 @@ Read-only цільово перевірено `Anatol1ch/HromadaAID` за SHA `3
 ### Етап 9.12.6 – Пропозиції тривалості періодів
 
 Цільово перевірено доступне дерево `Anatol1ch/HromadaAID` на remote HEAD `364f547200ebd63f9a2fe6592fae0768e77e9eb9` (read-only); придатного leave-period editor або service projection не виявлено. Збережено наявні HromadaHR `BalanceEditor`, `ServiceProjection`, `Modal`, `DateField`, `ValidatedInput` та стилі. Нова поведінка змінює тільки локальну чернетку й не створює окремого UI-компонента або облікового механізму.
+
+### Етап 9.12.7 – Похідний контроль відпускних періодів
+
+Перевірено read-only дерево `Anatol1ch/HromadaAID` на актуальному remote HEAD `364f547200ebd63f9a2fe6592fae0768e77e9eb9`; список шляхів із `leave`, `vacation`, `remind`, `period` або `balance` порожній. Аналога кадрового контролю непідтверджених відпусток не знайдено. Повторно використані HromadaHR `proposePeriods`, `ServiceProjection`, `BalanceEditor`, `Alert`, діючий leave-workbench і семантичні токени. Не додавали notification center, нагадувань у БД або нової UI-системи.
