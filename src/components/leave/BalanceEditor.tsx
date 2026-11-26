@@ -20,19 +20,25 @@ import { BalanceDraftError, buildChanges, cutoff, hasNewEntitlement, initialBala
 
 export const periodLabel = (period: Period) => formatDate(period.periodStart) + '–' + formatDate(period.periodEnd)
 
-export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly = false, closeLabel = 'Скасувати', serviceStart, manualProposals = [], focusPeriodStart }: {
+export default function BalanceEditor({ employeeId, employeeName, periods, type, typeLabel, navigationGuard, onClose, onSaved, rightsReady = true, historicalOnly = false, closeLabel = 'Скасувати', serviceStart, manualProposals = [], focusPeriodStart, childrenRightStatus }: {
   employeeId: string; employeeName?: string; periods: Period[]; type: PeriodLeaveType; typeLabel: string; navigationGuard: RefObject<NavigationGuard>
   onClose: (dateWritten: boolean) => void; onSaved: (daysWritten: boolean) => void
   rightsReady?: boolean; historicalOnly?: boolean; closeLabel?: string
   serviceStart?: string | null; manualProposals?: ProposedLeavePeriod[]
   focusPeriodStart?: string
+  childrenRightStatus?: 'has_right' | 'no_right'
 }) {
   const {today, throughDate}=useAccountingDate()
   const formId = useId()
   const service = type === 'oms_service_additional'
   const projection=useOmsServiceLeaveProjection(employeeId,0,service&&!historicalOnly&&rightsReady)
   const initial = useRef<Draft[]>(initialBalanceDrafts(periods, type))
-  const [draftRows, setRows] = useState(initial.current)
+  const [draftRows, setRows] = useState<Draft[]>(() => {
+    if (type !== 'children_social_additional' || !focusPeriodStart) return initial.current
+    const target = periods.find(period => period.status === 'proposed' && period.periodStart === focusPeriodStart)
+    return target ? [...initial.current, { period: target, days: '' }].sort((a, b) =>
+      ('period' in a ? a.period.periodStart : '9999').localeCompare('period' in b ? b.period.periodStart : '9999')) : initial.current
+  })
   const [savedDate, setSavedDate] = useState(serviceStart ?? null)
   const [dateValue, setDateValue] = useState(serviceStart ?? '')
   const [dateDraft, setDateDraft] = useState(formatDateInput(serviceStart ?? ''))
@@ -42,7 +48,9 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
   const rows = preview?.rows ?? draftRows
   const dateDirty = service && dateDraft !== formatDateInput(savedDate ?? '')
   const childYears = type === 'children_social_additional' ? periods.filter(period =>
-    period.status === 'proposed' && !rows.some(row => 'period' in row && row.period.periodStart === period.periodStart)) : []
+    period.status === 'proposed' && (period.accountingBasis === 'initial_balance' ||
+      (period.accountingBasis === 'confirmed_entitlement' && childrenRightStatus === 'has_right' && period.periodStart === `${today.slice(0, 4)}-01-01`)) &&
+    !rows.some(row => 'period' in row && row.period.periodStart === period.periodStart)) : []
   const [confirmZeros, setConfirmZeros] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -59,7 +67,7 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
         .find(candidate => candidate.dataset.periodStart === focusPeriodStart)
       if (!row) return
       row.scrollIntoView({ block: 'center' })
-      row.querySelector<HTMLInputElement>('input')?.focus()
+      ;(row.querySelector<HTMLButtonElement>('button[role="combobox"]') ?? row.querySelector<HTMLInputElement>('input:not(.app-select-validity)'))?.focus()
     })
     return () => cancelAnimationFrame(frame)
   }, [focusPeriodStart, rows.length])
@@ -174,6 +182,9 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
             if (period) setRows([...rows, { period, days: '' }].sort((a, b) => ('period' in a ? a.period.periodStart : '').localeCompare('period' in b ? b.period.periodStart : '')))
           }}/>
       </div>}
+      {type === 'children_social_additional' && !historicalOnly && childrenRightStatus !== 'has_right' &&
+        periods.some(period => period.status === 'proposed' && period.accountingBasis === 'confirmed_entitlement') &&
+        <Alert variant="info">Перед внесенням нової тривалості за календарний рік підтвердьте право на відпустку на дітей у розділі «Права».</Alert>}
       <DictionaryTable label="Введення залишків" className="leave-table leave-editor-table"
         columns={[{ label: 'Обліковий період' }, { label: 'Днів', width: '7.5rem', className: 'leave-editor-days' }, ...(hasRowActions ? [{label:'Дії',width:'3.5rem',className:'leave-actions-column'}] : [])]}
         empty={rows.length ? undefined : service && !dateValue ? 'Введіть дату набуття права або додайте період вручну.' : 'Немає періодів для введення.'}>
@@ -196,10 +207,20 @@ export default function BalanceEditor({ employeeId, employeeName, periods, type,
             {row.suggestedAnnual && 'period' in row && 'suggestedDays' in row.period && <small className="leave-period-note">Стандартна пропозиція: {row.period.suggestedDays} к. дн. — ще не підтверджено.</small>}
             {row.suggestedFromProjection&&<small className="leave-period-note">Рекомендовано {row.days} к. дн. — ще не підтверджено.</small>}
             </td>
-            <td><div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
-              aria-label={'Дні за період ' + ('period' in row ? periodLabel(row.period) : index + 1)} aria-invalid={rowError?.row === index || undefined}
-              aria-describedby={rowError?.row === index ? formId + '-row-error' : undefined}
-              onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days, suggestedFromProjection:undefined, suggestionDismissed:true })) }} /></div>
+            <td>{type === 'children_social_additional' && 'period' in row && row.period.status === 'proposed' && basis === 'confirmed_entitlement'
+              ? <div className="recipient-field leave-days-field"><Select label={`Тривалість за ${row.period.periodStart.slice(0, 4)} рік`}
+                  value={row.days === '10' || row.days === '17' ? row.days : ''} placeholder="Оберіть тривалість" required disabled={busy}
+                  advanceOnSelect={false} options={[{ value: '10', label: '10 к. дн.' }, { value: '17', label: '17 к. дн.' }]}
+                  onChange={days => update(index, current => ({ ...current, days, suggestedFromProjection:undefined, suggestionDismissed:true }))}/></div>
+              : <div className="recipient-field leave-days-field"><ValidatedInput type="text" inputMode="numeric" disabled={busy} value={row.days}
+                  aria-label={'Днів за період ' + ('period' in row ? periodLabel(row.period) : index + 1)} aria-invalid={rowError?.row === index || undefined}
+                  aria-describedby={rowError?.row === index ? formId + '-row-error' : undefined}
+                  onChange={event => { const days = event.target.value; update(index, current => ({ ...current, days, suggestedFromProjection:undefined, suggestionDismissed:true })) }} />
+                {type === 'children_social_additional' && 'period' in row && row.period.status === 'proposed' && basis === 'initial_balance' &&
+                  <small className="leave-period-note">Внесіть фактичний залишок вручну.</small>}
+                {type === 'children_social_additional' && 'period' in row && row.period.status === 'proposed' && basis === 'confirmed_entitlement' && row.days &&
+                  <small className="leave-period-note">Ще не підтверджено.</small>}
+              </div>}
               {rowError?.row === index && <small className="recipient-field-error" id={formId + '-row-error'} role="alert">{rowError.message}</small>}
             </td>
             {hasRowActions && <td className="leave-actions-column">{'start' in row && <button type="button" className="table-action leave-icon-action" title="Прибрати рядок" aria-label={`Прибрати незбережений рядок ${index + 1}`} disabled={busy} onClick={() => { setRowError(undefined); setRows(rows.filter((_,i)=>i!==index)) }}><X size={16} aria-hidden="true" /></button>}</td>}

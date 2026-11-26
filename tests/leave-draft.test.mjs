@@ -59,6 +59,16 @@ test('leave drafts send only new or changed confirmations, including explicit ze
   assert.deepEqual(buildChanges([{ period: { ...confirmed, confirmedDays: 5 }, days: '5' }]), [])
 })
 
+test('children annual choices remain attached to each calendar year and do not fill an unselected year', () => {
+  const proposed = year => ({ period: { leaveType:'children_social_additional',periodStart:`${year}-01-01`,periodEnd:`${year}-12-31`,
+    accountingBasis:'confirmed_entitlement',status:'proposed' },days:'' })
+  assert.deepEqual(buildChanges([proposed(2027)]),[])
+  const changes=buildChanges([{...proposed(2027),days:'17'},{...proposed(2028),days:'10'}])
+  assert.deepEqual(changes.map(({periodStart,confirmedDays})=>[periodStart,confirmedDays]),[['2027-01-01',17],['2028-01-01',10]])
+  const existing={period:{...proposed(2027).period,status:'confirmed',confirmedDays:13,referenceEntitlementDays:null,id:'period',employeeId:'employee'},days:'13'}
+  assert.deepEqual(buildChanges([existing]),[])
+})
+
 test('invalid drafts and clearing saved days fail without modifying the input', () => {
   for (const days of ['', '-1', '1.5', '1e2', '9007199254740992']) {
     const rows = [{ period: confirmed, days }]

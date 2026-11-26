@@ -37,6 +37,7 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   const position = personnel.createPosition({ name: 'Посада' })
   const employee = personnel.createEmployee({ lastName: 'Тест', firstName: 'Приклад', middleName: null, birthDate: null,
     employeeType: 'official', positionStartedOn: null, positionCategory: null, hireDate: '2026-06-01', departmentId: department.id, positionId: position.id })
+  leave.saveRights(employee.id,[{leaveType:'children_social_additional',status:'no_right'}])
   const handlers = new Map()
   const contents = { isDestroyed: () => false, mainFrame: { url } }
   const win = { isDestroyed: () => false, webContents: contents }
@@ -169,7 +170,8 @@ test('typed leave IPC validates sender and payloads and completes service roundt
   assert.equal((await api.leave.saveServiceLeaveStart(employee.id,'2025-02-29')).error.code,'INVALID_ARGUMENTS')
   assert.equal((await api.leave.saveServiceLeaveStart(employee.id,'2025-01-03')).data,'2025-01-03')
   assert.equal((await api.leave.getServiceLeaveStart(employee.id)).data,'2025-01-03')
-  assert.deepEqual((await api.leave.listRights(employee.id)).data,[])
+  assert.deepEqual((await api.leave.listRights(employee.id)).data.map(({leaveType,status})=>({leaveType,status})),
+    [{leaveType:'children_social_additional',status:'no_right'}])
   assert.equal((await api.leave.saveRights(employee.id,[{leaveType:'study_leave',status:'no_right'}])).data[0].status,'no_right')
   assert.equal((await api.leave.saveRights(employee.id,[{leaveType:'study_leave',status:'no_right',checkedAt:'forged'}])).error.code,'INVALID_ARGUMENTS')
   const studyInput={...registration,requestId:'22222222-2222-4222-8222-222222222222',leaveType:'study_leave',

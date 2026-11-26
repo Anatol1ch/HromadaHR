@@ -35,6 +35,27 @@ export function leavePeriodAttentionForEmployee(facts: LeavePeriodAttentionFacts
     }
   }
 
+  const childrenStatus = rightStatus(facts, 'children_social_additional')
+  if (childrenStatus !== 'no_right') {
+    const currentYear = today.slice(0, 4)
+    const current = proposedPeriods('children_social_additional', facts.hireDate, today)
+      .find(period => period.periodStart === `${currentYear}-01-01`)
+    const saved = current && facts.periods.some(period => period.leaveType === 'children_social_additional' &&
+      period.periodStart === current.periodStart && period.periodEnd === current.periodEnd)
+    if (current && !saved) {
+      if (childrenStatus === 'unknown') {
+        items.push({ employeeId: facts.employeeId, leaveType: 'children_social_additional', periodStart: current.periodStart,
+          periodEnd: current.periodEnd, kind: 'review_data', reviewReason: 'right', suggestedDays: null })
+      } else if (current.accountingBasis === 'initial_balance') {
+        items.push({ employeeId: facts.employeeId, leaveType: 'children_social_additional', periodStart: current.periodStart,
+          periodEnd: current.periodEnd, kind: 'review_data', reviewReason: 'initial_balance', suggestedDays: null })
+      } else {
+        items.push({ employeeId: facts.employeeId, leaveType: 'children_social_additional', periodStart: current.periodStart,
+          periodEnd: current.periodEnd, kind: 'needs_confirmation', suggestedDays: null })
+      }
+    }
+  }
+
   if (facts.employeeType !== 'official' || rightStatus(facts, 'oms_service_additional') === 'no_right') return items
   const servicePeriods = facts.periods.filter(period => period.leaveType === 'oms_service_additional')
   const proposed = facts.serviceLeaveStart

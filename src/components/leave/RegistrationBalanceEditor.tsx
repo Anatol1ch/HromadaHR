@@ -16,7 +16,7 @@ export default function RegistrationBalanceEditor({ employeeId, employeeName, ty
 }) {
   const [retry, setRetry] = useState(0)
   const [error, setError] = useState('')
-  const [data, setData] = useState<{ periods: Period[]; historicalOnly: boolean; serviceStart?: string | null }>()
+  const [data, setData] = useState<{ periods: Period[]; historicalOnly: boolean; childrenRightStatus?: 'has_right' | 'no_right'; serviceStart?: string | null }>()
   useEffect(() => {
     let active = true
     const api = window.hromadaHR.leave
@@ -33,13 +33,15 @@ export default function RegistrationBalanceEditor({ employeeId, employeeName, ty
         const merged = new Map<string, Period>(proposed.data.map(period => [period.periodStart, period]))
         for (const period of saved.data) if (period.leaveType === type) merged.set(period.periodStart, period)
         const periods = [...merged.values()].sort((a, b) => a.periodStart.localeCompare(b.periodStart))
-        setData({ historicalOnly, periods: historicalOnly ? historicalBalancePeriods(periods) : periods, serviceStart: serviceStart?.data })
+        const childrenRightStatus = rights.data.find(right => right.leaveType === 'children_social_additional')?.status
+        setData({ historicalOnly, childrenRightStatus, periods: historicalOnly ? historicalBalancePeriods(periods) : periods, serviceStart: serviceStart?.data })
       }).catch(() => { if (active) setError('Не вдалося завантажити залишки та статус права.') })
     return () => { active = false }
   }, [employeeId, type, throughDate, retry])
 
   if (data) return <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={data.periods}
     type={type} typeLabel={leaveLabels[type]} navigationGuard={navigationGuard} historicalOnly={data.historicalOnly}
+    childrenRightStatus={data.childrenRightStatus}
     serviceStart={data.serviceStart} closeLabel="Повернутися до оформлення" onClose={() => onReturn(false)} onSaved={daysWritten => {
       if (!daysWritten) notifySystemToast('success', 'Дату набуття права збережено', 'Пропозиції періодів оновлено.')
       onReturn(daysWritten)

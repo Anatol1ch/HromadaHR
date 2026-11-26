@@ -21,7 +21,7 @@ export const proposedPeriod = z.strictObject({ leaveType: periodLeaveType, perio
   accountingBasis: z.enum(['initial_balance', 'confirmed_entitlement']), status: z.literal('proposed'),
   suggestedDays: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional() })
 export const periodAttentionItem = z.strictObject({ employeeId:id,
-  leaveType:z.enum(['annual_main','oms_service_additional']),periodStart:calendarDate.nullable(),periodEnd:calendarDate.nullable(),
+  leaveType:periodLeaveType,periodStart:calendarDate.nullable(),periodEnd:calendarDate.nullable(),
   kind:z.enum(['needs_confirmation','review_data']),reviewReason:z.enum(['right','service_data','initial_balance']).optional(),
   suggestedDays:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable() })
 export const periodAttentionSummary = z.strictObject({ items:z.array(periodAttentionItem),

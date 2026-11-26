@@ -42,7 +42,7 @@ export interface ProposedLeavePeriod {
 
 export interface LeavePeriodAttentionItem {
   employeeId: string
-  leaveType: 'annual_main' | 'oms_service_additional'
+  leaveType: PeriodLeaveType
   periodStart: string | null
   periodEnd: string | null
   kind: 'needs_confirmation' | 'review_data'
@@ -56,7 +56,7 @@ export interface LeavePeriodAttentionSummary {
   dataReviews: number
 }
 
-export type LeaveErrorCode = 'LEAVE_DOCUMENT_REQUISITES_LOCKED' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED'
+export type LeaveErrorCode = 'LEAVE_DOCUMENT_REQUISITES_LOCKED' | 'NOT_FOUND' | 'CONFLICT' | 'STORAGE_UNAVAILABLE' | 'INVALID_ARGUMENTS' | 'BUSY' | 'INSUFFICIENT_DAYS' | 'LEAVE_OVERLAP' | 'PERIOD_IN_USE' | 'TRANSITION_LEAVE' | 'STALE_REVISION' | 'LEAVE_CANCELLED' | 'INVALID_PERIOD' | 'SPECIAL_YEAR_CONFLICT' | 'SPECIAL_DURATION' | 'GRANT_BASIS_REQUIRED' | 'CHILD_LEAVE_RIGHT_REQUIRED' | 'CHILD_LEAVE_DURATION_INVALID' | 'CHILD_LEAVE_PERIOD_NOT_CURRENT'
 
 export interface EmployeeLeaveRight { employeeId: string; leaveType: LeaveType; status: 'has_right' | 'no_right'; checkedAt: string }
 export interface LeaveRightInput { leaveType: LeaveType; status: 'has_right' | 'no_right' | null }

@@ -27,7 +27,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged, childrenRightStatus }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -40,6 +40,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   attentionTarget?: { periodStart: string; requestId: number } | null
   onAttentionTargetHandled?: () => void
   onChanged?: () => void
+  childrenRightStatus?: 'has_right' | 'no_right'
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -193,6 +194,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     </section>}
     {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
       focusPeriodStart={attentionTarget?.periodStart}
+      childrenRightStatus={childrenRightStatus}
       serviceStart={data?.serviceStart} manualProposals={manualProposals}
       onClose={dateWritten => {
         setEditing(false)

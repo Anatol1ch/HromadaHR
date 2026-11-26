@@ -173,7 +173,8 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
           <LeaveBalances key={balanceType} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={balanceType}
             navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
-            historicalOnly={selectedStatus === 'no_right'} attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}/>
+            historicalOnly={selectedStatus === 'no_right'} childrenRightStatus={selectedStatus === 'has_right' || selectedStatus === 'no_right' ? selectedStatus : undefined}
+            attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}/>
         </>}
         {view === 'history' && <>
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
@@ -214,16 +215,25 @@ function LeavePeriodAttentionNotice({ loading, error, summary, items, onOpen, on
         ? `Потребують підтвердження: ${confirmations.length} ${confirmationLabel}` : 'Потрібна перевірка даних'}</strong></div>
       {totalEmployees > 0 && <small className="leave-attention-aggregate">По установі: {totalEmployees} працівників потребують уваги · {totalPeriods} періодів до підтвердження.</small>}
       {confirmations.length > 0 && <ul>{confirmations.map(item => <li key={item.leaveType + item.periodStart}>
-        <span>{item.leaveType === 'annual_main' ? 'Щорічна основна' : 'Додаткова за стаж ОМС'} · {formatDate(item.periodStart!)}–{formatDate(item.periodEnd!)}</span>
-        <strong>{item.suggestedDays} к. дн.</strong>
-        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>Перейти до періоду</button>
+        <span>{leaveTypeName(item.leaveType)} · {item.leaveType === 'children_social_additional'
+          ? `${item.periodStart!.slice(0, 4)} рік` : `${formatDate(item.periodStart!)}–${formatDate(item.periodEnd!)}`}</span>
+        {item.leaveType === 'children_social_additional'
+          ? <strong>Оберіть 10 або 17 к. дн.</strong>
+          : <strong>{item.suggestedDays} к. дн.</strong>}
+        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>
+          {item.leaveType === 'children_social_additional' ? 'Обрати тривалість' : 'Перейти до періоду'}
+        </button>
       </li>)}</ul>}
       {reviews.map(item => <div className="leave-attention-review" key={item.leaveType + item.reviewReason}>
-        <span>{item.reviewReason === 'right' ? 'Потрібно перевірити право на додаткову відпустку за стаж ОМС.' :
-          item.reviewReason === 'initial_balance' ? `Потрібно внести початковий залишок ${item.leaveType === 'annual_main' ? 'щорічної основної' : 'додаткової за стаж ОМС'} відпустки.` :
-            'Потрібно перевірити дані для додаткової відпустки за стаж ОМС.'}</span>
+        <span>{item.reviewReason === 'right' ? `Потрібно перевірити право на відпустку «${leaveTypeName(item.leaveType)}».` :
+          item.reviewReason === 'initial_balance' ? `Потрібно внести фактичний початковий залишок: ${leaveTypeName(item.leaveType)}${item.leaveType === 'children_social_additional' && item.periodStart ? ` за ${item.periodStart.slice(0, 4)} рік` : ''}.` :
+            `Потрібно перевірити дані для відпустки «${leaveTypeName(item.leaveType)}».`}</span>
         <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>{item.reviewReason === 'right' ? 'Перевірити право' : item.reviewReason === 'initial_balance' ? 'Внести залишок' : 'Перевірити дані'}</button>
       </div>)}
     </div>
   </Alert>
+}
+
+function leaveTypeName(type: PeriodLeaveType) {
+  return type === 'annual_main' ? 'Щорічна основна' : type === 'oms_service_additional' ? 'Додаткова за стаж ОМС' : 'Додаткова на дітей'
 }

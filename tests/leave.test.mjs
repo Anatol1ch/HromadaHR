@@ -298,25 +298,67 @@ test('annual suggestions apply only to new electronic accounting periods, not in
 })
 
 test('period attention includes only current actionable entitlements and distinct OMS data review',()=>{
-  const annualFacts={employeeId:'employee',hireDate:'2027-01-01',employeeType:'staff',serviceLeaveStart:null,rights:[],periods:[],serviceProjection:null}
+  const annualFacts={employeeId:'employee',hireDate:'2027-01-01',employeeType:'staff',serviceLeaveStart:null,
+    rights:[{leaveType:'children_social_additional',status:'no_right'}],periods:[],serviceProjection:null}
   const current=leavePeriodAttentionForEmployee(annualFacts,'2027-02-01')
   assert.equal(current.length,1);assert.equal(current[0].kind,'needs_confirmation');assert.equal(current[0].suggestedDays,30)
   assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,hireDate:'2027-06-01'},'2027-02-01'),[])
-  assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,rights:[{leaveType:'annual_main',status:'no_right'}]},'2027-02-01'),[])
+  assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'children_social_additional',status:'no_right'}]},'2027-02-01'),[])
   const initialBalance=leavePeriodAttentionForEmployee({...annualFacts,hireDate:'2026-01-01'},'2026-03-01')
   assert.equal(initialBalance[0].kind,'review_data');assert.equal(initialBalance[0].reviewReason,'initial_balance');assert.equal(initialBalance[0].suggestedDays,null)
   const saved={employeeId:'employee',leaveType:'annual_main',periodStart:'2027-01-01',periodEnd:'2027-12-31',accountingBasis:'confirmed_entitlement',confirmedDays:30,referenceEntitlementDays:null,status:'confirmed'}
   assert.deepEqual(leavePeriodAttentionForEmployee({...annualFacts,periods:[saved]},'2027-02-01'),[])
 
   const oms={...annualFacts,hireDate:'2017-02-01',employeeType:'official',serviceLeaveStart:'2017-02-01',
-    rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'has_right'}],serviceProjection:{status:'calculated',calculation:{status:'calculated'},recommendedDays:9}}
+    rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'has_right'},
+      {leaveType:'children_social_additional',status:'no_right'}],serviceProjection:{status:'calculated',calculation:{status:'calculated'},recommendedDays:9}}
   const serviceTask=leavePeriodAttentionForEmployee(oms,'2027-02-01')
   assert.equal(serviceTask.length,1);assert.equal(serviceTask[0].leaveType,'oms_service_additional');assert.equal(serviceTask[0].suggestedDays,9)
-  const unknown=leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'}]},'2027-02-01')
+  const unknown=leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'children_social_additional',status:'no_right'}]},'2027-02-01')
   assert.equal(unknown[0].kind,'review_data');assert.equal(unknown[0].reviewReason,'right');assert.equal(unknown[0].suggestedDays,null)
   const insufficient=leavePeriodAttentionForEmployee({...oms,serviceProjection:{status:'missing_service_data',calculation:{status:'missing_service_data'},recommendedDays:null}},'2027-02-01')
   assert.equal(insufficient[0].kind,'review_data');assert.equal(insufficient[0].reviewReason,'service_data');assert.equal(insufficient[0].suggestedDays,null)
-  assert.deepEqual(leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'no_right'}]},'2027-02-01'),[])
+  assert.deepEqual(leavePeriodAttentionForEmployee({...oms,rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'no_right'},
+    {leaveType:'children_social_additional',status:'no_right'}]},'2027-02-01'),[])
+})
+
+test('children attention is current-year-only and never chooses the 10 or 17 day duration',()=>{
+  const facts={employeeId:'employee',hireDate:'2020-06-01',employeeType:'staff',serviceLeaveStart:null,
+    rights:[{leaveType:'annual_main',status:'no_right'},{leaveType:'oms_service_additional',status:'no_right'},
+      {leaveType:'children_social_additional',status:'has_right'}],periods:[],serviceProjection:null}
+  const current=leavePeriodAttentionForEmployee(facts,'2027-06-01')
+  assert.deepEqual(current.map(item=>[item.leaveType,item.periodStart,item.periodEnd,item.kind,item.suggestedDays]),
+    [['children_social_additional','2027-01-01','2027-12-31','needs_confirmation',null]])
+  assert.deepEqual(leavePeriodAttentionForEmployee({...facts,rights:facts.rights.map(right=>right.leaveType==='children_social_additional'?{...right,status:'no_right'}:right)},'2027-06-01'),[])
+  const unknown=leavePeriodAttentionForEmployee({...facts,rights:facts.rights.filter(right=>right.leaveType!=='children_social_additional')},'2027-06-01')
+  assert.equal(unknown.length,1);assert.equal(unknown[0].kind,'review_data');assert.equal(unknown[0].reviewReason,'right')
+  const saved={employeeId:'employee',leaveType:'children_social_additional',periodStart:'2027-01-01',periodEnd:'2027-12-31',accountingBasis:'confirmed_entitlement',confirmedDays:17,referenceEntitlementDays:null,status:'confirmed'}
+  assert.deepEqual(leavePeriodAttentionForEmployee({...facts,periods:[saved]},'2027-06-01'),[])
+  const initial=leavePeriodAttentionForEmployee({...facts,hireDate:'2020-01-01'},'2026-06-01')
+    .find(item=>item.leaveType==='children_social_additional')
+  assert.equal(initial.kind,'review_data');assert.equal(initial.reviewReason,'initial_balance');assert.equal(initial.suggestedDays,null)
+})
+
+test('new children entitlements require current right and 10 or 17 days; existing and initial values are preserved',async t=>{
+  const f=fixture(t),connection=await f.open()
+  const {employee:person}=await employee(connection,'2020-06-01')
+  const leave=new LeaveService({getDatabase:()=>connection.database},()=>false,()=> '2027-06-01')
+  const current={leaveType:'children_social_additional',periodStart:'2027-01-01',periodEnd:'2027-12-31',
+    accountingBasis:'confirmed_entitlement',confirmedDays:17,referenceEntitlementDays:null}
+  assert.throws(()=>leave.savePeriods(person.id,[current]),code('CHILD_LEAVE_RIGHT_REQUIRED'))
+  leave.saveRights(person.id,[{leaveType:'children_social_additional',status:'no_right'}])
+  assert.throws(()=>leave.savePeriods(person.id,[current]),code('CHILD_LEAVE_RIGHT_REQUIRED'))
+  const initial={...current,periodStart:'2026-01-01',periodEnd:'2026-12-31',accountingBasis:'initial_balance',confirmedDays:4}
+  assert.equal(leave.savePeriods(person.id,[initial])[0].confirmedDays,4)
+  leave.saveRights(person.id,[{leaveType:'children_social_additional',status:'has_right'}])
+  const later=new LeaveService({getDatabase:()=>connection.database},()=>false,()=> '2028-06-01')
+  later.saveRights(person.id,[{leaveType:'children_social_additional',status:'has_right'}])
+  assert.throws(()=>later.savePeriods(person.id,[current]),code('CHILD_LEAVE_PERIOD_NOT_CURRENT'))
+  assert.throws(()=>leave.savePeriods(person.id,[{...current,confirmedDays:11}]),code('CHILD_LEAVE_DURATION_INVALID'))
+  assert.equal(leave.savePeriods(person.id,[current])[0].confirmedDays,17)
+  leave.saveRights(person.id,[{leaveType:'children_social_additional',status:'no_right'}])
+  assert.equal(leave.listPeriods(person.id).find(period=>period.periodStart==='2027-01-01').confirmedDays,17)
+  assert.equal(leave.savePeriods(person.id,[{...current,confirmedDays:13}])[0].confirmedDays,13)
 })
 
 test('next-year proposals preserve anniversary, leap-day clamp and nonannual policies',()=>{

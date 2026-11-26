@@ -291,3 +291,7 @@ Read-only цільово перевірено `Anatol1ch/HromadaAID` за SHA `3
 ### Етап 9.12.7 – Похідний контроль відпускних періодів
 
 Перевірено read-only дерево `Anatol1ch/HromadaAID` на актуальному remote HEAD `364f547200ebd63f9a2fe6592fae0768e77e9eb9`; список шляхів із `leave`, `vacation`, `remind`, `period` або `balance` порожній. Аналога кадрового контролю непідтверджених відпусток не знайдено. Повторно використані HromadaHR `proposePeriods`, `ServiceProjection`, `BalanceEditor`, `Alert`, діючий leave-workbench і семантичні токени. Не додавали notification center, нагадувань у БД або нової UI-системи.
+
+### Етап 9.12.8 – Річний вибір дитячої відпустки
+
+Для точкової UI-зміни використано раніше перевірений read-only AID SHA `364f547200ebd63f9a2fe6592fae0768e77e9eb9`; там не було відповідного leave-period editor або річної автоматизації. Залишено HromadaHR `Select`, `BalanceEditor`, семантичні токени та dirty guard. Нові компоненти, залежності або дані про дітей не створювалися.

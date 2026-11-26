@@ -23,7 +23,8 @@ function toPeriod(row: LeaveRow): ConfirmedLeavePeriod { return { ...row, status
 
 // Main-only. Resolve the live connection on every operation, including after restore.
 export class LeaveService {
-  constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean) {}
+  constructor(private readonly storage: Pick<Storage, 'getDatabase'>, private readonly isBusy: () => boolean,
+    private readonly getToday: () => string = todayIsoDate) {}
 
   private run<T>(operation: (db: Database.Database) => T): T {
     if (this.isBusy()) throw new LeaveError('BUSY')
@@ -191,6 +192,13 @@ export class LeaveService {
         const current = db.prepare<[string, string, string], { id: string; periodEnd: string; accountingBasis: string }>(
           'SELECT id, period_end AS periodEnd, accounting_basis AS accountingBasis FROM leave_period_balances WHERE employee_id=? AND leave_type=? AND period_start=?')
           .get(employeeId, period.leaveType, period.periodStart)
+        if (period.leaveType === 'children_social_additional' && period.accountingBasis === 'confirmed_entitlement' && !current) {
+          if (period.periodStart !== `${this.getToday().slice(0, 4)}-01-01`) throw new LeaveError('CHILD_LEAVE_PERIOD_NOT_CURRENT')
+          const right = db.prepare<[string], { status: string }>(
+            "SELECT status FROM employee_leave_rights WHERE employee_id=? AND leave_type='children_social_additional'").get(employeeId)
+          if (right?.status !== 'has_right') throw new LeaveError('CHILD_LEAVE_RIGHT_REQUIRED')
+          if (period.confirmedDays !== 10 && period.confirmedDays !== 17) throw new LeaveError('CHILD_LEAVE_DURATION_INVALID')
+        }
         if (current && db.prepare('SELECT 1 FROM leave_allocations WHERE period_id=? LIMIT 1').get(current.id)) {
           const used = this.balances(db, employeeId).find(row => row.id === current.id)!.usedDays
           if (period.confirmedDays < used || period.periodEnd !== current.periodEnd || period.accountingBasis !== current.accountingBasis) {
