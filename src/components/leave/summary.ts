@@ -60,7 +60,7 @@ export function leaveBalanceOverviewMetrics(type: LeaveType, status: 'has_right'
         ? { value: formatLeaveDayCount(summary.accounted), kind: 'value' }
         : accounting.recordedUsage > 0n
           ? { value: formatLeaveDayCount(accounting.recordedUsage), kind: 'value', detail: ['За активними реєстраціями'] }
-          : { value: '—', kind: 'unknown' },
+          : { value: '0', kind: 'value' },
       remaining: summary.count && !summary.incomplete
         ? { value: formatLeaveDayCount(summary.remaining), kind: 'value', emphasis: true }
         : { value: '—', kind: summary.incomplete ? 'missing' : 'unknown', detail: summary.incomplete ? ['Не всі періоди внесено'] : undefined },

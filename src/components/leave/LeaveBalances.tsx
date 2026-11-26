@@ -27,7 +27,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged, childrenRightStatus, onBack }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged, childrenRightStatus, onBack, modalMode = false }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -37,11 +37,12 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   rightsReady: boolean
   historicalOnly: boolean
   rightBadge?: ReactNode
-  attentionTarget?: { periodStart: string; requestId: number } | null
+  attentionTarget?: { periodStart: string | null; requestId: number } | null
   onAttentionTargetHandled?: () => void
   onChanged?: () => void
   childrenRightStatus?: 'has_right' | 'no_right'
   onBack?: () => void
+  modalMode?: boolean
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -162,8 +163,8 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
 
   const selectedSummary=balanceSummary(type,data?.balances??[],type === 'children_social_additional' ? [] : (data?.proposals??[]).filter(p=>p.periodStart<=throughDate))
   return <section ref={owner} className="leave-layout" aria-label="Залишки відпусток">
-    <InfoSection title={labels[type]} icon={<LeaveTypeIcon type={type}/>} action={<div className="leave-summary-actions">
-      {onBack && <button type="button" className="secondary-button" onClick={onBack}>До всіх видів</button>}
+    <InfoSection title={modalMode ? 'Підтверджений облік' : labels[type]} icon={<LeaveTypeIcon type={type}/>} action={<div className="leave-summary-actions">
+      {onBack && <button type="button" className="secondary-button" onClick={onBack}>До керування видом</button>}
       {rightBadge}
       <button ref={editButton} type="button" className="secondary-button"
         disabled={!editorCandidates || (!editorCandidates.length && type !== 'oms_service_additional')}
@@ -189,7 +190,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
         <InfoItem label="Дата набуття права за стаж" value={data.serviceStart ? formatDate(data.serviceStart) : 'Не внесено'}/>
       </dl>}
     </InfoSection>
-    {type==='oms_service_additional'&&<OmsServiceLeaveProjection employeeId={employeeId} revision={key}/>}
+    {type==='oms_service_additional'&&!modalMode&&<OmsServiceLeaveProjection employeeId={employeeId} revision={key}/>}
     {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
       {!data?.error && <>
@@ -201,7 +202,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
       </>}
     </section>}
     {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
-      focusPeriodStart={attentionTarget?.periodStart}
+      focusPeriodStart={attentionTarget?.periodStart ?? undefined}
       childrenRightStatus={childrenRightStatus}
       serviceStart={data?.serviceStart} manualProposals={manualProposals}
       onClose={dateWritten => {

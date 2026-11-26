@@ -67,49 +67,22 @@
 .profile-leave-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
 .profile-leave-toolbar h3 { display:flex; align-items:center; gap:var(--space-2); margin:0; font-size:18px; color:var(--accent-hover); }
 .profile-leave-toolbar h3 svg { flex:none; color:var(--accent); }
-.leave-workbench-layout { display:grid; grid-template-columns:185px minmax(0,1fr); gap:var(--space-3); align-items:start; min-width:0; }
-.leave-workbench-nav { display:grid; gap:var(--space-1); min-width:0; padding:var(--space-2); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
-.leave-workbench-nav > button { display:flex; align-items:center; gap:var(--space-2); min-width:0; min-height:42px; padding:var(--space-2) var(--space-3); border:1px solid transparent; border-radius:var(--radius-control); background:transparent; color:var(--color-text-secondary); font:inherit; text-align:left; cursor:pointer; }
-.leave-workbench-nav > button:hover { background:var(--surface-panel); color:var(--color-text); }
-.leave-workbench-nav > button.is-active { border-color:var(--border-accent); background:var(--accent-soft); color:var(--accent-hover); font-weight:650; }
-.leave-workbench-nav > button svg { flex:none; color:var(--accent); }
-.leave-workbench-nav > button:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
-.leave-workbench-content { display:grid; gap:var(--space-3); min-width:0; }
-.leave-workbench-compact-select { display:none; min-width:0; }
-.leave-balances-overview { min-width:0; background:var(--surface-card); }
-.leave-balances-overview .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
-.leave-balances-overview-table { width:100%; min-width:880px; font-variant-numeric:tabular-nums; }
-.leave-balances-overview-table thead th { padding:var(--space-2); text-align:center; vertical-align:middle; }
-.leave-balances-overview-table thead th:first-child { text-align:center; }
-.leave-balances-overview-table thead th small { display:block; color:var(--color-text-hint); font-size:10px; font-weight:500; letter-spacing:normal; text-transform:none; }
-.leave-balances-overview-table tbody th[scope="row"],.leave-balances-overview-table tbody td { padding:var(--space-2); border-top:1px solid var(--border-surface); vertical-align:middle; }
-.leave-balances-overview-table tbody th[scope="row"] { min-width:0; background:var(--surface-card); color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; white-space:normal; }
-.leave-balances-overview-table tbody td { text-align:center; white-space:normal; }
-.leave-balances-overview-table .leave-right-status { justify-content:center; margin-inline:auto; }
+.profile-leave-toolbar:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
+.profile-leave-toolbar .primary-button { height:auto; min-height:var(--control-height); white-space:normal; }
+.leave-accounting-section { min-width:0; background:var(--surface-card); }
+.leave-accounting-section .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
+.leave-accounting-table { width:100%; min-width:780px; font-variant-numeric:tabular-nums; }
+.leave-accounting-table thead th { padding:var(--space-2); text-align:center; vertical-align:middle; }
+.leave-accounting-table thead th:first-child { text-align:center; }
+.leave-accounting-table thead th small { display:block; color:var(--color-text-hint); font-size:10px; font-weight:500; letter-spacing:normal; text-transform:none; }
+.leave-accounting-table tbody th[scope="row"],.leave-accounting-table tbody td { padding:var(--space-2); border-top:1px solid var(--border-surface); vertical-align:middle; }
+.leave-accounting-table tbody th[scope="row"] { min-width:0; background:transparent; color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; white-space:normal; }
+.leave-accounting-table tbody td { text-align:center; white-space:normal; }
+.leave-accounting-table .leave-right-status { justify-content:center; margin-inline:auto; }
+.leave-accounting-table .leave-overview-metric { justify-items:center; text-align:center; }
+.leave-accounting-table .leave-overview-metric-details { justify-items:center; }
 .leave-balance-row-note { display:block; margin-top:2px; color:var(--color-text-secondary); font-size:11px; font-weight:400; line-height:1.35; }
 .leave-balance-detail-button { min-height:var(--control-height-compact); white-space:nowrap; }
-.leave-historical-periods { margin-top:var(--space-3); border-top:1px solid var(--border-surface); color:var(--color-text-secondary); }
-.leave-historical-periods > summary { width:max-content; max-width:100%; padding:var(--space-2) 0; color:var(--accent-hover); font-size:13px; font-weight:600; cursor:pointer; }
-.leave-historical-periods > summary:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; border-radius:var(--radius-control); }
-.leave-event-balance-details { min-width:0; background:var(--surface-card); }
-.leave-event-balance-metrics { margin-bottom:var(--space-3); }
-.leave-event-balance-history-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-2); margin:var(--space-3) 0 var(--space-2); }
-.leave-event-balance-history-heading h4 { margin:0; color:var(--color-text); font-size:14px; }
-.leave-event-balance-table { min-width:680px; font-variant-numeric:tabular-nums; }
-.leave-event-balance-table tbody tr.leave-cancelled-row { color:var(--color-text-secondary); }
-.leave-event-balance-table tbody tr.leave-cancelled-row td { background:var(--surface-panel); }
-.leave-event-balance-table .leave-days-column { text-align:center; }
-.leave-event-balance-details .leave-muted { color:var(--color-text-secondary); font-size:12px; }
-.leave-overview-summary { min-width:0; background:var(--surface-card); }
-.leave-overview-summary .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
-.leave-summary-table { width:100%; min-width:760px; font-variant-numeric:tabular-nums; }
-.leave-summary-table thead th { height:auto; padding:12px 10px; border-bottom:1px solid var(--border-surface); text-align:center; vertical-align:middle; }
-.leave-summary-table thead th:first-child { text-align:center; }
-.leave-summary-table thead th small { display:block; color:var(--color-text-hint); font-size:10px; font-weight:500; letter-spacing:normal; text-transform:none; }
-.leave-summary-table tbody th[scope="row"] { min-width:0; padding:12px 10px 12px 20px; border-top:1px solid var(--border-surface); background:var(--surface-card); color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; vertical-align:middle; white-space:normal; }
-.leave-summary-table tbody td { height:auto; padding:12px 10px; text-align:center; vertical-align:middle; white-space:normal; }
-.leave-summary-table tbody tr:hover { background:var(--surface-card); }
-.leave-summary-table .leave-right-status { justify-content:center; margin-inline:auto; }
 .leave-summary-type { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
 .leave-summary-type > svg,.leave-summary-type .leave-type-icon { flex:none; }
 .leave-summary-type > span:last-child { min-width:0; overflow-wrap:anywhere; }
@@ -119,21 +92,48 @@
 .leave-overview-metric.is-emphasis strong { color:var(--accent-hover); font-weight:700; }
 .leave-overview-metric-details { display:grid; justify-items:center; gap:2px; }
 .leave-overview-metric small { color:var(--color-text-secondary); font-size:10px; font-weight:400; line-height:1.35; overflow-wrap:anywhere; }
-.leave-workbench-content .leave-registry { min-width:0; }
-.profile-leave-workbench .leave-register-table { min-width:760px; }
+.leave-attention-list { display:grid; gap:var(--space-2); padding:var(--space-3) var(--space-4); border:1px solid var(--border-surface); border-radius:var(--radius-panel); background:var(--surface-card); }
+.leave-attention-list-heading,.leave-attention-item { display:flex; align-items:center; gap:var(--space-2); min-width:0; }
+.leave-attention-list-heading { color:var(--color-text-secondary); font-size:13px; }
+.leave-attention-list-heading svg { flex:none; color:var(--accent); }
+.leave-attention-item { justify-content:space-between; flex-wrap:wrap; padding-top:var(--space-2); border-top:1px solid var(--border-surface); color:var(--color-text); font-size:13px; }
+.leave-attention-item > span { min-width:0; }
+.leave-history-section { display:grid; gap:var(--space-2); min-width:0; scroll-margin-top:var(--space-3); }
+.leave-history-section:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); border-radius:var(--radius-panel); }
 .profile-leave-workbench .leave-registry { min-width:0; }
-.profile-leave-toolbar:focus-visible { outline:2px solid var(--border-focus); outline-offset:var(--space-1); }
-
+.profile-leave-workbench .leave-register-table { min-width:760px; }
 .profile-leave-workbench .leave-register-table :is(th, td):nth-child(-n+4) { min-width:0; }
 .profile-leave-workbench .leave-register-table .leave-journal-date { min-width:6.5rem; }
-.profile-leave-toolbar .primary-button { height:auto; min-height:var(--control-height); white-space:normal; }
-@container leave-workspace (max-width:48rem) {
- .leave-workbench-layout { grid-template-columns:minmax(0,1fr); }
- .leave-workbench-nav { display:none; }
- .leave-workbench-compact-select { display:block; }
-}
+.leave-historical-periods { margin-top:var(--space-3); border-top:1px solid var(--border-surface); color:var(--color-text-secondary); }
+.leave-historical-periods > summary { width:max-content; max-width:100%; padding:var(--space-2) 0; color:var(--accent-hover); font-size:13px; font-weight:600; cursor:pointer; }
+.leave-historical-periods > summary:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; border-radius:var(--radius-control); }
+.leave-management-dialog { width:min(68rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
+.leave-management-dialog .app-modal-content { container:leave-manager / inline-size; display:grid; align-content:start; gap:var(--space-3); min-width:0; overflow:auto; }
+.leave-manager-accounting { min-width:0; }
+.leave-manager-note { margin:var(--space-2) 0 0; color:var(--color-text-secondary); font-size:12px; line-height:1.45; }
+.leave-manager-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--space-2); }
+.leave-management-dialog .leave-layout { min-width:0; }
+.leave-management-dialog .leave-section-heading { flex-wrap:wrap; }
+.leave-management-dialog .leave-rights-focused .leave-right-row { grid-template-columns:minmax(0,1fr); }
+.leave-management-dialog .leave-rights-focused .leave-right-switch { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.leave-management-dialog .leave-rights-focused .leave-right-switch label span { justify-content:center; }
+.leave-management-dialog .leave-period-table { min-width:620px; }
+.leave-management-dialog .leave-balances-table { min-width:0; }
+.leave-management-dialog .leave-summary-actions { flex-wrap:wrap; }
+.leave-management-dialog .leave-summary-actions > button { height:auto; min-height:var(--control-height); white-space:normal; }
+.leave-management-dialog :is(.dictionary-table-wrap,.leave-registry) { min-width:0; max-width:100%; }
 @container leave-workspace (max-width:32rem) {
  .profile-leave-toolbar { align-items:stretch; }
  .profile-leave-toolbar .primary-button { width:100%; justify-content:center; }
  .profile-leave-toolbar h3 { font-size:17px; }
+ .leave-attention-item > span { flex-basis:100%; }
 }
+@container leave-manager (max-width:42rem) {
+ .leave-manager-accounting .info-grid-three { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .leave-management-dialog .leave-rights-focused .leave-right-switch label span { padding-inline:var(--space-1); font-size:11px; }
+}
+@container leave-manager (max-width:30rem) {
+ .leave-manager-accounting .info-grid-three { grid-template-columns:minmax(0,1fr); }
+ .leave-manager-actions > button { flex:1 1 100%; }
+}
+@media (max-height:38rem) { .leave-management-dialog { max-height:calc(100dvh - 1rem); } }

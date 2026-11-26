@@ -2,7 +2,7 @@ import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextua
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveBalanceOverviewMetrics, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, leaveOverviewProposals, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
-import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
+import { leavePeriodAttentionTarget } from '../src/components/leave/attention.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
 import { leaveTypes } from '../shared/leave.ts'
@@ -140,36 +140,25 @@ test('overview does not infer entitlement from balances or the initial-period re
   assert.match(schema, /CHECK \(accounting_basis = 'initial_balance' OR reference_entitlement_days IS NULL\)/)
 })
 
-test('overview table has four columns for all leave types and preserves native table-cell display', () => {
-  const component = readFileSync(new URL('../src/components/leave/LeaveOverview.tsx', import.meta.url), 'utf8')
-  const styles = [
-    'employee-profile.css', 'leave.css', 'components.css',
-  ].map(file => readFileSync(new URL(`../src/styles/${file}`, import.meta.url), 'utf8')).join('\n')
-  assert.equal(leaveTypes.length, 6)
-  assert.match(component, /leaveTypes\.map\(type =>/)
-  for (const heading of ['Вид відпустки', 'Право', 'Облік днів', 'Внесено / Використано, к. дн.', 'Залишок']) assert.ok(component.includes(heading))
-  assert.match(component, /width: '33%'/)
-  assert.match(component, /width: '22%'/)
-  assert.match(component, /width: '27%'/)
-  assert.match(component, /width: '18%'/)
-  assert.equal([...component.matchAll(/width: '\d+%'/g)].length, 4)
-  assert.match(component, /<td><LeaveRightStatus status=\{status\}\/>/)
-  assert.match(component, /<td><DayMetric value=\{compactNoRight \? '—' : metrics\[0\]!\.value\}/)
-  assert.match(component, /<td><DayMetric value=\{compactNoRight \? '—' : metrics\[1\]!\.value\}/)
-  assert.doesNotMatch(component, /colSpan\s*=/)
-  assert.match(component, /leaveOverviewCompactNoRight\(status, accounting\)/)
-  assert.doesNotMatch(component, /label:\s*['"]Належить['"]/)
-  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('annual_main', [], [], [])).length, 2)
-  assert.equal(leaveOverviewMetrics(leaveOverviewAccounting('study_leave', [], [], [])).length, 2)
 
-  const tableElementRules = [...styles.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-    .filter(([, selectorList]) => selectorList.split(',').some(selector => /(?:^|[\s>+~])(?:table|thead|tbody|tr|th|td)(?:[.#][\w-]+|\[[^\]]+\]|:[\w-]+(?:\([^)]*\))?)*\s*$/.test(selector.trim())))
-  assert.ok(tableElementRules.length > 0)
-  for (const [, , declarations] of tableElementRules) assert.doesNotMatch(declarations, /display\s*:\s*(?:grid|flex|block)/)
-  assert.match(styles, /\.leave-summary-table thead th \{[^}]*text-align:center/)
-  assert.match(styles, /\.leave-summary-table tbody td \{[^}]*text-align:center[^}]*vertical-align:middle/)
-  assert.match(styles, /\.leave-summary-table \.leave-right-status \{[^}]*justify-content:center/)
-  assert.match(styles, /\.leave-overview-metric \{[^}]*justify-items:center[^}]*text-align:center/)
+test('leave accounting metrics distinguish missing balances from confirmed zero across six types', () => {
+  assert.equal(leaveTypes.length, 6)
+  for (const type of leaveTypes) {
+    const metrics = leaveBalanceOverviewMetrics(type, 'unknown', [], [], [], 'employee', '2027', '2027-03-01')
+    assert.ok(metrics.used)
+    assert.ok(metrics.remaining)
+  }
+  const annual = leaveBalanceOverviewMetrics('annual_main', 'has_right', [], [], [], 'employee', '2027', '2027-03-01')
+  assert.equal(annual.confirmed.kind, 'unknown')
+  assert.equal(annual.remaining.kind, 'unknown')
+  assert.equal(annual.used.value, '0')
+})
+
+test('period attention carries the selected type and period into contextual management', () => {
+  const period={employeeId:'employee',leaveType:'oms_service_additional',periodStart:'2027-01-01',periodEnd:'2027-12-31',kind:'needs_confirmation',suggestedDays:9}
+  assert.deepEqual(leavePeriodAttentionTarget(period), { type:'oms_service_additional',periodStart:'2027-01-01',reviewRight:false })
+  const review={...period,kind:'review_data',reviewReason:'right',suggestedDays:null}
+  assert.deepEqual(leavePeriodAttentionTarget(review), { type:'oms_service_additional',periodStart:null,reviewRight:true })
 })
 
 test('summaries keep missing distinct from zero, count all registered days and isolate three types', () => {
@@ -184,31 +173,6 @@ test('summaries keep missing distinct from zero, count all registered days and i
   assert.equal(formatLeaveDayCount(0n), '0')
 })
 
-test('workbench switches four sections and preserves selected balance and history return context', () => {
-  const accounting = leaveWorkspaceNavigation(initialLeaveWorkspaceState, { type: 'open-balances', leaveType: 'annual_main' })
-  assert.equal(accounting.view, 'balances')
-  assert.equal(accounting.selectedType, 'annual_main')
-  const rights = leaveWorkspaceNavigation(accounting, { type: 'navigate', view: 'rights' })
-  assert.equal(rights.view, 'rights')
-  assert.equal(rights.selectedType, 'annual_main')
-  const detail = leaveWorkspaceNavigation(rights, { type: 'navigate', view: 'overview' })
-  assert.equal(detail.view, 'overview')
-  assert.equal(detail.selectedType, 'annual_main')
-  const history = leaveWorkspaceNavigation(detail, { type: 'open-history', returnTo: detail.view })
-  const resumed = leaveWorkspaceNavigation(history, { type: 'resume-history' })
-  assert.equal(resumed.view, 'overview')
-  assert.equal(resumed.selectedType, 'annual_main')
-  const balances = leaveWorkspaceNavigation(resumed, { type: 'open-balances', leaveType: 'children_social_additional' })
-  const historyFromBalances = leaveWorkspaceNavigation(balances, { type: 'open-history', returnTo: balances.view })
-  const resumedBalances = leaveWorkspaceNavigation(historyFromBalances, { type: 'resume-history' })
-  assert.equal(resumedBalances.view, balances.view)
-  assert.equal(resumedBalances.selectedType, balances.selectedType)
-  assert.equal(resumedBalances.historyReturn, 'balances')
-  const returnedOverview = leaveWorkspaceNavigation(balances, { type: 'back-to-balances-overview' })
-  assert.equal(returnedOverview.view, 'balances')
-  assert.equal(returnedOverview.selectedType, null)
-  assert.equal(leaveWorkspaceNavigation(returnedOverview, { type: 'navigate', view: 'balances' }).selectedType, null)
-})
 
 test('balance overview distinguishes no confirmed period, confirmed zero and child-year choice', () => {
   const absent = leaveBalanceOverviewMetrics('annual_main', 'has_right', [], [], [], 'employee', '2027', '2027-03-01')
@@ -235,13 +199,6 @@ test('balance overview lists all six types and event leave never gets an accumul
   assert.equal(study.remaining.value, 'Не накопичується')
 })
 
-test('period attention routes to its specific balance type or rights review', () => {
-  const period={employeeId:'employee',leaveType:'oms_service_additional',periodStart:'2027-01-01',periodEnd:'2027-12-31',kind:'needs_confirmation',suggestedDays:9}
-  assert.deepEqual(leaveWorkspaceNavigation(initialLeaveWorkspaceState,leavePeriodAttentionAction(period)),
-    {view:'balances',selectedType:'oms_service_additional',historyReturn:'overview'})
-  const review={...period,kind:'review_data',reviewReason:'right',suggestedDays:null}
-  assert.equal(leaveWorkspaceNavigation(initialLeaveWorkspaceState,leavePeriodAttentionAction(review)).view,'rights')
-})
 
 test('focused right editor submits only its selected status and uses the agreed workspace labels', () => {
   const saved = [

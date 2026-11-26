@@ -1,55 +1,53 @@
-import { useEffect, useReducer, useRef, useState, type RefObject } from 'react'
-import { CheckCircle2, History, Info, LayoutDashboard, Plus, ShieldCheck, Wallet } from 'lucide-react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
+import { Info, Plus, Wallet } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import type { LeavePeriodAttentionItem, LeavePeriodAttentionSummary, LeaveType, PeriodLeaveType } from '../../../shared/leave'
+import type { LeavePeriodAttentionItem, LeavePeriodAttentionSummary, LeaveType } from '../../../shared/leave'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import Alert from '../Alert'
 import DataState from '../DataState'
-import Select from '../Select'
-import LeaveOverview, { type LeaveOverviewData } from './LeaveOverview'
-import LeaveBalancesOverview from './LeaveBalancesOverview'
-import LeaveEventBalanceDetails from './LeaveEventBalanceDetails'
-import LeaveBalances from './LeaveBalances'
+import LeaveAccountingTable from './LeaveAccountingTable'
 import LeaveJournal from './LeaveJournal'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
-import LeaveRights from './LeaveRights'
-import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation, type LeaveWorkspaceView } from './workbench-navigation'
+import LeaveTypeManagerDialog from './LeaveTypeManagerDialog'
+import { leavePeriodAttentionTarget } from './attention'
 import useAccountingDate from './useAccountingDate'
 import { leaveRecordBelongsToEmployee, type LeaveJournalContext, type RegistrationHistory } from './registry'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate } from '../../lib/dates'
+import type { LeaveWorkspaceData } from './workspace-data'
 
-type LoadedOverview = { key: string; data?: LeaveOverviewData; periodAttention?: LeavePeriodAttentionSummary; attentionError?: string; error?: string }
-const leaveSections: { id: LeaveWorkspaceView; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview', label: 'Зведення', icon: LayoutDashboard },
-  { id: 'rights', label: 'Права', icon: ShieldCheck },
-  { id: 'balances', label: 'Залишки', icon: Wallet },
-  { id: 'history', label: 'Історія', icon: History },
-]
-const periodicTypes = ['annual_main', 'oms_service_additional', 'children_social_additional'] as const
+type LoadedWorkspace = {
+  key: string
+  data?: LeaveWorkspaceData
+  attention?: LeavePeriodAttentionSummary
+  attentionError?: string
+  error?: string
+}
+type AttentionTarget = { periodStart: string | null; requestId: number } | null
 
-/** Leave workspace with guarded in-place section navigation. */
+/** One employee work page: all leave balances followed directly by the existing journal. */
 export default function ProfileLeaveWorkbench({ employee, navigationGuard, revision }: {
   employee: EmployeeCard; navigationGuard: RefObject<NavigationGuard>; revision: number
 }) {
   const employeeId = employee.id
-  const [workspace, dispatchWorkspace] = useReducer(leaveWorkspaceNavigation, initialLeaveWorkspaceState)
-  const { view, selectedType } = workspace
-  const balanceType: PeriodLeaveType = selectedType && periodicTypes.includes(selectedType as PeriodLeaveType)
-    ? selectedType as PeriodLeaveType : 'annual_main'
   const [localRevision, setLocalRevision] = useState(0)
   const refreshRevision = revision + localRevision
   const refresh = () => setLocalRevision(value => value + 1)
+  const { today, throughDate } = useAccountingDate()
+  const readKey = JSON.stringify([employeeId, refreshRevision, throughDate, today])
+  const [loaded, setLoaded] = useState<LoadedWorkspace>()
+  const [attentionTarget, setAttentionTarget] = useState<AttentionTarget>(null)
+  const attentionRequest = useRef(0)
+  const [managerType, setManagerType] = useState<LeaveType | null>(null)
+  const [managerOpener, setManagerOpener] = useState<HTMLElement | null>(null)
+  const [preferredType, setPreferredType] = useState<LeaveType>('annual_main')
   const [creating, setCreating] = useState(false)
   const [context, setContext] = useState<LeaveJournalContext | null>(null)
-  const opener = useRef<HTMLElement | null>(null)
+  const [contextSource, setContextSource] = useState<'registration' | 'filter' | null>(null)
+  const registrationOpener = useRef<HTMLElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
-  const { today, throughDate } = useAccountingDate()
-  const [loaded, setLoaded] = useState<LoadedOverview>()
-  const readKey = JSON.stringify([employeeId, refreshRevision, throughDate, today])
-  const [attentionTarget, setAttentionTarget] = useState<{ periodStart: string; requestId: number } | null>(null)
-  const attentionRequest = useRef(0)
+  const historyRegion = useRef<HTMLElement>(null)
 
   useEffect(() => {
     let active = true
@@ -57,10 +55,10 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     async function load() {
       try {
         const api = window.hromadaHR.leave
-        const [balances, records, rights, periodAttention, ...proposals] = await Promise.all([
-          api.getBalances(employeeId), api.listRecords(employeeId), api.listRights(employeeId),
-          api.getPeriodAttention(today),
-          ...(['annual_main', 'oms_service_additional', 'children_social_additional'] as const).map(type => api.proposePeriods(employeeId, throughDate, type)),
+        const [balances, records, rights, attention, ...proposals] = await Promise.all([
+          api.getBalances(employeeId), api.listRecords(employeeId), api.listRights(employeeId), api.getPeriodAttention(today),
+          ...(['annual_main', 'oms_service_additional', 'children_social_additional'] as const)
+            .map(type => api.proposePeriods(employeeId, throughDate, type)),
         ] as const)
         if (!active) return
         if (!balances.ok) { setLoaded({ key: readKey, error: personnelMessage(balances.error.code) }); return }
@@ -69,187 +67,151 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         const failedProposal = proposals.find(result => !result.ok)
         if (failedProposal && !failedProposal.ok) { setLoaded({ key: readKey, error: personnelMessage(failedProposal.error.code) }); return }
         setLoaded({ key: readKey, data: {
-          employeeId,
-          balances: balances.data,
+          employeeId, balances: balances.data, rights: rights.data,
           records: records.data.filter(record => leaveRecordBelongsToEmployee(record, employeeId)),
-          rights: rights.data,
           proposals: proposals.flatMap(result => result.ok ? result.data : []),
-        }, periodAttention: periodAttention.ok ? periodAttention.data : undefined,
-        attentionError: periodAttention.ok ? undefined : personnelMessage(periodAttention.error.code) })
+        }, attention: attention.ok ? attention.data : undefined,
+        attentionError: attention.ok ? undefined : personnelMessage(attention.error.code) })
       } catch {
         if (active) setLoaded({ key: readKey, error: 'Не вдалося завантажити відомості про відпустки.' })
       }
     }
     void load()
     return () => { active = false }
-  }, [employeeId, readKey, throughDate])
+  }, [employeeId, readKey, throughDate, today])
 
   const current = loaded?.key === readKey ? loaded : undefined
   const data = current?.data
+  const attentionItems = current?.attention?.items.filter(item => item.employeeId === employeeId) ?? []
   const history: RegistrationHistory = {
-    records: data?.records ?? [], error: current?.error ?? '', loading: !current, retry: refresh, suspended: context !== null,
+    records: data?.records ?? [], error: current?.error ?? '', loading: !current,
+    retry: refresh, suspended: contextSource === 'registration',
     open: next => {
       if (next.employeeId !== employeeId) return
       setContext(next)
-      dispatchWorkspace({ type: 'open-history', returnTo: view })
+      setContextSource('registration')
+      setManagerType(null)
+      setAttentionTarget(null)
       refresh()
+      focusHistory()
     },
   }
-  function navigate(next: LeaveWorkspaceView) {
-    navigationGuard.current(() => {
-      dispatchWorkspace({ type: 'navigate', view: next === 'history' ? 'overview' : next })
-      if (next === 'history') dispatchWorkspace({ type: 'open-history', returnTo: view === 'history' ? workspace.historyReturn : view })
-      requestAnimationFrame(() => heading.current?.focus())
+
+  function focusHistory() {
+    requestAnimationFrame(() => {
+      historyRegion.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+      historyRegion.current?.focus()
     })
   }
-  function openBalanceDetails(next: LeaveType) {
+  function manage(type: LeaveType, opener: HTMLElement, target: AttentionTarget = null) {
     navigationGuard.current(() => {
-      dispatchWorkspace({ type: 'open-balances', leaveType: next })
-      setAttentionTarget(null)
-      requestAnimationFrame(() => heading.current?.focus())
+      setPreferredType(type)
+      setManagerOpener(opener)
+      setAttentionTarget(target)
+      setManagerType(type)
     })
   }
-  function backToBalanceOverview() {
-    navigationGuard.current(() => {
-      dispatchWorkspace({ type: 'back-to-balances-overview' })
-      setAttentionTarget(null)
-      requestAnimationFrame(() => heading.current?.focus())
-    })
+  function openAttention(item: LeavePeriodAttentionItem, opener: HTMLElement) {
+    const target = leavePeriodAttentionTarget(item)
+    manage(target.type, opener, target.reviewRight ? null
+      : { periodStart: target.periodStart, requestId: ++attentionRequest.current })
   }
-  function openAttention(item: LeavePeriodAttentionItem) {
-    navigationGuard.current(() => {
-      const action = leavePeriodAttentionAction(item)
-      if (action.type === 'navigate') {
-        dispatchWorkspace(action)
-        setAttentionTarget(null)
-      } else if (action.type === 'open-balances') {
-        dispatchWorkspace(action)
-        setAttentionTarget(item.periodStart ? { periodStart: item.periodStart, requestId: ++attentionRequest.current } : null)
-      }
-      requestAnimationFrame(() => heading.current?.focus())
-    })
+  function openJournalContext(next: LeaveJournalContext) {
+    setManagerType(null)
+    setAttentionTarget(null)
+    setContext(next)
+    setContextSource('filter')
+    focusHistory()
+  }
+  function resumeJournalContext() {
+    setContext(null)
+    setContextSource(null)
+    if (contextSource === 'registration') requestAnimationFrame(() => heading.current?.focus())
   }
   function register() {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    registrationOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     navigationGuard.current(() => setCreating(true))
   }
   function closeRegistration() {
     setCreating(false)
-    setContext(null)
+    if (contextSource === 'registration') { setContext(null); setContextSource(null) }
     refresh()
     requestAnimationFrame(() => {
-      if (opener.current?.isConnected) opener.current.focus()
+      if (registrationOpener.current?.isConnected) registrationOpener.current.focus()
       else heading.current?.focus()
     })
   }
-  const title = view === 'overview' ? 'Зведення' : view === 'balances'
-    ? 'Залишки та облікові періоди'
-    : leaveSections.find(section => section.id === view)?.label ?? 'Відпустки'
-  const selectedStatus = data?.rights.find(right => right.leaveType === balanceType)?.status
-  const selectedRightStatus = selectedType ? data?.rights.find(right => right.leaveType === selectedType)?.status ?? 'unknown' : 'unknown'
 
   return <div className="profile-leave-workbench">
     <header className="profile-leave-toolbar">
       <h3 ref={heading} tabIndex={-1}><Wallet size={20} aria-hidden="true"/>Відпустки</h3>
-      <button type="button" className="primary-button" disabled={creating} onClick={register}><Plus size={17} aria-hidden="true"/>Зареєструвати відпустку</button>
+      <button type="button" className="primary-button" disabled={creating} onClick={register}>
+        <Plus size={17} aria-hidden="true"/>Зареєструвати відпустку
+      </button>
     </header>
 
-    <div className="leave-workbench-layout">
-      <nav className="leave-workbench-nav" aria-label="Розділи відпусток">
-        {leaveSections.map(({ id, label, icon: Icon }) => <button type="button" key={id}
-          className={view === id ? 'is-active' : undefined} aria-current={view === id ? 'page' : undefined}
-          title={id === 'balances' ? 'Залишки та облікові періоди' : label}
-          onClick={() => navigate(id)}><Icon size={18} aria-hidden="true"/><span>{label}</span></button>)}
-      </nav>
-      <div className="leave-workbench-content" aria-label={title}>
-        <div className="leave-workbench-compact-select">
-          <Select label="Розділ відпусток" value={view} options={leaveSections.map(({ id, label }) => ({ value: id, label }))}
-            onChange={value => navigate(value as LeaveWorkspaceView)} advanceOnSelect={false}/>
-        </div>
-        {view === 'overview' && <>
-          <LeavePeriodAttentionNotice loading={!current} error={current?.attentionError} summary={current?.periodAttention}
-            items={current?.periodAttention?.items.filter(item => item.employeeId === employeeId) ?? []} onOpen={openAttention} onRetry={refresh}/>
-          <LeaveOverview data={data} throughDate={throughDate} today={today} loading={!current} error={current?.error} onRetry={refresh}/>
-        </>}
-        {view === 'rights' && <LeaveRights employeeId={employeeId} navigationGuard={navigationGuard} onSaved={refresh}/>}
-        {view === 'balances' && <>
-          {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
-          {!selectedType && (!current || !data)
-            ? <DataState kind="loading" compact message="Завантаження залишків…"/>
-            : !selectedType && data
-              ? <LeaveBalancesOverview data={data} throughDate={throughDate} today={today}
-                attentionItems={current?.periodAttention?.items.filter(item => item.employeeId === employeeId) ?? []} onOpen={openBalanceDetails}/>
-              : selectedType && periodicTypes.includes(selectedType as PeriodLeaveType)
-                ? <LeaveBalances key={balanceType} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={balanceType}
-                  navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
-                  historicalOnly={selectedStatus === 'no_right'} childrenRightStatus={selectedStatus === 'has_right' || selectedStatus === 'no_right' ? selectedStatus : undefined}
-                  attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}
-                  onBack={backToBalanceOverview}/>
-                : selectedType && !data && !current?.error
-                  ? <DataState kind="loading" compact message="Завантаження залишків…"/>
-                  : selectedType && data && <LeaveEventBalanceDetails type={selectedType as Extract<LeaveType, 'study_leave' | 'veteran_special_leave' | 'chernobyl_special_leave'>}
-                  employeeId={employeeId} rightStatus={selectedRightStatus} records={data.records} year={today.slice(0, 4)} error={current?.error}
-                  onBack={backToBalanceOverview} onOpenHistory={history.open}/>
-          }
-        </>}
-        {view === 'history' && <>
-          {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
-          {!current && <DataState kind="loading" compact message="Завантаження історії…"/>}
-          <LeaveJournal employeeId={employeeId} records={history.records} navigationGuard={navigationGuard} onChanged={refresh}
-            history={history} context={context} onResume={() => { setContext(null); dispatchWorkspace({ type: 'resume-history' }); refresh() }}/>
-        </>}
-      </div>
-    </div>
+    <LeavePeriodAttentionNotice loading={!current} error={current?.attentionError} items={attentionItems}
+      onOpen={openAttention} onRetry={refresh}/>
+
+    {current?.error
+      ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>
+      : !data ? <DataState kind="loading" message="Завантаження обліку відпусток…"/>
+        : <LeaveAccountingTable data={data} throughDate={throughDate} today={today} attentionItems={attentionItems}
+          onManage={manage}/>}
+
+    <section ref={historyRegion} className="leave-history-section" tabIndex={-1} aria-label="Історія відпусток">
+      {current?.error ? <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>
+        Історія поки недоступна. {current.error}
+      </Alert> : !current ? <DataState kind="loading" compact message="Завантаження історії відпусток…"/> :
+        <LeaveJournal employeeId={employeeId} records={history.records} navigationGuard={navigationGuard}
+          onChanged={refresh} history={history} context={context} onResume={resumeJournalContext}
+          contextReturnLabel={contextSource === 'registration' ? 'Повернутися до оформлення' : 'Показати всю історію'}
+          allowContextActions={contextSource !== 'registration'}/>}
+    </section>
+
+    {managerType && <LeaveTypeManagerDialog key={managerType} type={managerType} employeeId={employeeId} data={data}
+      employeeName={fullName(employee)} hireDate={employee.hireDate} throughDate={throughDate} today={today}
+      attentionItems={attentionItems} attentionTarget={attentionTarget} refreshRevision={refreshRevision}
+      navigationGuard={navigationGuard} returnFocus={managerOpener} onAttentionTargetHandled={() => setAttentionTarget(null)}
+      onChanged={refresh} onOpenHistory={openJournalContext} onClose={() => { setManagerType(null); setAttentionTarget(null) }}/>}
 
     {creating && <LeaveRegistrationForm employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate}
-      initialType={selectedType ?? 'annual_main'} navigationGuard={navigationGuard} history={history} returnFocus={opener.current}
+      initialType={preferredType} navigationGuard={navigationGuard} history={history} returnFocus={registrationOpener.current}
       onClose={closeRegistration} onSaved={() => {
         closeRegistration()
-        notifySystemToast('success', 'Відпустку зареєстровано', 'Історію та залишки оновлено.')
-      }}/>}
+        notifySystemToast('success', 'Відпустку зареєстровано', 'Облік та історію оновлено.')
+      }}/ >}
   </div>
 }
 
-function LeavePeriodAttentionNotice({ loading, error, summary, items, onOpen, onRetry }: {
-  loading: boolean; error?: string; summary?: LeavePeriodAttentionSummary; items: LeavePeriodAttentionItem[]
-  onOpen: (item: LeavePeriodAttentionItem) => void; onRetry: () => void
+function LeavePeriodAttentionNotice({ loading, error, items, onOpen, onRetry }: {
+  loading: boolean; error?: string; items: LeavePeriodAttentionItem[]
+  onOpen: (item: LeavePeriodAttentionItem, opener: HTMLElement) => void; onRetry: () => void
 }) {
-  if (loading || (!summary && !error)) return null
-  if (error) return <Alert variant="info" action={<button type="button" onClick={onRetry}>Повторити</button>}>Не вдалося перевірити періоди, що потребують уваги. {error}</Alert>
-  const confirmations = items.filter(item => item.kind === 'needs_confirmation')
-  const reviews = items.filter(item => item.kind === 'review_data')
-  const totalEmployees = summary?.employeesNeedingAttention ?? 0
-  const totalPeriods = summary?.periodsNeedingConfirmation ?? 0
-  const confirmationLabel = confirmations.length === 1 ? 'період' : confirmations.length >= 2 && confirmations.length <= 4 ? 'періоди' : 'періодів'
-  if (!confirmations.length && !reviews.length) return <div className="leave-attention-empty" role="status">
-    <CheckCircle2 size={16} aria-hidden="true"/><span>Непідтверджених актуальних періодів у цій картці немає.</span>
-    {totalEmployees > 0 && <small>По установі: {totalEmployees} працівників потребують уваги · {totalPeriods} періодів до підтвердження.</small>}
-  </div>
-  return <Alert variant="info">
-    <div className="leave-attention-content">
-      <div className="leave-attention-title"><Info size={16} aria-hidden="true"/><strong>{confirmations.length
-        ? `Потребують підтвердження: ${confirmations.length} ${confirmationLabel}` : 'Потрібна перевірка даних'}</strong></div>
-      {totalEmployees > 0 && <small className="leave-attention-aggregate">По установі: {totalEmployees} працівників потребують уваги · {totalPeriods} періодів до підтвердження.</small>}
-      {confirmations.length > 0 && <ul>{confirmations.map(item => <li key={item.leaveType + item.periodStart}>
-        <span>{leaveTypeName(item.leaveType)} · {item.leaveType === 'children_social_additional'
-          ? `${item.periodStart!.slice(0, 4)} рік` : `${formatDate(item.periodStart!)}–${formatDate(item.periodEnd!)}`}</span>
-        {item.leaveType === 'children_social_additional'
-          ? <strong>Оберіть 10 або 17 к. дн.</strong>
-          : <strong>{item.suggestedDays} к. дн.</strong>}
-        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>
-          {item.leaveType === 'children_social_additional' ? 'Обрати тривалість' : 'Перейти до періоду'}
-        </button>
-      </li>)}</ul>}
-      {reviews.map(item => <div className="leave-attention-review" key={item.leaveType + item.reviewReason}>
-        <span>{item.reviewReason === 'right' ? `Потрібно перевірити право на відпустку «${leaveTypeName(item.leaveType)}».` :
-          item.reviewReason === 'initial_balance' ? `Потрібно внести фактичний початковий залишок: ${leaveTypeName(item.leaveType)}${item.leaveType === 'children_social_additional' && item.periodStart ? ` за ${item.periodStart.slice(0, 4)} рік` : ''}.` :
-            `Потрібно перевірити дані для відпустки «${leaveTypeName(item.leaveType)}».`}</span>
-        <button type="button" className="secondary-button leave-attention-action" onClick={() => onOpen(item)}>{item.reviewReason === 'right' ? 'Перевірити право' : item.reviewReason === 'initial_balance' ? 'Внести залишок' : 'Перевірити дані'}</button>
-      </div>)}
-    </div>
+  if (loading) return null
+  if (error) return <Alert variant="info" action={<button type="button" onClick={onRetry}>Повторити</button>}>
+    Не вдалося перевірити дії, потрібні для обліку відпусток. {error}
   </Alert>
+  if (!items.length) return null
+  return <section className="leave-attention-list" aria-label="Потрібні дії щодо відпусток">
+    <div className="leave-attention-list-heading"><Info size={16} aria-hidden="true"/><strong>Потрібні дії</strong></div>
+    {items.map(item => <div className="leave-attention-item" key={`${item.leaveType}/${item.periodStart ?? item.reviewReason}`}>
+      <span>{attentionDescription(item)}</span>
+      <button type="button" className="secondary-button" onClick={event => onOpen(item, event.currentTarget)}>
+        {item.reviewReason === 'right' ? 'Перевірити право' : item.kind === 'needs_confirmation' && item.leaveType === 'children_social_additional' ? 'Обрати тривалість' : 'Керувати'}
+      </button>
+    </div>)}
+  </section>
 }
 
-function leaveTypeName(type: PeriodLeaveType) {
-  return type === 'annual_main' ? 'Щорічна основна' : type === 'oms_service_additional' ? 'Додаткова за стаж ОМС' : 'Додаткова на дітей'
+function attentionDescription(item: LeavePeriodAttentionItem) {
+  const name = item.leaveType === 'annual_main' ? 'Щорічна основна'
+    : item.leaveType === 'oms_service_additional' ? 'Додаткова за стаж ОМС' : 'Додаткова на дітей'
+  if (item.reviewReason === 'right') return `Перевірте право на відпустку «${name}».`
+  if (item.reviewReason === 'initial_balance') return `Внесіть початковий залишок: ${name}${item.leaveType === 'children_social_additional' && item.periodStart ? ` за ${item.periodStart.slice(0, 4)} рік` : ''}.`
+  if (item.reviewReason === 'service_data') return `Перевірте дані стажу для відпустки «${name}».`
+  if (item.leaveType === 'children_social_additional') return `Оберіть 10 або 17 днів для ${item.periodStart?.slice(0, 4) ?? ''} року.`
+  const period = item.periodStart && item.periodEnd ? ` ${formatDate(item.periodStart)}–${formatDate(item.periodEnd)}` : ''
+  const recommendation = item.suggestedDays === null ? '' : ` · пропозиція ${item.suggestedDays} к. дн.`
+  return `Підтвердьте новий період${period}: ${name}${recommendation}.`
 }

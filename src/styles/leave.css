@@ -98,7 +98,7 @@
 /* 4.6.3: named modal containers respond to their actual available width. */
 .leave-workspace { width:100%; min-width:0; display:grid; gap:var(--space-3); }
 .leave-workspace [hidden] { display:none !important; }
-.leave-overview .dictionary-table-wrap, .leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
+.leave-workspace .dictionary-table-wrap { max-width:100%; min-width:0; overflow-x:auto; }
 .leave-editor-modal { width:min(54rem,calc(100vw - 2rem)); max-width:calc(100vw - 2rem); max-height:calc(100dvh - 2rem); min-width:0; }
 .leave-editor-modal .app-modal-content { container:leave-modal / inline-size; min-width:0; overflow-y:auto; overflow-x:hidden; }
 .leave-editor-modal :is(.app-select-trigger, .app-select-option) > span { min-width:0; overflow-wrap:anywhere; }
