@@ -76,7 +76,30 @@
 .leave-workbench-nav > button:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
 .leave-workbench-content { display:grid; gap:var(--space-3); min-width:0; }
 .leave-workbench-compact-select { display:none; min-width:0; }
-.leave-balance-selector { min-width:0; }
+.leave-balances-overview { min-width:0; background:var(--surface-card); }
+.leave-balances-overview .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
+.leave-balances-overview-table { width:100%; min-width:880px; font-variant-numeric:tabular-nums; }
+.leave-balances-overview-table thead th { padding:var(--space-2); text-align:center; vertical-align:middle; }
+.leave-balances-overview-table thead th:first-child { text-align:center; }
+.leave-balances-overview-table thead th small { display:block; color:var(--color-text-hint); font-size:10px; font-weight:500; letter-spacing:normal; text-transform:none; }
+.leave-balances-overview-table tbody th[scope="row"],.leave-balances-overview-table tbody td { padding:var(--space-2); border-top:1px solid var(--border-surface); vertical-align:middle; }
+.leave-balances-overview-table tbody th[scope="row"] { min-width:0; background:var(--surface-card); color:var(--color-text); font-size:13px; font-weight:650; line-height:1.4; text-align:left; white-space:normal; }
+.leave-balances-overview-table tbody td { text-align:center; white-space:normal; }
+.leave-balances-overview-table .leave-right-status { justify-content:center; margin-inline:auto; }
+.leave-balance-row-note { display:block; margin-top:2px; color:var(--color-text-secondary); font-size:11px; font-weight:400; line-height:1.35; }
+.leave-balance-detail-button { min-height:var(--control-height-compact); white-space:nowrap; }
+.leave-historical-periods { margin-top:var(--space-3); border-top:1px solid var(--border-surface); color:var(--color-text-secondary); }
+.leave-historical-periods > summary { width:max-content; max-width:100%; padding:var(--space-2) 0; color:var(--accent-hover); font-size:13px; font-weight:600; cursor:pointer; }
+.leave-historical-periods > summary:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; border-radius:var(--radius-control); }
+.leave-event-balance-details { min-width:0; background:var(--surface-card); }
+.leave-event-balance-metrics { margin-bottom:var(--space-3); }
+.leave-event-balance-history-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--space-2); margin:var(--space-3) 0 var(--space-2); }
+.leave-event-balance-history-heading h4 { margin:0; color:var(--color-text); font-size:14px; }
+.leave-event-balance-table { min-width:680px; font-variant-numeric:tabular-nums; }
+.leave-event-balance-table tbody tr.leave-cancelled-row { color:var(--color-text-secondary); }
+.leave-event-balance-table tbody tr.leave-cancelled-row td { background:var(--surface-panel); }
+.leave-event-balance-table .leave-days-column { text-align:center; }
+.leave-event-balance-details .leave-muted { color:var(--color-text-secondary); font-size:12px; }
 .leave-overview-summary { min-width:0; background:var(--surface-card); }
 .leave-overview-summary .info-section-heading { padding-bottom:var(--space-2); border-bottom:2px solid color-mix(in srgb,var(--accent) 40%,transparent); }
 .leave-summary-table { width:100%; min-width:760px; font-variant-numeric:tabular-nums; }

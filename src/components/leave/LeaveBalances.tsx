@@ -27,7 +27,7 @@ const groups = [
   { basis: 'initial_balance', label: 'Початкові залишки' },
   { basis: 'confirmed_entitlement', label: 'Права за новими періодами' },
 ] as const
-export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged, childrenRightStatus }: {
+export default function LeaveBalances({ employeeId, hireDate, navigationGuard, employeeName, type, refreshRevision, rightsReady, historicalOnly, rightBadge, attentionTarget, onAttentionTargetHandled, onChanged, childrenRightStatus, onBack }: {
   employeeId: string
   employeeName: string
   hireDate: string
@@ -41,6 +41,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   onAttentionTargetHandled?: () => void
   onChanged?: () => void
   childrenRightStatus?: 'has_right' | 'no_right'
+  onBack?: () => void
 }) {
   const {today,throughDate}=useAccountingDate()
   const groupId = useId()
@@ -102,8 +103,30 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
 
   const editorCandidates = periods && (historicalOnly ? historicalBalancePeriods(periods) : periods)
   const visiblePeriods = historicalOnly || type === 'children_social_additional' ? periods?.filter(period => period.status === 'confirmed') : periods
+  const currentPeriods = visiblePeriods?.filter(period => period.periodEnd >= today)
+  const historicalPeriods = visiblePeriods?.filter(period => period.periodEnd < today)
   const balanceMap = new Map(data?.balances?.map(period => [period.id, period]))
   const refresh = () => setRevision(value => value + 1)
+  const periodTable = (entries: Period[] | undefined, empty?: string) => <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data} empty={empty}>
+    {groups.map(group => {
+      const grouped = entries?.filter(period => period.accountingBasis === group.basis)
+      if (!grouped?.length) return null
+      return <Fragment key={group.basis}>
+        <tr className="leave-group"><th id={groupId + group.basis} colSpan={5}>{historicalOnly && group.basis === 'confirmed_entitlement' ? 'Раніше підтверджені періоди' : group.label}</th></tr>
+        {grouped.map(period => <tr key={period.periodStart}>
+          <td className="leave-period" aria-describedby={groupId + group.basis}>{type === 'children_social_additional' ? period.periodStart.slice(0, 4) + ' рік' : periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
+          <td className="leave-days-column">{period.status === 'confirmed' ? <strong>{formatLeaveDays(period.confirmedDays)}</strong> : <span className="leave-muted">Не внесено</span>}</td>
+          <td className="leave-days-column">{period.status === 'confirmed' ? balanceMap.get(period.id)?.usedDays ?? '–' : '–'}</td>
+          <td className="leave-days-column">{period.status === 'confirmed' ? <strong>{balanceMap.get(period.id)?.availableDays ?? '–'}</strong> : '–'}</td>
+          <td>{period.status === 'confirmed' && <div className="registry-row-actions">
+            <button type="button" className="table-action leave-icon-action leave-remove" title="Вилучити підтвердження"
+              aria-label={'Вилучити підтвердження за період ' + periodLabel(period)}
+              onClick={() => { setDeleteError(''); setDeleting(period) }}><Trash2 size={16} aria-hidden="true" /></button>
+          </div>}</td>
+        </tr>)}
+      </Fragment>
+    })}
+  </DictionaryTable>
 
   useEffect(() => {
     if (!attentionTarget || editing || openedAttentionRequest.current === attentionTarget.requestId || !data || data.error || !editorCandidates) return
@@ -140,6 +163,7 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
   const selectedSummary=balanceSummary(type,data?.balances??[],type === 'children_social_additional' ? [] : (data?.proposals??[]).filter(p=>p.periodStart<=throughDate))
   return <section ref={owner} className="leave-layout" aria-label="Залишки відпусток">
     <InfoSection title={labels[type]} icon={<LeaveTypeIcon type={type}/>} action={<div className="leave-summary-actions">
+      {onBack && <button type="button" className="secondary-button" onClick={onBack}>До всіх видів</button>}
       {rightBadge}
       <button ref={editButton} type="button" className="secondary-button"
         disabled={!editorCandidates || (!editorCandidates.length && type !== 'oms_service_additional')}
@@ -168,29 +192,13 @@ export default function LeaveBalances({ employeeId, hireDate, navigationGuard, e
     {type==='oms_service_additional'&&<OmsServiceLeaveProjection employeeId={employeeId} revision={key}/>}
     {(!historicalOnly || !!visiblePeriods?.length) && <section className="leave-balances-table" aria-label="Облікові періоди">
       <header className="leave-section-heading"><CalendarDays size={17} aria-hidden="true"/><h3>Облікові періоди</h3></header>
-    {!data?.error && <DictionaryTable label="Залишки за періодами" className="leave-table leave-period-table" columns={columns} loading={!data}
-      empty={!visiblePeriods?.length ? 'Немає облікових періодів для вибраного виду.' : undefined}>
-      {groups.map(group => {
-        const entries = visiblePeriods?.filter(period => period.accountingBasis === group.basis)
-        if (!entries?.length) return null
-        return <Fragment key={group.basis}>
-          <tr className="leave-group"><th id={groupId + group.basis} colSpan={5}>{historicalOnly && group.basis === 'confirmed_entitlement' ? 'Раніше підтверджені періоди' : group.label}</th></tr>
-          {entries.map(period => <tr key={period.periodStart}>
-            <td className="leave-period" aria-describedby={groupId + group.basis}>{type === 'children_social_additional' ? period.periodStart.slice(0, 4) + ' рік' : periodLabel(period)}{period.periodStart>today&&<small className="leave-period-note">Майбутній період</small>}</td>
-            <td className="leave-days-column">{period.status === 'confirmed'
-              ? <strong>{formatLeaveDays(period.confirmedDays)}</strong>
-              : <span className="leave-muted">Не внесено</span>}</td>
-            <td className="leave-days-column">{period.status === 'confirmed' ? balanceMap.get(period.id)?.usedDays ?? '–' : '–'}</td>
-            <td className="leave-days-column">{period.status === 'confirmed' ? <strong>{balanceMap.get(period.id)?.availableDays ?? '–'}</strong> : '–'}</td>
-            <td>{period.status === 'confirmed' && <div className="registry-row-actions">
-              <button type="button" className="table-action leave-icon-action leave-remove" title="Вилучити підтвердження"
-                aria-label={'Вилучити підтвердження за період ' + periodLabel(period)}
-                onClick={() => { setDeleteError(''); setDeleting(period) }}><Trash2 size={16} aria-hidden="true" /></button>
-            </div>}</td>
-          </tr>)}
-        </Fragment>
-      })}
-    </DictionaryTable>}
+      {!data?.error && <>
+        {periodTable(currentPeriods, !currentPeriods?.length ? 'Актуальних періодів немає.' : undefined)}
+        {!!historicalPeriods?.length && <details className="leave-historical-periods">
+          <summary>Історичні періоди ({historicalPeriods.length})</summary>
+          {periodTable(historicalPeriods)}
+        </details>}
+      </>}
     </section>}
     {editing && (editorPeriods.current??periods) && <BalanceEditor employeeId={employeeId} employeeName={employeeName} periods={editorPeriods.current??periods!} type={type} typeLabel={labels[type]} navigationGuard={navigationGuard} rightsReady={rightsReady} historicalOnly={historicalOnly}
       focusPeriodStart={attentionTarget?.periodStart}

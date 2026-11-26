@@ -1,20 +1,21 @@
 import { useEffect, useReducer, useRef, useState, type RefObject } from 'react'
 import { CheckCircle2, History, Info, LayoutDashboard, Plus, ShieldCheck, Wallet } from 'lucide-react'
 import type { EmployeeCard } from '../../../shared/personnel'
-import type { LeavePeriodAttentionItem, LeavePeriodAttentionSummary, PeriodLeaveType } from '../../../shared/leave'
+import type { LeavePeriodAttentionItem, LeavePeriodAttentionSummary, LeaveType, PeriodLeaveType } from '../../../shared/leave'
 import { fullName, personnelMessage } from '../../employees/model'
 import type { NavigationGuard } from '../employees/useUnsavedChanges'
 import Alert from '../Alert'
 import DataState from '../DataState'
 import Select from '../Select'
 import LeaveOverview, { type LeaveOverviewData } from './LeaveOverview'
+import LeaveBalancesOverview from './LeaveBalancesOverview'
+import LeaveEventBalanceDetails from './LeaveEventBalanceDetails'
 import LeaveBalances from './LeaveBalances'
 import LeaveJournal from './LeaveJournal'
 import LeaveRegistrationForm from './LeaveRegistrationForm'
 import LeaveRights from './LeaveRights'
 import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation, type LeaveWorkspaceView } from './workbench-navigation'
 import useAccountingDate from './useAccountingDate'
-import { leaveWorkspaceLabels } from './presentation'
 import { leaveRecordBelongsToEmployee, type LeaveJournalContext, type RegistrationHistory } from './registry'
 import { notifySystemToast } from '../SystemToastHost'
 import { formatDate } from '../../lib/dates'
@@ -26,8 +27,7 @@ const leaveSections: { id: LeaveWorkspaceView; label: string; icon: typeof Layou
   { id: 'balances', label: 'Залишки', icon: Wallet },
   { id: 'history', label: 'Історія', icon: History },
 ]
-const balanceOptions = (['annual_main', 'oms_service_additional', 'children_social_additional'] as const)
-  .map(value => ({ value, label: leaveWorkspaceLabels[value] }))
+const periodicTypes = ['annual_main', 'oms_service_additional', 'children_social_additional'] as const
 
 /** Leave workspace with guarded in-place section navigation. */
 export default function ProfileLeaveWorkbench({ employee, navigationGuard, revision }: {
@@ -36,9 +36,8 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   const employeeId = employee.id
   const [workspace, dispatchWorkspace] = useReducer(leaveWorkspaceNavigation, initialLeaveWorkspaceState)
   const { view, selectedType } = workspace
-  const balanceType: PeriodLeaveType = selectedType && balanceOptions.some(option => option.value === selectedType)
+  const balanceType: PeriodLeaveType = selectedType && periodicTypes.includes(selectedType as PeriodLeaveType)
     ? selectedType as PeriodLeaveType : 'annual_main'
-  const [type, setType] = useState<PeriodLeaveType>('annual_main')
   const [localRevision, setLocalRevision] = useState(0)
   const refreshRevision = revision + localRevision
   const refresh = () => setLocalRevision(value => value + 1)
@@ -98,17 +97,23 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
   }
   function navigate(next: LeaveWorkspaceView) {
     navigationGuard.current(() => {
-      if (next === 'balances' && view !== 'balances') dispatchWorkspace({ type: 'open-balances', leaveType: balanceType })
-      else dispatchWorkspace({ type: 'navigate', view: next === 'history' ? 'overview' : next })
+      dispatchWorkspace({ type: 'navigate', view: next === 'history' ? 'overview' : next })
       if (next === 'history') dispatchWorkspace({ type: 'open-history', returnTo: view === 'history' ? workspace.historyReturn : view })
       requestAnimationFrame(() => heading.current?.focus())
     })
   }
-  function chooseBalance(value: string) {
-    const next = value as PeriodLeaveType
+  function openBalanceDetails(next: LeaveType) {
     navigationGuard.current(() => {
       dispatchWorkspace({ type: 'open-balances', leaveType: next })
-      setType(next)
+      setAttentionTarget(null)
+      requestAnimationFrame(() => heading.current?.focus())
+    })
+  }
+  function backToBalanceOverview() {
+    navigationGuard.current(() => {
+      dispatchWorkspace({ type: 'back-to-balances-overview' })
+      setAttentionTarget(null)
+      requestAnimationFrame(() => heading.current?.focus())
     })
   }
   function openAttention(item: LeavePeriodAttentionItem) {
@@ -119,7 +124,6 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         setAttentionTarget(null)
       } else if (action.type === 'open-balances') {
         dispatchWorkspace(action)
-        setType(action.leaveType)
         setAttentionTarget(item.periodStart ? { periodStart: item.periodStart, requestId: ++attentionRequest.current } : null)
       }
       requestAnimationFrame(() => heading.current?.focus())
@@ -142,6 +146,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     ? 'Залишки та облікові періоди'
     : leaveSections.find(section => section.id === view)?.label ?? 'Відпустки'
   const selectedStatus = data?.rights.find(right => right.leaveType === balanceType)?.status
+  const selectedRightStatus = selectedType ? data?.rights.find(right => right.leaveType === selectedType)?.status ?? 'unknown' : 'unknown'
 
   return <div className="profile-leave-workbench">
     <header className="profile-leave-toolbar">
@@ -168,14 +173,24 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         </>}
         {view === 'rights' && <LeaveRights employeeId={employeeId} navigationGuard={navigationGuard} onSaved={refresh}/>}
         {view === 'balances' && <>
-          <section className="dashboard-panel leave-balance-selector" aria-label="Вибір виду відпустки">
-            <Select label="Вид відпустки" value={balanceType} options={balanceOptions} onChange={chooseBalance} advanceOnSelect={false}/>
-          </section>
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
-          <LeaveBalances key={balanceType} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={balanceType}
-            navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
-            historicalOnly={selectedStatus === 'no_right'} childrenRightStatus={selectedStatus === 'has_right' || selectedStatus === 'no_right' ? selectedStatus : undefined}
-            attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}/>
+          {!selectedType && (!current || !data)
+            ? <DataState kind="loading" compact message="Завантаження залишків…"/>
+            : !selectedType && data
+              ? <LeaveBalancesOverview data={data} throughDate={throughDate} today={today}
+                attentionItems={current?.periodAttention?.items.filter(item => item.employeeId === employeeId) ?? []} onOpen={openBalanceDetails}/>
+              : selectedType && periodicTypes.includes(selectedType as PeriodLeaveType)
+                ? <LeaveBalances key={balanceType} employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate} type={balanceType}
+                  navigationGuard={navigationGuard} refreshRevision={refreshRevision} rightsReady={!!data?.rights}
+                  historicalOnly={selectedStatus === 'no_right'} childrenRightStatus={selectedStatus === 'has_right' || selectedStatus === 'no_right' ? selectedStatus : undefined}
+                  attentionTarget={attentionTarget} onAttentionTargetHandled={() => setAttentionTarget(null)} onChanged={refresh}
+                  onBack={backToBalanceOverview}/>
+                : selectedType && !data && !current?.error
+                  ? <DataState kind="loading" compact message="Завантаження залишків…"/>
+                  : selectedType && data && <LeaveEventBalanceDetails type={selectedType as Extract<LeaveType, 'study_leave' | 'veteran_special_leave' | 'chernobyl_special_leave'>}
+                  employeeId={employeeId} rightStatus={selectedRightStatus} records={data.records} year={today.slice(0, 4)} error={current?.error}
+                  onBack={backToBalanceOverview} onOpenHistory={history.open}/>
+          }
         </>}
         {view === 'history' && <>
           {current?.error && <Alert variant="error" action={<button type="button" onClick={refresh}>Повторити</button>}>{current.error}</Alert>}
@@ -187,7 +202,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
     </div>
 
     {creating && <LeaveRegistrationForm employeeId={employeeId} employeeName={fullName(employee)} hireDate={employee.hireDate}
-      initialType={type} navigationGuard={navigationGuard} history={history} returnFocus={opener.current}
+      initialType={selectedType ?? 'annual_main'} navigationGuard={navigationGuard} history={history} returnFocus={opener.current}
       onClose={closeRegistration} onSaved={() => {
         closeRegistration()
         notifySystemToast('success', 'Відпустку зареєстровано', 'Історію та залишки оновлено.')

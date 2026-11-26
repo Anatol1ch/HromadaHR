@@ -30,6 +30,74 @@ export function leaveOverviewAccounting(type: LeaveType, balances: PeriodBalance
 }
 
 export type LeaveOverviewMetric = { value: string; kind: 'value' | 'missing' | 'unknown' | 'not-applicable'; emphasis?: boolean; detail?: string[] }
+export type LeaveBalanceOverviewMetrics = { confirmed: LeaveOverviewMetric; used: LeaveOverviewMetric; remaining: LeaveOverviewMetric; note?: string }
+
+/** Compact six-type balance view; only persisted balances and active records contribute numbers. */
+export function leaveBalanceOverviewMetrics(type: LeaveType, status: 'has_right' | 'no_right' | 'unknown',
+  balances: PeriodBalance[], proposals: ProposedLeavePeriod[], records: LeaveRecord[], employeeId: string,
+  accountingYear: string, today: string, attention?: { kind: 'needs_confirmation' | 'review_data'; reviewReason?: string; suggestedDays: number | null })
+  : LeaveBalanceOverviewMetrics {
+  const accounting = leaveOverviewAccounting(type, balances, proposals, records)
+  if (accounting.kind === 'period') {
+    const { summary } = accounting
+    const currentStart = `${today.slice(0, 4)}-01-01`
+    const currentProposal = type === 'children_social_additional'
+      ? proposals.find(period => period.leaveType === type && period.periodStart === currentStart)
+      : undefined
+    const currentSaved = currentProposal && balances.some(period => period.leaveType === type && period.periodStart === currentProposal.periodStart)
+    const note = currentProposal && status === 'has_right' && !currentSaved
+      ? currentProposal.accountingBasis === 'initial_balance' ? 'Внесіть фактичний початковий залишок.' : 'Оберіть 10 або 17 днів.'
+      : attention?.kind === 'needs_confirmation' && attention.suggestedDays !== null
+        ? `Потрібне підтвердження · пропозиція ${formatLeaveDayCount(attention.suggestedDays)} к. дн.`
+        : attention?.kind === 'review_data' && attention.reviewReason === 'service_data' ? 'Перевірте дані стажу.'
+          : attention?.kind === 'review_data' && attention.reviewReason === 'initial_balance' ? 'Внесіть фактичний початковий залишок.'
+            : undefined
+    return {
+      confirmed: summary.count
+        ? { value: formatLeaveDayCount(summary.entered), kind: 'value', detail: summary.incomplete ? ['За внесеними періодами'] : undefined }
+        : { value: '—', kind: summary.incomplete ? 'missing' : 'unknown' },
+      used: summary.count
+        ? { value: formatLeaveDayCount(summary.accounted), kind: 'value' }
+        : accounting.recordedUsage > 0n
+          ? { value: formatLeaveDayCount(accounting.recordedUsage), kind: 'value', detail: ['За активними реєстраціями'] }
+          : { value: '—', kind: 'unknown' },
+      remaining: summary.count && !summary.incomplete
+        ? { value: formatLeaveDayCount(summary.remaining), kind: 'value', emphasis: true }
+        : { value: '—', kind: summary.incomplete ? 'missing' : 'unknown', detail: summary.incomplete ? ['Не всі періоди внесено'] : undefined },
+      note,
+    }
+  }
+
+  const yearRecords = records.filter(record => record.employeeId === employeeId && record.leaveType === type && record.startDate.slice(0, 4) === accountingYear)
+  const activeYearRecords = yearRecords.filter(record => record.status === 'active')
+  const usedDays = activeYearRecords.reduce((sum, record) => sum + BigInt(record.usedDays), 0n)
+  if (type === 'study_leave') return {
+    confirmed: { value: '—', kind: 'not-applicable' },
+    used: { value: formatLeaveDayCount(usedDays), kind: 'value' },
+    remaining: { value: 'Не накопичується', kind: 'not-applicable' },
+  }
+
+  const specialType = type as 'veteran_special_leave' | 'chernobyl_special_leave'
+  const availability = specialLeaveAnnualAvailability(specialType, status, records, employeeId, accountingYear)
+  const limit = specialType === 'veteran_special_leave' ? 14 : 16
+  const priorUsage = records.filter(record => record.employeeId === employeeId && record.leaveType === type &&
+    record.status === 'active' && record.startDate.slice(0, 4) < accountingYear)
+    .reduce((sum, record) => sum + BigInt(record.usedDays), 0n)
+  const note = priorUsage > 0n ? `За попередні роки використано ${formatLeaveDayCount(priorUsage)} к. дн.` : undefined
+  return {
+    confirmed: availability.kind === 'available' || availability.kind === 'used'
+      ? { value: formatLeaveDayCount(limit), kind: 'value', detail: ['Норматив за рік'] }
+      : { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' },
+    used: { value: formatLeaveDayCount(usedDays), kind: 'value' },
+    remaining: availability.kind === 'available'
+      ? { value: `Доступно ${limit}`, kind: 'value', emphasis: true }
+      : availability.kind === 'used' ? { value: 'Використано', kind: 'value' }
+        : availability.kind === 'review' ? { value: 'Потребує перевірки', kind: 'unknown' }
+          : availability.kind === 'unknown' ? { value: 'Право не перевірено', kind: 'unknown' }
+            : { value: 'Права немає', kind: 'not-applicable' },
+    note,
+  }
+}
 
 export function leaveOverviewHasAccountedData(accounting: ReturnType<typeof leaveOverviewAccounting>) {
   return accounting.kind === 'period'

@@ -1,7 +1,7 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, leaveOverviewProposals, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveBalanceOverviewMetrics, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, leaveOverviewProposals, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
@@ -204,6 +204,35 @@ test('workbench switches four sections and preserves selected balance and histor
   assert.equal(resumedBalances.view, balances.view)
   assert.equal(resumedBalances.selectedType, balances.selectedType)
   assert.equal(resumedBalances.historyReturn, 'balances')
+  const returnedOverview = leaveWorkspaceNavigation(balances, { type: 'back-to-balances-overview' })
+  assert.equal(returnedOverview.view, 'balances')
+  assert.equal(returnedOverview.selectedType, null)
+  assert.equal(leaveWorkspaceNavigation(returnedOverview, { type: 'navigate', view: 'balances' }).selectedType, null)
+})
+
+test('balance overview distinguishes no confirmed period, confirmed zero and child-year choice', () => {
+  const absent = leaveBalanceOverviewMetrics('annual_main', 'has_right', [], [], [], 'employee', '2027', '2027-03-01')
+  assert.equal(absent.confirmed.kind, 'unknown')
+  assert.equal(absent.remaining.kind, 'unknown')
+  const zero = { leaveType: 'children_social_additional', periodStart: '2027-01-01', confirmedDays: 0, usedDays: 0, availableDays: 0 }
+  const child = leaveBalanceOverviewMetrics('children_social_additional', 'has_right', [zero], [], [], 'employee', '2027', '2027-03-01')
+  assert.equal(child.confirmed.value, '0')
+  assert.equal(child.remaining.value, '0')
+  const proposal = { leaveType: 'children_social_additional', periodStart: '2027-01-01', accountingBasis: 'confirmed_entitlement' }
+  const choice = leaveBalanceOverviewMetrics('children_social_additional', 'has_right', [], [proposal], [], 'employee', '2027', '2027-03-01')
+  assert.equal(choice.note, 'Оберіть 10 або 17 днів.')
+  assert.equal(choice.confirmed.value, '—')
+})
+
+test('balance overview lists all six types and event leave never gets an accumulating balance', () => {
+  assert.equal(leaveTypes.length, 6)
+  const special = leaveBalanceOverviewMetrics('veteran_special_leave', 'has_right', [], [], [], 'employee', '2027', '2027-03-01')
+  assert.equal(special.confirmed.value, '14')
+  assert.equal(special.remaining.value, 'Доступно 14')
+  assert.equal(special.used.value, '0')
+  const study = leaveBalanceOverviewMetrics('study_leave', 'unknown', [], [], [], 'employee', '2027', '2027-03-01')
+  assert.equal(study.used.value, '0')
+  assert.equal(study.remaining.value, 'Не накопичується')
 })
 
 test('period attention routes to its specific balance type or rights review', () => {
