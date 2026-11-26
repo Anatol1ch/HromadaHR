@@ -2,6 +2,7 @@ import { seedDirectories, seedEmployee } from './fixtures/personnel-directory.mj
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
+import { Worker } from 'node:worker_threads'
 import { mkdtempSync, rmSync, readFileSync, renameSync, writeFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
@@ -114,6 +115,23 @@ test('special limits, explanations, annual uniqueness, start-year attribution an
   assert.equal(chNextYear.startDate.slice(0,4),'2029')
   assert.deepEqual(f.service.getBalances(f.employee.id),[])
   assert.deepEqual(f.service.listPeriods(f.employee.id),[])
+  integrity(f.connection.database)
+})
+
+test('concurrent special registrations cannot consume the same employee/type/year twice',async t=>{
+  const f=await fixture(t)
+  f.service.saveRights(f.employee.id,[{leaveType:'veteran_special_leave',status:'has_right'}])
+  const base=event(f,'veteran_special_leave',{startDate:'2027-06-01',endDate:'2027-06-14',usedDays:14})
+  const run= input => new Promise((resolve,reject)=>{
+    const worker=new Worker(new URL('./fixtures/special-leave-registration-worker.mjs',import.meta.url),{workerData:{file:f.file,input}})
+    worker.once('message',resolve)
+    worker.once('error',reject)
+    worker.once('exit',code=>{if(code!==0)reject(new Error(`special leave worker exited ${code}`))})
+  })
+  const results=await Promise.all([run({...base,requestId:randomUUID()}),run({...base,requestId:randomUUID(),startDate:'2027-08-01',endDate:'2027-08-14'})])
+  assert.equal(results.filter(result=>result.ok).length,1)
+  assert.equal(results.filter(result=>result.code==='SPECIAL_YEAR_CONFLICT').length,1)
+  assert.equal(f.connection.database.prepare("SELECT count(*) n FROM leave_records WHERE employee_id=? AND leave_type='veteran_special_leave' AND status='active' AND substr(start_date,1,4)='2027'").get(f.employee.id).n,1)
   integrity(f.connection.database)
 })
 
