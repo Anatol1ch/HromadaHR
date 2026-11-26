@@ -164,7 +164,7 @@ export default function ProfileLeaveWorkbench({ employee, navigationGuard, revis
         {view === 'overview' && <>
           <LeavePeriodAttentionNotice loading={!current} error={current?.attentionError} summary={current?.periodAttention}
             items={current?.periodAttention?.items.filter(item => item.employeeId === employeeId) ?? []} onOpen={openAttention} onRetry={refresh}/>
-          <LeaveOverview data={data} throughDate={throughDate} loading={!current} error={current?.error} onRetry={refresh}/>
+          <LeaveOverview data={data} throughDate={throughDate} today={today} loading={!current} error={current?.error} onRetry={refresh}/>
         </>}
         {view === 'rights' && <LeaveRights employeeId={employeeId} navigationGuard={navigationGuard} onSaved={refresh}/>}
         {view === 'balances' && <>

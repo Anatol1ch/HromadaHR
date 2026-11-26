@@ -11,6 +11,16 @@ export function balanceSummary(type: PeriodLeaveType, balances: PeriodBalance[],
     accounted: saved.reduce((n, p) => n + BigInt(p.usedDays), 0n), remaining: saved.reduce((n, p) => n + BigInt(p.availableDays), 0n) }
 }
 
+/** Child leave needs an explicit current-year choice; proposals never represent confirmed days. */
+export function leaveOverviewProposals(type: LeaveType, status: 'has_right' | 'no_right' | 'unknown',
+  proposals: ProposedLeavePeriod[], throughDate: string, today: string) {
+  const matching = proposals.filter(period => period.leaveType === type && period.periodStart <= throughDate)
+  if (type !== 'children_social_additional') return matching
+  if (status !== 'has_right') return []
+  const currentYearStart = `${today.slice(0, 4)}-01-01`
+  return matching.filter(period => period.periodStart === currentYearStart)
+}
+
 export function leaveOverviewAccounting(type: LeaveType, balances: PeriodBalance[], proposals: ProposedLeavePeriod[], records: LeaveRecord[]) {
   const activeRecords = records.filter(record => record.leaveType === type && record.status === 'active')
   if (isPeriodLeave(type)) return { kind: 'period' as const, summary: balanceSummary(type, balances, proposals),
@@ -78,8 +88,12 @@ export function specialLeaveAnnualAvailability(type: 'veteran_special_leave' | '
 export function specialLeaveAnnualMetrics(type: 'veteran_special_leave' | 'chernobyl_special_leave',
   status: 'has_right' | 'no_right' | 'unknown', records: LeaveRecord[], employeeId: string, year: string): LeaveOverviewMetric[] {
   const availability = specialLeaveAnnualAvailability(type, status, records, employeeId, year)
+  const priorUsage = records.filter(record => record.employeeId === employeeId && record.leaveType === type &&
+    record.status === 'active' && record.startDate.slice(0, 4) < year)
+    .reduce((sum, record) => sum + BigInt(record.usedDays), 0n)
+  const priorUsageText = priorUsage > 0n ? `Раніше використано ${formatLeaveDayCount(priorUsage)} к. дн.` : null
   if (availability.kind === 'available') return [
-    { value: String(availability.limit), kind: 'value', detail: [`Норматив за ${year} рік`] },
+    { value: String(availability.limit), kind: 'value', detail: [`Норматив за ${year} рік`, ...(priorUsageText ? [priorUsageText] : [])] },
     { value: `Доступно ${availability.limit}`, kind: 'value', emphasis: true },
   ]
   if (availability.kind === 'used') return [
@@ -90,6 +104,8 @@ export function specialLeaveAnnualMetrics(type: 'veteran_special_leave' | 'chern
     { value: 'Потребує перевірки', kind: 'unknown' },
     { value: '—', kind: 'unknown' },
   ]
+  if (priorUsageText) return [{ value: priorUsageText, kind: 'value' },
+    { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' }]
   return [
     { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' },
     { value: '—', kind: availability.kind === 'unknown' ? 'unknown' : 'not-applicable' },

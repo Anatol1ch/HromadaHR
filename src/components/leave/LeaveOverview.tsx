@@ -6,7 +6,7 @@ import Alert from '../Alert'
 import DataState from '../DataState'
 import InfoSection from '../InfoSection'
 import DictionaryTable from '../DictionaryTable'
-import { leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, specialLeaveAnnualMetrics, type LeaveOverviewMetric } from './summary'
+import { leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, leaveOverviewProposals, specialLeaveAnnualMetrics, type LeaveOverviewMetric } from './summary'
 import { leaveWorkspaceLabels, rightLabels } from './presentation'
 import LeaveTypeIcon from './LeaveTypeIcon'
 
@@ -42,9 +42,10 @@ function LeaveRightStatus({ status }: { status: EmployeeLeaveRight['status'] | '
   return <span className={`leave-right-status is-${status}`}><Icon size={14} aria-hidden="true"/>{rightLabels[status]}</span>
 }
 
-export default function LeaveOverview({ data, throughDate, error, loading, onRetry }: {
+export default function LeaveOverview({ data, throughDate, today, error, loading, onRetry }: {
   data?: LeaveOverviewData
   throughDate: string
+  today: string
   error?: string
   loading: boolean
   onRetry: () => void
@@ -56,7 +57,7 @@ export default function LeaveOverview({ data, throughDate, error, loading, onRet
     <DictionaryTable label="Зведення по відпустках" className="leave-summary-table" columns={columns}>
       {leaveTypes.map(type => {
         const status = data.rights.find(right => right.leaveType === type)?.status ?? 'unknown'
-        const proposals = type === 'children_social_additional' ? [] : data.proposals.filter(period => period.leaveType === type && period.periodStart <= throughDate)
+        const proposals = leaveOverviewProposals(type, status, data.proposals, throughDate, today)
         const accounting = leaveOverviewAccounting(type, data.balances, proposals, data.records)
         const compactNoRight = leaveOverviewCompactNoRight(status, accounting)
         const metrics = type === 'veteran_special_leave' || type === 'chernobyl_special_leave'

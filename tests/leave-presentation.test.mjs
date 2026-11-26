@@ -1,7 +1,7 @@
 import { leaveRecordBelongsToEmployee, journalRows, emptyLeaveFilters, contextualLeaveFilters } from '../src/components/leave/registry.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
+import { balanceSummary, allocationDraft, formatLeaveDays, formatLeaveDayCount, formatLeaveCount, leaveOverviewAccounting, leaveOverviewCompactNoRight, leaveOverviewMetrics, leaveOverviewProposals, specialLeaveAnnualAvailability, specialLeaveAnnualMetrics } from '../src/components/leave/summary.ts'
 import { initialLeaveWorkspaceState, leavePeriodAttentionAction, leaveWorkspaceNavigation } from '../src/components/leave/workbench-navigation.ts'
 import { changedLeaveRights } from '../src/components/leave/rights-draft.ts'
 import { leaveWorkspaceLabels, rightLabels } from '../src/components/leave/presentation.ts'
@@ -75,6 +75,35 @@ test('special leave overview distinguishes current annual access, use, no right,
   assert.equal(specialLeaveAnnualAvailability('veteran_special_leave','has_right',partial,'e','2027').kind,'review')
   assert.equal(specialLeaveAnnualAvailability('veteran_special_leave','has_right',[{...records[0],status:'cancelled'}],'e','2027').kind,'available')
   assert.deepEqual(specialLeaveAnnualMetrics('chernobyl_special_leave','has_right',[], 'e','2027').map(metric=>metric.value), ['16','Доступно 16'])
+})
+
+test('special leave overview preserves prior active use without treating it as current-year availability', () => {
+  const records = [
+    { id:'old', employeeId:'e', leaveType:'veteran_special_leave', startDate:'2027-06-01', endDate:'2027-06-14', usedDays:14, status:'active' },
+    { id:'cancelled', employeeId:'e', leaveType:'veteran_special_leave', startDate:'2026-06-01', endDate:'2026-06-14', usedDays:14, status:'cancelled' },
+  ]
+  const noRight = specialLeaveAnnualMetrics('veteran_special_leave','no_right',records,'e','2028')
+  assert.equal(noRight[0]?.value, 'Раніше використано 14 к. дн.')
+  assert.equal(noRight[1]?.kind, 'not-applicable')
+  const available = specialLeaveAnnualMetrics('veteran_special_leave','has_right',records,'e','2028')
+  assert.deepEqual(available.map(metric => metric.value), ['14','Доступно 14'])
+  assert.deepEqual(available[0]?.detail, ['Норматив за 2028 рік','Раніше використано 14 к. дн.'])
+})
+
+test('children overview marks only a confirmed-right current year incomplete, without counting proposals as days', () => {
+  const proposals = [
+    { leaveType:'children_social_additional', periodStart:'2026-01-01', periodEnd:'2026-12-31', status:'proposed' },
+    { leaveType:'children_social_additional', periodStart:'2027-01-01', periodEnd:'2027-12-31', status:'proposed' },
+  ]
+  assert.deepEqual(leaveOverviewProposals('children_social_additional','has_right',proposals,'2027-01-01','2026-11-26'), [proposals[0]])
+  assert.deepEqual(leaveOverviewProposals('children_social_additional','unknown',proposals,'2027-01-01','2026-11-26'), [])
+  assert.deepEqual(leaveOverviewProposals('children_social_additional','no_right',proposals,'2027-01-01','2026-11-26'), [])
+  const pending = leaveOverviewAccounting('children_social_additional', [
+    { leaveType:'children_social_additional', periodStart:'2025-01-01', confirmedDays:10, usedDays:4, availableDays:6 },
+  ], leaveOverviewProposals('children_social_additional','has_right',proposals,'2027-01-01','2026-11-26'), [])
+  assert.equal(pending.summary.incomplete, true)
+  assert.deepEqual(leaveOverviewMetrics(pending).map(metric=>metric.value), ['10 / 4','—'])
+  assert.equal(pending.summary.entered, 10n)
 })
 
 test('overview compacts only no-right rows without periods or active usage', () => {
